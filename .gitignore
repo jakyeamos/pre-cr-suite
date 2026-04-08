@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.vsix
+.turbo/
+*.log
+.env
+.env.local

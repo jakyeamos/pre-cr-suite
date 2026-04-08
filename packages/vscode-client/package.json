@@ -1,0 +1,683 @@
+{
+  "name": "pre-cr-suite",
+  "displayName": "Pre-CR Suite",
+  "description": "Coverage-first pre-PR readiness for VS Code with a bundled Pre-CR server",
+  "version": "0.1.0",
+  "publisher": "jakye",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Testing",
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "coverage",
+    "code review",
+    "documentation",
+    "testing",
+    "debugging",
+    "productivity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakye/pre-cr-suite"
+  },
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascriptreact",
+    "onLanguage:python",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "workspaceContains:**/coverage/**",
+    "workspaceContains:**/.nyc_output/**"
+  ],
+  "main": "./dist/extension.js",
+  "files": [
+    "dist/**",
+    "README.md",
+    "package.json"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "preCr.showQuickActions",
+        "title": "Quick Actions Menu",
+        "category": "Pre-CR",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "preCr.showDashboard",
+        "title": "Show Dashboard",
+        "category": "Pre-CR",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "preCr.runPreCrCheck",
+        "title": "Run Pre-CR Check",
+        "category": "Pre-CR",
+        "icon": "$(play)"
+      },
+      {
+        "command": "preCr.quickCoverageCheck",
+        "title": "Refresh Coverage",
+        "category": "Pre-CR",
+        "icon": "$(check)"
+      },
+      {
+        "command": "preCr.runFullCoverageCheck",
+        "title": "Run Tests with Coverage (Legacy Alias)",
+        "category": "Pre-CR",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "preCr.configureTestCommand",
+        "title": "Open Repo Config",
+        "category": "Pre-CR"
+      },
+      {
+        "command": "preCr.fixSetup",
+        "title": "Fix Setup",
+        "category": "Pre-CR",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "preCr.loadCoverage",
+        "title": "Load Coverage File",
+        "category": "Pre-CR Coverage"
+      },
+      {
+        "command": "preCr.clearCoverage",
+        "title": "Clear Coverage",
+        "category": "Pre-CR Coverage"
+      },
+      {
+        "command": "preCr.toggleCoverageOverlay",
+        "title": "Toggle Coverage Overlay",
+        "category": "Pre-CR Coverage"
+      },
+      {
+        "command": "preCr.showCoverageSummary",
+        "title": "Show Summary",
+        "category": "Pre-CR Coverage"
+      },
+      {
+        "command": "preCr.showFileCoverage",
+        "title": "Show File Coverage",
+        "category": "Pre-CR Coverage"
+      },
+      {
+        "command": "preCr.checkChangesCoverage",
+        "title": "Check Changes Coverage",
+        "category": "Pre-CR Coverage"
+      },
+      {
+        "command": "preCr.nextIssue",
+        "title": "Next Issue",
+        "category": "Pre-CR Security"
+      },
+      {
+        "command": "preCr.prevIssue",
+        "title": "Previous Issue",
+        "category": "Pre-CR Security"
+      },
+      {
+        "command": "preCr.openSettings",
+        "title": "Open Settings",
+        "category": "Pre-CR"
+      },
+      {
+        "command": "preCr.showAllCommands",
+        "title": "Show All Commands",
+        "category": "Pre-CR"
+      },
+      {
+        "command": "preCr.showLogs",
+        "title": "Show Logs",
+        "category": "Pre-CR"
+      },
+      {
+        "command": "preCr.gettingStarted",
+        "title": "Getting Started",
+        "category": "Pre-CR"
+      },
+      {
+        "command": "preCr.runChecklist",
+        "title": "Run on Git Changes",
+        "category": "Pre-CR Review"
+      },
+      {
+        "command": "preCr.runChecklistWorkspace",
+        "title": "Run on Workspace",
+        "category": "Pre-CR Review"
+      },
+      {
+        "command": "preCr.quickSecurityScan",
+        "title": "Scan Current File",
+        "category": "Pre-CR Security"
+      },
+      {
+        "command": "preCr.securityScanWorkspace",
+        "title": "Scan Workspace",
+        "category": "Pre-CR Security"
+      },
+      {
+        "command": "preCr.securityScanChanges",
+        "title": "Scan Git Changes",
+        "category": "Pre-CR Security"
+      },
+      {
+        "command": "preCr.estimateReviewTime",
+        "title": "Estimate Review Time",
+        "category": "Pre-CR Review"
+      },
+      {
+        "command": "preCr.showFlakyTests",
+        "title": "Show Flaky Tests",
+        "category": "Pre-CR Review"
+      },
+      {
+        "command": "preCr.generateDocs",
+        "title": "Generate All (Current File)",
+        "category": "Pre-CR Docs"
+      },
+      {
+        "command": "preCr.generateDocAtCursor",
+        "title": "Generate at Cursor",
+        "category": "Pre-CR Docs"
+      },
+      {
+        "command": "preCr.checkDocHealth",
+        "title": "Check File Health",
+        "category": "Pre-CR Docs"
+      },
+      {
+        "command": "preCr.checkDocHealthWorkspace",
+        "title": "Check Workspace Health",
+        "category": "Pre-CR Docs"
+      },
+      {
+        "command": "preCr.captureContext",
+        "title": "Save Snapshot",
+        "category": "Pre-CR Context"
+      },
+      {
+        "command": "preCr.restoreContext",
+        "title": "Restore Snapshot",
+        "category": "Pre-CR Context"
+      },
+      {
+        "command": "preCr.whereWasI",
+        "title": "Where Was I?",
+        "category": "Pre-CR Context"
+      },
+      {
+        "command": "preCr.startDebugCapture",
+        "title": "Start Capture",
+        "category": "Pre-CR Debug"
+      },
+      {
+        "command": "preCr.stopDebugCapture",
+        "title": "Stop Capture",
+        "category": "Pre-CR Debug"
+      },
+      {
+        "command": "preCr.discardDebugCapture",
+        "title": "Discard Capture",
+        "category": "Pre-CR Debug"
+      },
+      {
+        "command": "preCr.analyzeDebugSession",
+        "title": "Analyze Session",
+        "category": "Pre-CR Debug"
+      }
+    ],
+    "configuration": {
+      "title": "Pre-CR Suite",
+      "properties": {
+        "preCr.coverage.autoLoad": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh coverage when coverage files change"
+        },
+        "preCr.coverage.searchPaths": {
+          "type": "array",
+          "default": [
+            "coverage/lcov.info",
+            "coverage/coverage-final.json",
+            ".nyc_output/coverage.json"
+          ],
+          "description": "Coverage report paths used when repo config is missing. Prefer .pre-cr.json for project behavior."
+        },
+        "preCr.coverage.decorations.covered": {
+          "type": "string",
+          "default": "rgba(0, 255, 0, 0.1)",
+          "description": "Background color for covered lines"
+        },
+        "preCr.coverage.decorations.uncovered": {
+          "type": "string",
+          "default": "rgba(255, 0, 0, 0.1)",
+          "description": "Background color for uncovered lines"
+        },
+        "preCr.coverage.decorations.partial": {
+          "type": "string",
+          "default": "rgba(255, 255, 0, 0.1)",
+          "description": "Background color for partially covered lines"
+        },
+        "preCr.coverage.threshold": {
+          "type": "number",
+          "default": 80,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Minimum coverage percentage required for changed lines to pass Pre-CR check"
+        },
+        "preCr.coverage.excludePatterns": {
+          "type": "array",
+          "default": [
+            "**/*.test.*",
+            "**/*.spec.*",
+            "**/__tests__/**",
+            "**/__mocks__/**",
+            "**/node_modules/**",
+            "**/*.d.ts"
+          ],
+          "description": "Patterns for files to exclude from coverage checks"
+        },
+        "preCr.checklist.autoRun": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically run checklist on file save"
+        },
+        "preCr.checklist.maxFileSize": {
+          "type": "number",
+          "default": 500,
+          "description": "Maximum lines for a single file before warning"
+        },
+        "preCr.checklist.maxPrSize": {
+          "type": "number",
+          "default": 400,
+          "description": "Maximum total lines changed before warning"
+        },
+        "preCr.security.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable security scanning"
+        },
+        "preCr.security.scanOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically scan files for security issues on save"
+        },
+        "preCr.security.excludePatterns": {
+          "type": "array",
+          "default": [
+            "**/node_modules/**",
+            "**/*.test.*",
+            "**/*.spec.*"
+          ],
+          "description": "Glob patterns to exclude from security scanning"
+        },
+        "preCr.docs.style": {
+          "type": "string",
+          "enum": [
+            "jsdoc",
+            "tsdoc"
+          ],
+          "default": "tsdoc",
+          "description": "Documentation style to generate"
+        },
+        "preCr.docs.includeExamples": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include example sections in generated docs"
+        },
+        "preCr.flakyTests.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable flaky test detection"
+        },
+        "preCr.flakyTests.threshold": {
+          "type": "number",
+          "default": 0.1,
+          "description": "Failure rate threshold to consider a test flaky (0-1)"
+        },
+        "preCr.flakyTests.minRuns": {
+          "type": "number",
+          "default": 5,
+          "description": "Minimum test runs before calculating flakiness"
+        },
+        "preCr.context.autoCaptureOnBranchSwitch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically capture context when switching branches"
+        },
+        "preCr.context.autoRestoreOnBranchReturn": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically restore context when returning to a branch"
+        },
+        "preCr.debug.captureConsole": {
+          "type": "boolean",
+          "default": true,
+          "description": "Capture console output during debug sessions"
+        },
+        "preCr.debug.maxBreakpointHits": {
+          "type": "number",
+          "default": 1000,
+          "description": "Maximum breakpoint hits to store per session"
+        },
+        "preCr.notifications.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable notifications from Pre-CR Suite"
+        },
+        "preCr.notifications.successTimeout": {
+          "type": "number",
+          "default": 3000,
+          "description": "Auto-dismiss timeout for success messages (ms)"
+        },
+        "preCr.notifications.infoTimeout": {
+          "type": "number",
+          "default": 5000,
+          "description": "Auto-dismiss timeout for info messages (ms)"
+        },
+        "preCr.notifications.warningTimeout": {
+          "type": "number",
+          "default": 8000,
+          "description": "Auto-dismiss timeout for warning messages (ms)"
+        },
+        "preCr.notifications.errorTimeout": {
+          "type": "number",
+          "default": 10000,
+          "description": "Auto-dismiss timeout for error messages (ms)"
+        },
+        "preCr.docs.skipTrivialItems": {
+          "type": "boolean",
+          "default": true,
+          "description": "Skip trivial getters/setters when generating docs"
+        },
+        "preCr.docs.skipPrivateMembers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip private class members when generating docs"
+        },
+        "preCr.docs.minFunctionStatements": {
+          "type": "number",
+          "default": 0,
+          "description": "Minimum statements for a function to be documented (0 = all)"
+        },
+        "preCr.docs.includeReactComponents": {
+          "type": "boolean",
+          "default": true,
+          "description": "Always include React components regardless of complexity"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "preCrSuite",
+          "title": "Pre-CR Suite",
+          "icon": "$(checklist)"
+        }
+      ]
+    },
+    "views": {
+      "preCrSuite": [
+        {
+          "id": "preCr.coverage",
+          "name": "Coverage"
+        },
+        {
+          "id": "preCr.checklist",
+          "name": "PR Checklist"
+        },
+        {
+          "id": "preCr.flakyTests",
+          "name": "Flaky Tests"
+        },
+        {
+          "id": "preCr.debugSessions",
+          "name": "Debug Sessions"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "preCr.coverage",
+        "contents": "No coverage data loaded.\n[Load Coverage File](command:preCr.loadCoverage)\n\nRun your tests with coverage enabled, then load the report here."
+      },
+      {
+        "view": "preCr.checklist",
+        "contents": "No checklist results yet.\n[Run PR Checklist](command:preCr.runChecklist)\n\nRun a checklist to see security, documentation, and code quality issues."
+      },
+      {
+        "view": "preCr.flakyTests",
+        "contents": "No flaky test data available.\n[View Flaky Tests](command:preCr.showFlakyTests)\n\nRun your tests multiple times to detect flaky tests."
+      },
+      {
+        "view": "preCr.debugSessions",
+        "contents": "No debug sessions recorded.\n[Start Capture](command:preCr.startDebugCapture)\n\nRecord a debug session to analyze patterns and get insights."
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "preCr.quickSecurityScan",
+          "group": "1_preCr@1",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "preCr.generateDocAtCursor",
+          "group": "1_preCr@2",
+          "when": "editorTextFocus && resourceLangId =~ /typescript|javascript|typescriptreact|javascriptreact/"
+        },
+        {
+          "command": "preCr.showFileCoverage",
+          "group": "1_preCr@3",
+          "when": "editorTextFocus"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "preCr.showQuickActions",
+          "group": "navigation@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "preCr.loadCoverage",
+          "when": "view == preCr.coverage",
+          "group": "navigation"
+        },
+        {
+          "command": "preCr.runChecklist",
+          "when": "view == preCr.checklist",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "preCr.startDebugCapture",
+          "when": "!preCr.isCapturing"
+        },
+        {
+          "command": "preCr.stopDebugCapture",
+          "when": "preCr.isCapturing"
+        },
+        {
+          "command": "preCr.discardDebugCapture",
+          "when": "preCr.isCapturing"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "preCr.showQuickActions",
+        "key": "ctrl+shift+p ctrl+shift+p",
+        "mac": "cmd+shift+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "preCr.showDashboard",
+        "key": "ctrl+shift+b",
+        "mac": "cmd+shift+b"
+      },
+      {
+        "command": "preCr.runPreCrCheck",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t"
+      },
+      {
+        "command": "preCr.quickSecurityScan",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "preCr.generateDocAtCursor",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "preCr.runChecklist",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c"
+      },
+      {
+        "command": "preCr.whereWasI",
+        "key": "ctrl+shift+w",
+        "mac": "cmd+shift+w"
+      },
+      {
+        "command": "preCr.toggleCoverageOverlay",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
+        "when": "preCr.hasCoverage"
+      },
+      {
+        "command": "preCr.nextIssue",
+        "key": "f8",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "preCr.prevIssue",
+        "key": "shift+f8",
+        "when": "editorTextFocus"
+      }
+    ],
+    "colors": [
+      {
+        "id": "preCr.coverageCovered",
+        "description": "Background color for covered lines",
+        "defaults": {
+          "dark": "#00ff0015",
+          "light": "#00ff0015"
+        }
+      },
+      {
+        "id": "preCr.coverageUncovered",
+        "description": "Background color for uncovered lines",
+        "defaults": {
+          "dark": "#ff000015",
+          "light": "#ff000015"
+        }
+      },
+      {
+        "id": "preCr.coveragePartial",
+        "description": "Background color for partially covered lines",
+        "defaults": {
+          "dark": "#ffff0015",
+          "light": "#ffff0015"
+        }
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "preCr.gettingStarted",
+        "title": "Get Started with Pre-CR Suite",
+        "description": "Set up the coverage-first beta workflow before you open a PR",
+        "steps": [
+          {
+            "id": "runPreCrCheck",
+            "title": "Run Pre-CR Check",
+            "description": "Run the main beta workflow on your current changes.\n\n[Run Pre-CR Check](command:preCr.runPreCrCheck)",
+            "media": {
+              "markdown": "This runs tests with coverage, checks changed lines against the repo threshold, and reports whether the change is ready for review."
+            },
+            "completionEvents": [
+              "onCommand:preCr.runPreCrCheck"
+            ]
+          },
+          {
+            "id": "refreshCoverage",
+            "title": "Refresh Coverage",
+            "description": "Load the configured coverage report without rerunning tests.\n\n[Refresh Coverage](command:preCr.quickCoverageCheck)",
+            "media": {
+              "markdown": "Use this when coverage already exists and you want the latest overlays, diagnostics, and summary inside VS Code."
+            },
+            "completionEvents": [
+              "onCommand:preCr.quickCoverageCheck"
+            ]
+          },
+          {
+            "id": "fixSetup",
+            "title": "Fix Setup",
+            "description": "Check repo configuration, test-command detection, and coverage paths.\n\n[Fix Setup](command:preCr.fixSetup)",
+            "media": {
+              "markdown": "Use the setup health panel when the repo is missing `.pre-cr.json`, coverage reports are not found, or test execution cannot be resolved."
+            },
+            "completionEvents": [
+              "onCommand:preCr.fixSetup"
+            ]
+          },
+          {
+            "id": "experimentalFeatures",
+            "title": "Explore Experimental Features",
+            "description": "Checklist, docs, review, context, and debug features remain available as experimental tools.",
+            "media": {
+              "markdown": "The beta promise is the shared coverage workflow. Everything else is still in the extension, but it is explicitly experimental until the typed/tested parity work is complete."
+            },
+            "completionEvents": []
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run build",
+    "build": "pnpm run build:extension && pnpm run build:server-bundle",
+    "build:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify --sourcemap",
+    "build:server-bundle": "esbuild ../server/src/server.ts --bundle --outfile=dist/server.js --format=cjs --platform=node --sourcemap",
+    "build:dev": "pnpm run build:extension:dev && pnpm run build:server-bundle:dev",
+    "build:extension:dev": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "build:server-bundle:dev": "esbuild ../server/src/server.ts --bundle --outfile=dist/server.js --format=cjs --platform=node",
+    "watch": "pnpm run build:extension:dev -- --watch",
+    "lint": "eslint src --ext ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@pre-cr/core": "workspace:*",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.19.8",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2",
+    "vitest": "^1.6.1"
+  }
+}

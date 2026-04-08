@@ -1,0 +1,51 @@
+{
+  "name": "@pre-cr/server",
+  "version": "0.1.0",
+  "description": "Language Server Protocol server for Pre-CR Suite",
+  "main": "dist/server.js",
+  "bin": {
+    "pre-cr-server": "./dist/server.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "watch": "tsc -w",
+    "test": "vitest run",
+    "lint": "eslint src --ext ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "lsp",
+    "language-server",
+    "coverage",
+    "pre-cr"
+  ],
+  "author": "Jakye Amos <jakyejobs@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakyeamos/pre-cr-suite",
+    "directory": "packages/server"
+  },
+  "dependencies": {
+    "@pre-cr/core": "workspace:*",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "vscode-uri": "^3.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "esbuild": "^0.19.8",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

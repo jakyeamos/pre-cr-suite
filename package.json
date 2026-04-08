@@ -1,0 +1,35 @@
+{
+  "name": "pre-cr-suite-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Coverage-first pre-PR readiness workflow for VS Code and Neovim",
+  "author": "Jakye Amos <jakyejobs@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakyeamos/pre-cr-suite"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm run build:core && pnpm run build:server && pnpm run build:vscode",
+    "build:core": "pnpm --filter @pre-cr/core build",
+    "build:server": "pnpm --filter @pre-cr/server build",
+    "build:vscode": "pnpm --filter pre-cr-suite build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "package": "pnpm run build && pnpm --filter pre-cr-suite package",
+    "clean": "pnpm -r run clean && rm -rf node_modules",
+    "dev": "turbo run dev --parallel"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
