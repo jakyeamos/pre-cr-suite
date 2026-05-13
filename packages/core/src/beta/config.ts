@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { LoadedPreCrProjectConfig, PreCrProjectConfig } from '../protocol';
+import type {
+  LoadedPreCrProjectConfig,
+  PreCrCoverageAdapterConfig,
+  PreCrProjectConfig,
+  PreCrSurfaceConfig
+} from '../protocol';
 
 const DEFAULT_COVERAGE_PATHS = [
   'coverage/lcov.info',
@@ -13,6 +18,12 @@ export const DEFAULT_PRE_CR_CONFIG: PreCrProjectConfig = {
   version: 1,
   coveragePaths: DEFAULT_COVERAGE_PATHS,
   coverageFormat: 'auto',
+  coverageAdapters: [],
+  surfaces: {
+    covered: [],
+    ignored: [],
+    unsupported: []
+  },
   threshold: 80,
   excludePatterns: [
     '**/*.test.*',
@@ -35,6 +46,8 @@ interface RawProjectConfig {
   coveragePaths?: unknown;
   coveragePath?: unknown;
   coverageFormat?: unknown;
+  coverageAdapters?: unknown;
+  surfaces?: unknown;
   threshold?: unknown;
   excludePatterns?: unknown;
   checks?: unknown;
@@ -88,6 +101,8 @@ export function loadProjectConfig(workspaceRoot: string): LoadedPreCrProjectConf
         raw.coverageFormat === 'lcov' || raw.coverageFormat === 'istanbul' || raw.coverageFormat === 'auto'
           ? raw.coverageFormat
           : DEFAULT_PRE_CR_CONFIG.coverageFormat,
+      coverageAdapters: parseCoverageAdapters(raw.coverageAdapters),
+      surfaces: parseSurfaces(raw.surfaces),
       threshold:
         typeof raw.threshold === 'number' && Number.isFinite(raw.threshold)
           ? Math.max(0, Math.min(100, raw.threshold))
@@ -134,4 +149,62 @@ export function inferCoverageFormat(filePath: string): Exclude<PreCrProjectConfi
 
 function dedupeStrings(values: string[]): string[] {
   return [...new Set(values)];
+}
+
+function parseCoverageAdapters(value: unknown): PreCrCoverageAdapterConfig[] {
+  if (!Array.isArray(value)) {
+    return DEFAULT_PRE_CR_CONFIG.coverageAdapters;
+  }
+
+  const adapters: PreCrCoverageAdapterConfig[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'object' || entry === null) {
+      continue;
+    }
+
+    const candidate = entry as Record<string, unknown>;
+    const name = typeof candidate.name === 'string' ? candidate.name.trim() : '';
+    const command = typeof candidate.command === 'string' ? candidate.command.trim() : '';
+    const coveragePath = typeof candidate.coveragePath === 'string' ? candidate.coveragePath.trim() : '';
+    const coverageFormat = candidate.coverageFormat;
+
+    if (
+      name.length === 0 ||
+      command.length === 0 ||
+      coveragePath.length === 0 ||
+      (coverageFormat !== 'lcov' && coverageFormat !== 'istanbul')
+    ) {
+      continue;
+    }
+
+    adapters.push({
+      name,
+      command,
+      coveragePath,
+      coverageFormat
+    });
+  }
+
+  return adapters;
+}
+
+function parseSurfaces(value: unknown): PreCrSurfaceConfig {
+  if (typeof value !== 'object' || value === null) {
+    return DEFAULT_PRE_CR_CONFIG.surfaces;
+  }
+
+  const raw = value as Record<string, unknown>;
+  return {
+    covered: parseStringList(raw.covered),
+    ignored: parseStringList(raw.ignored),
+    unsupported: parseStringList(raw.unsupported)
+  };
+}
+
+function parseStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return dedupeStrings(value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0));
 }

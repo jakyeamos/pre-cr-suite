@@ -65,4 +65,40 @@ describe('loadProjectConfig', () => {
       path.join(workspaceRoot, 'reports/lcov.info')
     );
   });
+
+  it('loads coverage adapters and surface declarations', () => {
+    const workspaceRoot = createWorkspace();
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      coverageAdapters: [
+        {
+          name: 'python-lcov',
+          command: 'python scripts/emit_lcov.py',
+          coveragePath: 'build/python.lcov',
+          coverageFormat: 'lcov'
+        }
+      ],
+      surfaces: {
+        covered: ['src/**'],
+        ignored: ['docs/**'],
+        unsupported: ['python/**']
+      }
+    }));
+
+    const result = loadProjectConfig(workspaceRoot);
+
+    expect(result.config.coverageAdapters).toEqual([
+      {
+        name: 'python-lcov',
+        command: 'python scripts/emit_lcov.py',
+        coveragePath: 'build/python.lcov',
+        coverageFormat: 'lcov'
+      }
+    ]);
+    expect(result.config.surfaces).toEqual({
+      covered: ['src/**'],
+      ignored: ['docs/**'],
+      unsupported: ['python/**']
+    });
+  });
 });

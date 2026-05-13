@@ -4,6 +4,7 @@
   "description": "Language Server Protocol server for Pre-CR Suite",
   "main": "dist/server.js",
   "bin": {
+    "pre-cr": "./dist/cli.js",
     "pre-cr-server": "./dist/server.js"
   },
   "files": [

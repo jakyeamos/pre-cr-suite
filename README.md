@@ -15,6 +15,7 @@ The beta promise is simple: the same repo-configured coverage workflow should be
 | Surface | Status | Notes |
 | --- | --- | --- |
 | Run Pre-CR Check | Supported | Runs tests with coverage and checks changed-line coverage against the repo threshold |
+| Headless JSON gate | Supported | Runs the same gate without LSP via `pre-cr run --json` |
 | Refresh Coverage | Supported | Reloads configured coverage reports for overlays, diagnostics, and summaries |
 | Fix Setup | Supported | Shows repo config, coverage-path, and test-command health |
 | VS Code | Supported | Ships with a bundled language-server artifact |
@@ -51,6 +52,16 @@ Then wire the plugin into your config and use:
 
 See [packages/neovim-client/README.md](packages/neovim-client/README.md) for the full setup.
 
+### Headless CLI
+
+Install the server package, then run the gate directly:
+
+```bash
+pre-cr run --json --workspace /path/to/repo
+```
+
+The CLI uses the same `@pre-cr/core` pipeline as the editor integrations and exits non-zero when the gate fails.
+
 ## Repo Configuration
 
 Project behavior lives in `.pre-cr.json` at the repo root.
@@ -64,6 +75,19 @@ Project behavior lives in `.pre-cr.json` at the repo root.
     "coverage/coverage-final.json"
   ],
   "coverageFormat": "auto",
+  "coverageAdapters": [
+    {
+      "name": "python-lcov",
+      "command": "python scripts/emit_lcov.py",
+      "coveragePath": "build/python.lcov",
+      "coverageFormat": "lcov"
+    }
+  ],
+  "surfaces": {
+    "covered": ["src/**"],
+    "ignored": ["docs/**"],
+    "unsupported": ["legacy/**"]
+  },
   "threshold": 80,
   "excludePatterns": [
     "**/*.test.*",
@@ -82,6 +106,8 @@ Notes:
 
 - `.pre-cr.json` is the canonical source of repo behavior across editors.
 - Legacy `coveragePath` is still accepted during beta and maps to the first `coveragePaths` entry.
+- `coverageAdapters` can generate LCOV or Istanbul coverage after the test command succeeds.
+- `surfaces` lets repos declare covered, ignored, and unsupported directories in repo config.
 - Editor settings are for presentation only: colors, notifications, and experimental visibility.
 
 ## Development

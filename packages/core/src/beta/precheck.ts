@@ -1,9 +1,11 @@
 import * as fs from 'fs';
+import { spawn } from 'child_process';
 
 import { parseIstanbulFile } from '../parsers/istanbul';
 import { parseLcovFile } from '../parsers/lcov';
 import type {
   LoadedPreCrProjectConfig,
+  PreCrCoverageAdapterConfig,
   PreCrCheckExecution,
   PreCrCheckResult,
   ProjectHealth,
@@ -21,6 +23,7 @@ import {
 } from '../runner/testRunner';
 import { collectGitChangedFiles, isGitRepository } from './git';
 import { inferCoverageFormat, loadProjectConfig, resolveProjectPath } from './config';
+import { parseCommandString } from './command';
 
 interface LoadedCoverage {
   coverage: WorkspaceCoverage | null;
@@ -69,15 +72,26 @@ export function loadWorkspaceCoverage(
   workspaceRoot: string,
   loadedConfig: LoadedPreCrProjectConfig
 ): LoadedCoverage {
-  for (const relativePath of loadedConfig.config.coveragePaths) {
-    const absolutePath = resolveProjectPath(workspaceRoot, loadedConfig, relativePath);
+  const coverageSources = [
+    ...loadedConfig.config.coveragePaths.map((relativePath) => ({
+      relativePath,
+      format: loadedConfig.config.coverageFormat
+    })),
+    ...loadedConfig.config.coverageAdapters.map((adapter) => ({
+      relativePath: adapter.coveragePath,
+      format: adapter.coverageFormat
+    }))
+  ];
+
+  for (const source of coverageSources) {
+    const absolutePath = resolveProjectPath(workspaceRoot, loadedConfig, source.relativePath);
     if (!fs.existsSync(absolutePath)) {
       continue;
     }
 
-    const format = loadedConfig.config.coverageFormat === 'auto'
+    const format = source.format === 'auto'
       ? inferCoverageFormat(absolutePath)
-      : loadedConfig.config.coverageFormat;
+      : source.format;
     const result = format === 'istanbul'
       ? parseIstanbulFile(absolutePath, workspaceRoot)
       : parseLcovFile(absolutePath, workspaceRoot);
@@ -100,6 +114,96 @@ export function loadWorkspaceCoverage(
     coverage: null,
     coveragePath: null
   };
+}
+
+interface CoverageAdapterResult {
+  success: boolean;
+  coveragePath: string | null;
+  coverageFormat: Exclude<LoadedPreCrProjectConfig['config']['coverageFormat'], 'auto'> | null;
+  stdout: string;
+  stderr: string;
+  error?: string;
+}
+
+async function runCoverageAdapters(
+  workspaceRoot: string,
+  loadedConfig: LoadedPreCrProjectConfig
+): Promise<CoverageAdapterResult> {
+  for (const adapter of loadedConfig.config.coverageAdapters) {
+    const result = await runCoverageAdapter(workspaceRoot, loadedConfig, adapter);
+    if (result.success && result.coveragePath) {
+      return result;
+    }
+  }
+
+  return {
+    success: false,
+    coveragePath: null,
+    coverageFormat: null,
+    stdout: '',
+    stderr: '',
+    error: loadedConfig.config.coverageAdapters.length > 0
+      ? 'No configured coverage adapter produced a coverage report.'
+      : undefined
+  };
+}
+
+async function runCoverageAdapter(
+  workspaceRoot: string,
+  loadedConfig: LoadedPreCrProjectConfig,
+  adapter: PreCrCoverageAdapterConfig
+): Promise<CoverageAdapterResult> {
+  const parsed = parseCommandString(adapter.command);
+  if (!parsed) {
+    return {
+      success: false,
+      coveragePath: null,
+      coverageFormat: null,
+      stdout: '',
+      stderr: '',
+      error: `Invalid coverage adapter command for "${adapter.name}".`
+    };
+  }
+
+  const startTime = Date.now();
+  return new Promise((resolve) => {
+    const child = spawn(parsed.command, parsed.args, {
+      cwd: workspaceRoot,
+      env: { ...process.env, FORCE_COLOR: '0' }
+    });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', (error) => {
+      resolve({
+        success: false,
+        coveragePath: null,
+        coverageFormat: null,
+        stdout,
+        stderr,
+        error: `Failed to start coverage adapter "${adapter.name}": ${error.message}`
+      });
+    });
+    child.on('close', (exitCode) => {
+      const coveragePath = resolveProjectPath(workspaceRoot, loadedConfig, adapter.coveragePath);
+      resolve({
+        success: exitCode === 0 && fs.existsSync(coveragePath),
+        coveragePath: exitCode === 0 && fs.existsSync(coveragePath) ? coveragePath : null,
+        coverageFormat: adapter.coverageFormat,
+        stdout,
+        stderr,
+        error: exitCode === 0
+          ? undefined
+          : `Coverage adapter "${adapter.name}" exited with code ${exitCode ?? 0} after ${Date.now() - startTime}ms.`
+      });
+    });
+  });
 }
 
 export async function getProjectHealth(
@@ -243,7 +347,7 @@ export async function runWorkspacePreCrCheck(workspaceRoot: string): Promise<Run
     error: testRunResult.error
   };
 
-  if (!testRunResult.success || !testRunResult.coveragePath) {
+  if (!testRunResult.success) {
     return {
       result: {
         health: await getProjectHealth(workspaceRoot),
@@ -255,12 +359,36 @@ export async function runWorkspacePreCrCheck(workspaceRoot: string): Promise<Run
     };
   }
 
-  const coverageFormat = loadedConfig.config.coverageFormat === 'auto'
-    ? inferCoverageFormat(testRunResult.coveragePath)
-    : loadedConfig.config.coverageFormat;
+  const adapterResult = loadedConfig.config.coverageAdapters.length > 0
+    ? await runCoverageAdapters(workspaceRoot, loadedConfig)
+    : null;
+  const coveragePath = adapterResult?.coveragePath ?? testRunResult.coveragePath ?? null;
+
+  if (!coveragePath) {
+    return {
+      result: {
+        health: await getProjectHealth(workspaceRoot),
+        changedFiles,
+        testRun: {
+          ...execution,
+          stdout: `${execution.stdout}${adapterResult?.stdout ?? ''}`,
+          stderr: `${execution.stderr}${adapterResult?.stderr ?? ''}`,
+          error: adapterResult?.error ?? execution.error,
+          coveragePath: null
+        },
+        coverageCheck: null,
+        coveragePath: null
+      }
+    };
+  }
+
+  const coverageFormat = adapterResult?.coverageFormat
+    ?? (loadedConfig.config.coverageFormat === 'auto'
+      ? inferCoverageFormat(coveragePath)
+      : loadedConfig.config.coverageFormat);
   const parseResult = coverageFormat === 'istanbul'
-    ? parseIstanbulFile(testRunResult.coveragePath, workspaceRoot)
-    : parseLcovFile(testRunResult.coveragePath, workspaceRoot);
+    ? parseIstanbulFile(coveragePath, workspaceRoot)
+    : parseLcovFile(coveragePath, workspaceRoot);
 
   if (!parseResult.success || !parseResult.data) {
     return {
@@ -271,15 +399,21 @@ export async function runWorkspacePreCrCheck(workspaceRoot: string): Promise<Run
 
   const coverageCheck = checkChangesCoverage(changedFiles, parseResult.data, {
     threshold: loadedConfig.config.threshold,
-    excludePatterns: loadedConfig.config.excludePatterns
+    excludePatterns: loadedConfig.config.excludePatterns,
+    surfaces: loadedConfig.config.surfaces
   });
 
   const result: PreCrCheckResult = {
     health: await getProjectHealth(workspaceRoot, parseResult.data),
     changedFiles,
-    testRun: execution,
+    testRun: {
+      ...execution,
+      coveragePath,
+      stdout: `${execution.stdout}${adapterResult?.stdout ?? ''}`,
+      stderr: `${execution.stderr}${adapterResult?.stderr ?? ''}`
+    },
     coverageCheck,
-    coveragePath: testRunResult.coveragePath
+    coveragePath
   };
 
   return { result };

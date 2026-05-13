@@ -220,6 +220,19 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
     "coverage/coverage-final.json"
   ],
   "coverageFormat": "auto",
+  "coverageAdapters": [
+    {
+      "name": "python-lcov",
+      "command": "python scripts/emit_lcov.py",
+      "coveragePath": "build/python.lcov",
+      "coverageFormat": "lcov"
+    }
+  ],
+  "surfaces": {
+    "covered": ["src/**"],
+    "ignored": ["docs/**"],
+    "unsupported": ["legacy/**"]
+  },
   "threshold": 80,
   "excludePatterns": [
     "**/*.test.*",
@@ -243,11 +256,25 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
 | `coveragePaths` | `string[]` | Ordered list of coverage report paths |
 | `coveragePath` | `string` | Legacy alias accepted during beta; mapped to the first `coveragePaths` entry |
 | `coverageFormat` | `"auto"` \| `"lcov"` \| `"istanbul"` | Coverage file format |
+| `coverageAdapters` | `object[]` | Commands that can emit LCOV or Istanbul coverage after `testCommand` succeeds |
+| `surfaces.covered` | `string[]` | Glob patterns where changed lines should be checked for coverage |
+| `surfaces.ignored` | `string[]` | Glob patterns excluded from gate policy |
+| `surfaces.unsupported` | `string[]` | Glob patterns reported as not yet supported without wrapper-side policy |
 | `threshold` | `number` | Coverage threshold percentage |
 | `excludePatterns` | `string[]` | Files to exclude from coverage checks |
 | `checks` | `object` | Toggles for coverage/checklist/security flows |
 
 During beta, `.pre-cr.json` owns project behavior. Editor settings should be used for presentation only.
+
+### Headless Gate
+
+Use the packaged CLI when automation needs JSON without speaking LSP over stdio:
+
+```bash
+pre-cr run --json --workspace /path/to/repo
+```
+
+The command runs the same gate used by VS Code and Neovim. It exits with `0` when the coverage gate passes and non-zero when setup, tests, or coverage fail.
 
 ---
 

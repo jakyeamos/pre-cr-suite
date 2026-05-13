@@ -222,6 +222,47 @@ describe('Coverage Checker', () => {
       expect(result.summary.coveredLines).toBe(3);
       expect(result.passed).toBe(true);
     });
+
+    it('models ignored and unsupported surfaces without wrapper-side policy', () => {
+      const changedFiles: ChangedFile[] = [
+        {
+          path: 'src/utils.ts',
+          additions: [1],
+          modifications: [],
+          isNew: false
+        },
+        {
+          path: 'docs/readme.md',
+          additions: [1],
+          modifications: [],
+          isNew: false
+        },
+        {
+          path: 'python/app.py',
+          additions: [1],
+          modifications: [],
+          isNew: false
+        }
+      ];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage(), {
+        surfaces: {
+          covered: ['src/**'],
+          ignored: ['docs/**'],
+          unsupported: ['python/**']
+        }
+      });
+
+      expect(result.passed).toBe(true);
+      expect(result.summary.totalChangedLines).toBe(1);
+      expect(result.surfaceSummary).toEqual({
+        coveredFiles: 1,
+        ignoredFiles: 1,
+        unsupportedFiles: 1
+      });
+      expect(result.unsupportedFiles).toEqual(['python/app.py']);
+      expect(result.fileBreakdown.map((entry) => entry.file)).toEqual(['src/utils.ts']);
+    });
   });
 
   describe('formatCoverageReport', () => {
@@ -236,6 +277,12 @@ describe('Coverage Checker', () => {
           uncoveredLines: 1,
           skippedLines: 5
         },
+        surfaceSummary: {
+          coveredFiles: 0,
+          ignoredFiles: 0,
+          unsupportedFiles: 0
+        },
+        unsupportedFiles: [],
         uncoveredDetails: [],
         fileBreakdown: []
       };
@@ -258,6 +305,12 @@ describe('Coverage Checker', () => {
           uncoveredLines: 5,
           skippedLines: 0
         },
+        surfaceSummary: {
+          coveredFiles: 0,
+          ignoredFiles: 0,
+          unsupportedFiles: 0
+        },
+        unsupportedFiles: [],
         uncoveredDetails: [
           { file: 'src/test.ts', line: 5, reason: 'not-covered' }
         ],
@@ -279,6 +332,8 @@ describe('Coverage Checker', () => {
         coveragePercent: 85,
         threshold: 80,
         summary: { totalChangedLines: 10, coveredLines: 8, uncoveredLines: 2, skippedLines: 0 },
+        surfaceSummary: { coveredFiles: 0, ignoredFiles: 0, unsupportedFiles: 0 },
+        unsupportedFiles: [],
         uncoveredDetails: [],
         fileBreakdown: []
       };
@@ -292,6 +347,8 @@ describe('Coverage Checker', () => {
         coveragePercent: 65,
         threshold: 80,
         summary: { totalChangedLines: 10, coveredLines: 6, uncoveredLines: 4, skippedLines: 0 },
+        surfaceSummary: { coveredFiles: 0, ignoredFiles: 0, unsupportedFiles: 0 },
+        unsupportedFiles: [],
         uncoveredDetails: [],
         fileBreakdown: []
       };

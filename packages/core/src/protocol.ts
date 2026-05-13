@@ -3,6 +3,19 @@ import type { CoverageDecoration, CoverageSummary } from './types';
 
 export type PreCrCoverageFormat = 'auto' | 'lcov' | 'istanbul';
 
+export interface PreCrCoverageAdapterConfig {
+  name: string;
+  command: string;
+  coveragePath: string;
+  coverageFormat: Exclude<PreCrCoverageFormat, 'auto'>;
+}
+
+export interface PreCrSurfaceConfig {
+  covered: string[];
+  ignored: string[];
+  unsupported: string[];
+}
+
 export interface PreCrChecksConfig {
   coverage: boolean;
   security: boolean;
@@ -14,6 +27,8 @@ export interface PreCrProjectConfig {
   testCommand?: string;
   coveragePaths: string[];
   coverageFormat: PreCrCoverageFormat;
+  coverageAdapters: PreCrCoverageAdapterConfig[];
+  surfaces: PreCrSurfaceConfig;
   threshold: number;
   excludePatterns: string[];
   checks: PreCrChecksConfig;

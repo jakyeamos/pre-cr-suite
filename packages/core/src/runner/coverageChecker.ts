@@ -6,6 +6,7 @@
  */
 
 import { WorkspaceCoverage, FileCoverage, LineCoverageStatus } from '../types';
+import type { PreCrSurfaceConfig } from '../protocol';
 
 export interface ChangedLine {
   file: string;
@@ -31,6 +32,12 @@ export interface CoverageCheckResult {
     uncoveredLines: number;
     skippedLines: number;  // Comments, blank lines, etc.
   };
+  surfaceSummary: {
+    coveredFiles: number;
+    ignoredFiles: number;
+    unsupportedFiles: number;
+  };
+  unsupportedFiles: string[];
   uncoveredDetails: UncoveredDetail[];
   fileBreakdown: FileBreakdown[];
 }
@@ -57,6 +64,7 @@ export interface CoverageCheckOptions {
   includeNewFiles?: boolean;    // Check coverage on brand new files
   skipComments?: boolean;       // Don't count comment-only lines
   skipBlankLines?: boolean;     // Don't count blank lines
+  surfaces?: PreCrSurfaceConfig;
 }
 
 const DEFAULT_OPTIONS: Required<CoverageCheckOptions> = {
@@ -72,7 +80,12 @@ const DEFAULT_OPTIONS: Required<CoverageCheckOptions> = {
   ],
   includeNewFiles: true,
   skipComments: true,
-  skipBlankLines: true
+  skipBlankLines: true,
+  surfaces: {
+    covered: [],
+    ignored: [],
+    unsupported: []
+  }
 };
 
 /**
@@ -92,8 +105,28 @@ export function checkChangesCoverage(
   let totalCoveredLines = 0;
   let totalUncoveredLines = 0;
   let totalSkippedLines = 0;
+  const surfaceSummary = {
+    coveredFiles: 0,
+    ignoredFiles: 0,
+    unsupportedFiles: 0
+  };
+  const unsupportedFiles: string[] = [];
 
   for (const changed of changedFiles) {
+    const surface = classifySurface(changed.path, opts.surfaces);
+    if (surface === 'ignored') {
+      surfaceSummary.ignoredFiles += 1;
+      continue;
+    }
+
+    if (surface === 'unsupported') {
+      surfaceSummary.unsupportedFiles += 1;
+      unsupportedFiles.push(changed.path);
+      continue;
+    }
+
+    surfaceSummary.coveredFiles += 1;
+
     // Skip excluded files
     if (shouldExclude(changed.path, opts.excludePatterns)) {
       continue;
@@ -140,14 +173,12 @@ export function checkChangesCoverage(
     // Check each changed line
     let fileCovered = 0;
     let fileUncovered = 0;
-    let fileSkipped = 0;
 
     for (const lineNum of allChangedLines) {
       const lineData = fileCoverage.lines.get(lineNum);
       
       // Line not in coverage data - might be comment/blank/non-executable
       if (!lineData) {
-        fileSkipped++;
         totalSkippedLines++;
         continue;
       }
@@ -199,9 +230,27 @@ export function checkChangesCoverage(
       uncoveredLines: totalUncoveredLines,
       skippedLines: totalSkippedLines
     },
+    surfaceSummary,
+    unsupportedFiles,
     uncoveredDetails,
     fileBreakdown
   };
+}
+
+function classifySurface(filePath: string, surfaces: PreCrSurfaceConfig): 'covered' | 'ignored' | 'unsupported' {
+  if (shouldExclude(filePath, surfaces.ignored)) {
+    return 'ignored';
+  }
+
+  if (shouldExclude(filePath, surfaces.unsupported)) {
+    return 'unsupported';
+  }
+
+  if (surfaces.covered.length === 0 || shouldExclude(filePath, surfaces.covered)) {
+    return 'covered';
+  }
+
+  return 'ignored';
 }
 
 /**

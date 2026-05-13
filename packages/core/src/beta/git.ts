@@ -83,16 +83,23 @@ export async function collectGitChangedFiles(workspaceRoot: string): Promise<Cha
       continue;
     }
 
-    const absolutePath = path.join(workspaceRoot, entry.path);
-    const additions = entry.isNew
-      ? readAllLineNumbers(absolutePath)
-      : await getAddedLines(workspaceRoot, entry.path, headExists);
+    if (entry.isNew) {
+      for (const filePath of expandNewPath(workspaceRoot, entry.path)) {
+        changedFiles.push({
+          path: filePath,
+          additions: readAllLineNumbers(path.join(workspaceRoot, filePath)),
+          modifications: [],
+          isNew: true
+        });
+      }
+      continue;
+    }
 
     changedFiles.push({
       path: entry.path,
-      additions,
+      additions: await getAddedLines(workspaceRoot, entry.path, headExists),
       modifications: [],
-      isNew: entry.isNew
+      isNew: false
     });
   }
 
@@ -170,7 +177,43 @@ function readAllLineNumbers(absolutePath: string): number[] {
     return [];
   }
 
+  const stat = fs.statSync(absolutePath);
+  if (!stat.isFile()) {
+    return [];
+  }
+
   const content = fs.readFileSync(absolutePath, 'utf-8');
   const lineCount = content.length === 0 ? 0 : content.split('\n').length;
   return Array.from({ length: lineCount }, (_unused, index) => index + 1);
+}
+
+function expandNewPath(workspaceRoot: string, relativePath: string): string[] {
+  const absolutePath = path.join(workspaceRoot, relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    return [];
+  }
+
+  const stat = fs.statSync(absolutePath);
+  if (stat.isFile()) {
+    return [relativePath];
+  }
+
+  if (!stat.isDirectory()) {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const entry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
+    const childPath = path.join(relativePath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...expandNewPath(workspaceRoot, childPath));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      files.push(childPath);
+    }
+  }
+
+  return files.sort();
 }
