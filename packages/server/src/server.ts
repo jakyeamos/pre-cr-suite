@@ -16,15 +16,11 @@ import {
   InitializeParams,
   InitializeResult,
   TextDocumentSyncKind,
-  Diagnostic,
-  DiagnosticSeverity,
-  DiagnosticTag,
-  Hover,
-  MarkupKind,
-  CodeLens,
-  CodeLensParams,
   DidChangeConfigurationNotification,
-  TextDocumentPositionParams
+  type Hover,
+  type CodeLens,
+  type CodeLensParams,
+  type TextDocumentPositionParams
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
@@ -33,10 +29,6 @@ import {
   parseLcovFile,
   parseIstanbulFile,
   WorkspaceCoverage,
-  FileCoverage,
-  LineCoverageStatus,
-  CoverageDecoration,
-  lineCoverageToDecoration,
   setLogger,
   Logger,
   // Checklist imports
@@ -88,21 +80,11 @@ import {
   DebugSession,
   SessionAnalysis,
   DebugCaptureConfig,
-  loadWorkspaceCoverage,
-  loadProjectConfig,
-  DEFAULT_PRE_CR_CONFIG,
-  getProjectHealth as buildProjectHealth,
-  runWorkspacePreCrCheck,
-  type CoverageFileResult,
-  type GetCoverageDecorationsResult,
-  type GetCoverageSummaryResult,
-  type GetProjectHealthResult,
-  type RefreshCoverageResult,
-  type RunPreCrCheckResult
 } from '@pre-cr/core';
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { createCoverageController } from './beta/coverageController';
 
 // ============================================================================
 // Connection Setup
@@ -180,6 +162,19 @@ let coveragePath: string | null = null;
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 
+const coverageController = createCoverageController({
+  connection,
+  documents,
+  getCoverageSettings: () => globalSettings.coverage,
+  getWorkspaceRoot: () => workspaceRoot,
+  getCoverage: () => coverage,
+  getCoveragePath: () => coveragePath,
+  setCoverageState: (nextCoverage, nextCoveragePath) => {
+    coverage = nextCoverage;
+    coveragePath = nextCoveragePath;
+  }
+});
+
 // ============================================================================
 // LSP Logger Adapter
 // ============================================================================
@@ -231,7 +226,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   
   // Load initial coverage
   if (workspaceRoot) {
-    loadCoverage();
+    coverageController.loadCoverage();
   }
   
   return {
@@ -281,382 +276,43 @@ connection.onDidChangeConfiguration((change) => {
   }
   
   // Reload coverage with new settings
-  loadCoverage();
+  coverageController.loadCoverage();
   
   // Re-validate all open documents
-  documents.all().forEach(validateTextDocument);
+  documents.all().forEach((document) => {
+    coverageController.validateTextDocument(document);
+  });
 });
-
-// ============================================================================
-// Coverage Loading
-// ============================================================================
-
-function loadCoverage(): boolean {
-  if (!workspaceRoot) {
-    connection.console.warn('No workspace root, cannot load coverage');
-    return false;
-  }
-
-  const result = loadWorkspaceCoverage(workspaceRoot, loadProjectConfig(workspaceRoot));
-
-  if (result.coverage) {
-    coverage = result.coverage;
-    coveragePath = result.coveragePath;
-    connection.console.info(
-      `Coverage loaded: ${coverage.summary.linePercentage}% lines, ` +
-      `${coverage.files.size} files`
-    );
-    
-    // Send notification to clients
-    connection.sendNotification('$/preCr/coverageChanged', {
-      summary: coverage.summary
-    });
-    
-    return true;
-  }
-
-  if (result.error) {
-    connection.console.error(`Failed to load coverage: ${result.error}`);
-  } else {
-    connection.console.info('No coverage file found');
-  }
-
-  coverage = null;
-  coveragePath = null;
-  return false;
-}
 
 // ============================================================================
 // Document Events
 // ============================================================================
 
 documents.onDidOpen((event) => {
-  validateTextDocument(event.document);
+  coverageController.validateTextDocument(event.document);
 });
 
 documents.onDidChangeContent((change) => {
-  validateTextDocument(change.document);
+  coverageController.validateTextDocument(change.document);
 });
 
 documents.onDidSave((_event) => {
   // Could trigger coverage reload here if the saved file is a test file
 });
 
-// ============================================================================
-// Diagnostics (Uncovered Lines as Warnings)
-// ============================================================================
-
-function validateTextDocument(textDocument: TextDocument): void {
-  if (!globalSettings.coverage.showDiagnostics) {
-    connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] });
-    return;
-  }
-  
-  const fileCoverage = getFileCoverage(textDocument.uri);
-  if (!fileCoverage) {
-    connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] });
-    return;
-  }
-  
-  const diagnostics: Diagnostic[] = [];
-  
-  for (const [lineNumber, lineCov] of fileCoverage.lines) {
-    if (lineCov.status === LineCoverageStatus.Uncovered) {
-      const lineIndex = lineNumber - 1;
-      const lineText = textDocument.getText({
-        start: { line: lineIndex, character: 0 },
-        end: { line: lineIndex, character: Number.MAX_SAFE_INTEGER }
-      });
-      
-      // Skip empty lines
-      if (!lineText.trim()) continue;
-      
-      diagnostics.push({
-        severity: DiagnosticSeverity.Information,
-        range: {
-          start: { line: lineIndex, character: 0 },
-          end: { line: lineIndex, character: lineText.length }
-        },
-        message: 'Line not covered by tests',
-        source: 'pre-cr',
-        code: 'uncovered-line',
-        tags: [DiagnosticTag.Unnecessary]
-      });
-    } else if (lineCov.status === LineCoverageStatus.Partial) {
-      const lineIndex = lineNumber - 1;
-      const lineText = textDocument.getText({
-        start: { line: lineIndex, character: 0 },
-        end: { line: lineIndex, character: Number.MAX_SAFE_INTEGER }
-      });
-      
-      const branches = lineCov.branches || [];
-      const taken = branches.filter(b => b.taken > 0).length;
-      const total = branches.length;
-      
-      diagnostics.push({
-        severity: DiagnosticSeverity.Hint,
-        range: {
-          start: { line: lineIndex, character: 0 },
-          end: { line: lineIndex, character: lineText.length }
-        },
-        message: `Partial coverage: ${taken}/${total} branches taken`,
-        source: 'pre-cr',
-        code: 'partial-coverage'
-      });
-    }
-  }
-  
-  connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
-}
-
-// ============================================================================
-// Hover (Execution Count)
-// ============================================================================
-
 connection.onHover((params: TextDocumentPositionParams): Hover | null => {
-  const fileCoverage = getFileCoverage(params.textDocument.uri);
-  if (!fileCoverage) {
-    return null;
-  }
-  
-  const lineNumber = params.position.line + 1; // Convert to 1-based
-  const lineCov = fileCoverage.lines.get(lineNumber);
-  
-  if (!lineCov) {
-    return null;
-  }
-  
-  let content = `**Coverage:** ${lineCov.executionCount} execution${lineCov.executionCount !== 1 ? 's' : ''}\n\n`;
-  
-  if (lineCov.branches && lineCov.branches.length > 0) {
-    const taken = lineCov.branches.filter(b => b.taken > 0).length;
-    content += `**Branches:** ${taken}/${lineCov.branches.length} covered\n\n`;
-    
-    content += '| Branch | Status | Hits |\n|--------|--------|------|\n';
-    for (const branch of lineCov.branches) {
-      const status = branch.taken > 0 ? '✅' : '❌';
-      const type = branch.type ? ` (${branch.type})` : '';
-      content += `| #${branch.branchId}${type} | ${status} | ${branch.taken} |\n`;
-    }
-  }
-  
-  return {
-    contents: {
-      kind: MarkupKind.Markdown,
-      value: content
-    }
-  };
+  return coverageController.handleHover(params);
 });
 
-// ============================================================================
-// Code Lens (Coverage % Above Functions)
-// ============================================================================
-
 connection.onCodeLens((params: CodeLensParams): CodeLens[] => {
-  if (!globalSettings.coverage.showCodeLens) {
-    return [];
-  }
-  
-  const fileCoverage = getFileCoverage(params.textDocument.uri);
-  if (!fileCoverage) {
-    return [];
-  }
-  
-  const codeLenses: CodeLens[] = [];
-  
-  // Add file-level coverage lens at top
-  codeLenses.push({
-    range: {
-      start: { line: 0, character: 0 },
-      end: { line: 0, character: 0 }
-    },
-    command: {
-      title: `Coverage: ${fileCoverage.summary.linePercentage}% lines | ${fileCoverage.summary.branchPercentage}% branches`,
-      command: ''
-    }
-  });
-  
-  // Add function-level coverage
-  for (const fn of fileCoverage.functions) {
-    if (fn.lineNumber > 0) {
-      const status = fn.executionCount > 0 ? '✅' : '❌';
-      codeLenses.push({
-        range: {
-          start: { line: fn.lineNumber - 1, character: 0 },
-          end: { line: fn.lineNumber - 1, character: 0 }
-        },
-        command: {
-          title: `${status} ${fn.executionCount} call${fn.executionCount !== 1 ? 's' : ''}`,
-          command: ''
-        }
-      });
-    }
-  }
-  
-  return codeLenses;
+  return coverageController.handleCodeLens(params);
 });
 
 // ============================================================================
 // Custom Methods
 // ============================================================================
 
-// Get coverage decorations for a file
-connection.onRequest(
-  '$/preCr/getCoverageDecorations',
-  (params: { textDocument: { uri: string } }): GetCoverageDecorationsResult => {
-    const fileCoverage = getFileCoverage(params.textDocument.uri);
-    if (!fileCoverage) {
-      return { decorations: [] };
-    }
-    
-    const document = documents.get(params.textDocument.uri);
-    const decorations: CoverageDecoration[] = [];
-    
-    for (const [, lineCov] of fileCoverage.lines) {
-      if (lineCov.status === LineCoverageStatus.NotExecutable) {
-        continue;
-      }
-      
-      // Get line length from document or use default
-      let lineLength = 80;
-      if (document) {
-        const lineIndex = lineCov.lineNumber - 1;
-        if (lineIndex < document.lineCount) {
-          const lineText = document.getText({
-            start: { line: lineIndex, character: 0 },
-            end: { line: lineIndex, character: Number.MAX_SAFE_INTEGER }
-          });
-          lineLength = lineText.length;
-        }
-      }
-      
-      decorations.push(lineCoverageToDecoration(lineCov, lineLength));
-    }
-    
-    return { decorations };
-  }
-);
-
-// Get overall coverage summary
-connection.onRequest(
-  '$/preCr/getCoverageSummary',
-  (): GetCoverageSummaryResult => {
-    return {
-      summary: coverage?.summary ?? null,
-      coveragePath
-    };
-  }
-);
-
-// Get coverage data for a specific file
-connection.onRequest(
-  '$/preCr/getCoverage',
-  (params: { uri: string }): CoverageFileResult => {
-    const fileCoverage = getFileCoverage(params.uri);
-    if (!fileCoverage) {
-      return { coverage: null };
-    }
-    
-    // Convert to format expected by client
-    const lines: Record<number, number> = {};
-    for (const [lineNumber, lineCov] of fileCoverage.lines) {
-      lines[lineNumber] = lineCov.executionCount;
-    }
-    
-    return {
-      coverage: {
-        path: fileCoverage.filePath,
-        lines,
-        summary: fileCoverage.summary
-      }
-    };
-  }
-);
-
-// Refresh coverage data
-connection.onRequest(
-  '$/preCr/refreshCoverage',
-  (): RefreshCoverageResult => {
-    const success = loadCoverage();
-    return {
-      success,
-      coveragePath,
-      summary: coverage?.summary ?? null
-    };
-  }
-);
-
-// Legacy coverage load alias
-connection.onRequest(
-  '$/preCr/loadCoverage',
-  (): RefreshCoverageResult => {
-    const success = loadCoverage();
-    return {
-      success,
-      coveragePath,
-      summary: coverage?.summary ?? null
-    };
-  }
-);
-
-connection.onRequest(
-  '$/preCr/getProjectHealth',
-  async (): Promise<GetProjectHealthResult> => {
-    if (!workspaceRoot) {
-      return {
-        health: {
-          workspaceRoot: '',
-          configPath: null,
-          isLegacyConfig: false,
-          config: DEFAULT_PRE_CR_CONFIG,
-          framework: {
-            name: null,
-            command: null,
-            source: 'none',
-            configFile: null
-          },
-          coverage: {
-            loaded: false,
-            path: null,
-            format: null,
-            summary: null
-          },
-          issues: [
-            {
-              code: 'missing-git',
-              severity: 'error',
-              message: 'No workspace root is available for this session.'
-            }
-          ],
-          warnings: [],
-          ready: false
-        }
-      };
-    }
-
-    return {
-      health: await buildProjectHealth(workspaceRoot, coverage)
-    };
-  }
-);
-
-connection.onRequest(
-  '$/preCr/runPreCrCheck',
-  async (): Promise<RunPreCrCheckResult> => {
-    if (!workspaceRoot) {
-      return { result: null, error: 'No workspace root' };
-    }
-
-    const result = await runWorkspacePreCrCheck(workspaceRoot);
-    if (result.result?.coveragePath && loadCoverage()) {
-      connection.sendNotification('$/preCr/coverageChanged', {
-        summary: coverage?.summary ?? null
-      });
-    }
-
-    return result;
-  }
-);
+coverageController.registerBetaRequests();
 
 // Run PR checklist
 interface RunChecklistParams {
@@ -2016,41 +1672,6 @@ connection.onRequest(
     }
   }
 );
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function getFileCoverage(uri: string): FileCoverage | undefined {
-  if (!coverage) {
-    return undefined;
-  }
-  
-  const filePath = URI.parse(uri).fsPath;
-  
-  // Try exact match
-  let fileCov = coverage.files.get(filePath);
-  if (fileCov) {
-    return fileCov;
-  }
-  
-  // Try normalized path
-  const normalized = path.normalize(filePath);
-  fileCov = coverage.files.get(normalized);
-  if (fileCov) {
-    return fileCov;
-  }
-  
-  // Try matching by filename
-  const fileName = path.basename(filePath);
-  for (const [coveragePath, cov] of coverage.files) {
-    if (path.basename(coveragePath) === fileName) {
-      return cov;
-    }
-  }
-  
-  return undefined;
-}
 
 // ============================================================================
 // Start Server

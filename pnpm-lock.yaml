@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      eslint-plugin-anti-slop:
+        specifier: file:/Users/jakyeamos/projects/eslint-plugin-anti-slop
+        version: file:../eslint-plugin-anti-slop(eslint@8.57.1)
       turbo:
         specifier: ^2.0.0
         version: 2.9.5
@@ -1135,6 +1138,11 @@ packages:
   escape-string-regexp@4.0.0:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
+
+  eslint-plugin-anti-slop@file:../eslint-plugin-anti-slop:
+    resolution: {directory: ../eslint-plugin-anti-slop, type: directory}
+    peerDependencies:
+      eslint: ^9.0.0
 
   eslint-scope@7.2.2:
     resolution: {integrity: sha512-dOt21O7lTMhDM+X9mB4GX+DZrZtCUJPL/wlcTqxyrx5IvO0IYtILdtrQGQp+8n5S0gwSVmOf9NQrjMOgfQZlIg==}
@@ -3077,6 +3085,10 @@ snapshots:
   escape-string-regexp@1.0.5: {}
 
   escape-string-regexp@4.0.0: {}
+
+  eslint-plugin-anti-slop@file:../eslint-plugin-anti-slop(eslint@8.57.1):
+    dependencies:
+      eslint: 8.57.1
 
   eslint-scope@7.2.2:
     dependencies:

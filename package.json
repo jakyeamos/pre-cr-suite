@@ -25,6 +25,7 @@
     "dev": "turbo run dev --parallel"
   },
   "devDependencies": {
+    "eslint-plugin-anti-slop": "file:/Users/jakyeamos/projects/eslint-plugin-anti-slop",
     "turbo": "^2.0.0",
     "typescript": "^5.3.3"
   },

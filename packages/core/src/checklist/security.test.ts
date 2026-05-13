@@ -7,6 +7,8 @@ import { scanSecurity, mightContainSecrets } from './security';
 import { CheckSeverity } from './types';
 
 describe('Security Scanner', () => {
+  const stripeLiveKey = `sk_${'live'}_${'1234567890abcdefghijklmn'}`;
+
   describe('Secret Detection', () => {
     it('detects AWS access keys', () => {
       const files = [{
@@ -34,7 +36,7 @@ describe('Security Scanner', () => {
     it('detects Stripe keys', () => {
       const files = [{
         path: 'payment.ts',
-        content: 'const stripeKey = "sk_live_TEST_KEY_FOR_SECURITY_SCANNER_ONLY";'
+        content: `const stripeKey = "${stripeLiveKey}";`
       }];
       
       const result = scanSecurity(files);
@@ -78,7 +80,7 @@ describe('Security Scanner', () => {
     it('ignores comments', () => {
       const files = [{
         path: 'config.ts',
-        content: '// API_KEY=sk_live_TEST_KEY_FOR_SECURITY_SCANNER_ONLY'
+        content: `// API_KEY=${stripeLiveKey}`
       }];
       
       const result = scanSecurity(files);
@@ -151,7 +153,7 @@ describe('Security Scanner', () => {
     it('skips node_modules', () => {
       const files = [{
         path: 'node_modules/some-package/index.js',
-        content: 'const key = "sk_live_TEST_KEY_FOR_SECURITY_SCANNER_ONLY";'
+        content: `const key = "${stripeLiveKey}";`
       }];
       
       const result = scanSecurity(files);

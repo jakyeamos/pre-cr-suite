@@ -37,11 +37,6 @@
     "workspaceContains:**/.nyc_output/**"
   ],
   "main": "./dist/extension.js",
-  "files": [
-    "dist/**",
-    "README.md",
-    "package.json"
-  ],
   "contributes": {
     "commands": [
       {

@@ -1,0 +1,11 @@
+.eslintrc.json
+.turbo/**
+.vscode/**
+src/**
+node_modules/**
+tsconfig.json
+vitest.config.ts
+!dist/**
+!README.md
+!package.json
+!LICENSE
