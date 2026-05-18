@@ -3,7 +3,7 @@ schemaVersion: 1
 healthScore: 79
 nextStep: "Run full release gates from the headless CLI branch, then verify VS Code and Neovim parity against the expanded .pre-cr.json contract."
 blockers: []
-lastUpdated: "2026-05-13"
+lastUpdated: "2026-05-18"
 tags:
   - lsp
   - vscode
@@ -25,3 +25,7 @@ As of 2026-05-13, the beta gate also has a first-class headless JSON path throug
 ## Risks
 
 The main risk is parity drift between clients while experimental features continue to live in-repo. The product should stay disciplined around the beta workflow until those release gates are routinely passing.
+
+## Recent Documentation Updates
+
+- 2026-05-18: Added or expanded README coverage for project and subproject roots so workspace documentation inventory is complete.
