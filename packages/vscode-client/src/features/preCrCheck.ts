@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import type { PreCrCheckResult, ProjectHealth } from '@pre-cr/core';
+import type { CoverageCheckResult, PreCrCheckResult, ProjectHealth } from '@pre-cr/core';
 
 import * as notify from '../utils/notifications';
 import { state } from '../utils/state';
@@ -11,6 +11,8 @@ import * as webview from '../utils/webview';
 
 let outputChannel: vscode.OutputChannel;
 let isRunning = false;
+
+type CoverageSurfaceFields = Pick<CoverageCheckResult, 'surfaceSummary' | 'unsupportedFiles'>;
 
 function findProjectRoot(startPath: string): string {
   let current = startPath;
@@ -250,6 +252,9 @@ function renderCheckOutput(result: PreCrCheckResult): void {
     outputChannel.appendLine(`  Changed Lines: ${result.coverageCheck.summary.totalChangedLines}`);
     outputChannel.appendLine(`  Covered Lines: ${result.coverageCheck.summary.coveredLines}`);
     outputChannel.appendLine(`  Uncovered Lines: ${result.coverageCheck.summary.uncoveredLines}`);
+    for (const line of formatCoverageSurfaceLines(result.coverageCheck)) {
+      outputChannel.appendLine(line);
+    }
     outputChannel.appendLine('');
 
     if (result.coverageCheck.uncoveredDetails.length > 0) {
@@ -259,6 +264,30 @@ function renderCheckOutput(result: PreCrCheckResult): void {
       }
     }
   }
+}
+
+export function formatCoverageSurfaceLines(coverage: CoverageSurfaceFields): string[] {
+  const lines = [
+    `  Covered Surface Files: ${coverage.surfaceSummary.coveredFiles}`,
+    `  Ignored Surface Files: ${coverage.surfaceSummary.ignoredFiles}`,
+    `  Unsupported Surface Files: ${coverage.surfaceSummary.unsupportedFiles}`
+  ];
+
+  if (coverage.unsupportedFiles.length === 0) {
+    return lines;
+  }
+
+  lines.push('', 'Unsupported Files');
+  for (const file of coverage.unsupportedFiles.slice(0, 10)) {
+    lines.push(`  - ${file}`);
+  }
+
+  const remaining = coverage.unsupportedFiles.length - 10;
+  if (remaining > 0) {
+    lines.push(`  ... and ${remaining} more`);
+  }
+
+  return lines;
 }
 
 function applyCoverageState(result: PreCrCheckResult): void {

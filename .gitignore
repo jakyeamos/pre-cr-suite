@@ -5,3 +5,5 @@ dist/
 *.log
 .env
 .env.local
+coverage/
+packages/*/coverage/

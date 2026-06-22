@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "testCommand": "pnpm --filter pre-cr-suite test -- --coverage",
+  "coveragePaths": [
+    "packages/vscode-client/coverage/coverage-final.json"
+  ],
+  "coverageFormat": "istanbul",
+  "threshold": 0,
+  "checks": {
+    "coverage": false,
+    "security": false,
+    "checklist": false
+  }
+}

@@ -84,6 +84,38 @@ local function apply_decorations(bufnr, decorations)
   end
 end
 
+local function format_coverage_surface_lines(coverage_check)
+  local surface = coverage_check.surfaceSummary or {
+    coveredFiles = 0,
+    ignoredFiles = 0,
+    unsupportedFiles = 0
+  }
+  local lines = {
+    string.format('  Covered Surface Files: %d', surface.coveredFiles or 0),
+    string.format('  Ignored Surface Files: %d', surface.ignoredFiles or 0),
+    string.format('  Unsupported Surface Files: %d', surface.unsupportedFiles or 0)
+  }
+  local unsupported_files = coverage_check.unsupportedFiles or {}
+
+  if #unsupported_files == 0 then
+    return lines
+  end
+
+  table.insert(lines, '')
+  table.insert(lines, 'Unsupported Files')
+
+  local limit = math.min(#unsupported_files, 10)
+  for index = 1, limit do
+    table.insert(lines, '  - ' .. unsupported_files[index])
+  end
+
+  if #unsupported_files > limit then
+    table.insert(lines, string.format('  ... and %d more', #unsupported_files - limit))
+  end
+
+  return lines
+end
+
 -- ============================================================================
 -- LSP Client Setup (Manual)
 -- ============================================================================
@@ -199,11 +231,13 @@ local function setup_commands()
 
       local check = result.result
       if check.coverageCheck then
+        local lines = format_coverage_surface_lines(check.coverageCheck)
         local summary = string.format(
-          'Coverage %.1f%% (%d/%d changed lines covered)',
+          'Coverage %.1f%% (%d/%d changed lines covered)\n%s',
           check.coverageCheck.coveragePercent,
           check.coverageCheck.summary.coveredLines,
-          check.coverageCheck.summary.totalChangedLines
+          check.coverageCheck.summary.totalChangedLines,
+          table.concat(lines, '\n')
         )
         vim.notify(summary, check.coverageCheck.passed and vim.log.levels.INFO or vim.log.levels.WARN)
       else
