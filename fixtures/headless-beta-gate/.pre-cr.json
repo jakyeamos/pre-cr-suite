@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "testCommand": "node scripts/test-ok.js",
+  "coverageAdapters": [
+    {
+      "name": "fixture-lcov",
+      "command": "node scripts/emit-lcov.js",
+      "coveragePath": "build/fixture.lcov",
+      "coverageFormat": "lcov"
+    }
+  ],
+  "surfaces": {
+    "covered": ["src/**"],
+    "ignored": [],
+    "unsupported": []
+  },
+  "threshold": 100
+}

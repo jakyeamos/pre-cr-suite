@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { runWorkspacePreCrCheck, type RunPreCrCheckResult } from '@pre-cr/core';
+import { NullLogger, runWorkspacePreCrCheck, setLogger, type RunPreCrCheckResult } from '@pre-cr/core';
 
 export interface HeadlessCliResult {
   exitCode: number;
@@ -23,6 +23,8 @@ export async function runHeadlessCli(
   argv: string[],
   dependencies: HeadlessCliDependencies = {}
 ): Promise<HeadlessCliResult> {
+  setLogger(new NullLogger());
+
   const parsed = parseHeadlessArgs(argv, dependencies.cwd?.() ?? process.cwd());
   if (!parsed) {
     return {

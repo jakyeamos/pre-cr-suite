@@ -19,6 +19,7 @@
     "build:vscode": "pnpm --filter pre-cr-suite build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:headless-beta": "pnpm run build:core && pnpm run build:server && node scripts/smoke-headless-beta-gate.js",
     "lint": "turbo run lint",
     "package": "pnpm run build && pnpm --filter pre-cr-suite package",
     "clean": "pnpm -r run clean && rm -rf node_modules",
