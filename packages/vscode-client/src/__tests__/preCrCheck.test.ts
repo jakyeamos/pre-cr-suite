@@ -26,7 +26,27 @@ vi.mock('vscode', () => ({
 
 vi.mock('vscode-languageclient/node', () => ({}));
 
-import { formatCoverageSurfaceLines } from '../features/preCrCheck';
+import { buildProjectConfigTemplate, formatCoverageFailureMessage, formatCoverageSurfaceLines } from '../features/preCrCheck';
+
+describe('buildProjectConfigTemplate', () => {
+  it('enables every check in new project configs', () => {
+    const config = JSON.parse(buildProjectConfigTemplate()) as {
+      checks: {
+        coverage: boolean;
+        security: boolean;
+        checklist: boolean;
+      };
+      threshold: number;
+    };
+
+    expect(config.checks).toEqual({
+      coverage: true,
+      security: true,
+      checklist: true
+    });
+    expect(config.threshold).toBe(80);
+  });
+});
 
 describe('formatCoverageSurfaceLines', () => {
   it('includes surface counts and unsupported files', () => {
@@ -46,7 +66,10 @@ describe('formatCoverageSurfaceLines', () => {
       '',
       'Unsupported Files',
       '  - python/app.py',
-      '  - infra/template.yaml'
+      '  - infra/template.yaml',
+      '',
+      'Fix Setup: Unsupported files are outside the current coverage surface.',
+      '  Add a coverage adapter for these paths or reclassify them in .pre-cr.json under surfaces.covered, surfaces.ignored, or surfaces.unsupported.'
     ]);
   });
 
@@ -62,5 +85,23 @@ describe('formatCoverageSurfaceLines', () => {
 
     expect(lines).toContain('  ... and 2 more');
     expect(lines.filter((line) => line.startsWith('  - '))).toHaveLength(10);
+  });
+});
+
+describe('formatCoverageFailureMessage', () => {
+  it('reports unsupported surfaces as the blocking reason', () => {
+    expect(formatCoverageFailureMessage({
+      coveragePercent: 100,
+      threshold: 80,
+      unsupportedFiles: ['python/app.py']
+    })).toBe('1 unsupported surface file needs setup guidance');
+  });
+
+  it('falls back to threshold wording when no unsupported files are present', () => {
+    expect(formatCoverageFailureMessage({
+      coveragePercent: 72.5,
+      threshold: 80,
+      unsupportedFiles: []
+    })).toBe('Coverage 72.5% is below 80%');
   });
 });

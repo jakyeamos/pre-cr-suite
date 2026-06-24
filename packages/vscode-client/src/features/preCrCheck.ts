@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import type { CoverageCheckResult, PreCrCheckResult, ProjectHealth } from '@pre-cr/core';
+import { formatUnsupportedSurfaceSetupGuidance, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth } from '@pre-cr/core';
 
 import * as notify from '../utils/notifications';
 import { state } from '../utils/state';
@@ -97,13 +97,26 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
       const summary = response.result.coverageCheck;
       const message = summary.passed
         ? `Coverage ${summary.coveragePercent.toFixed(1)}% on changed lines`
-        : `Coverage ${summary.coveragePercent.toFixed(1)}% is below ${summary.threshold}%`;
-      if (summary.passed) {
+        : formatCoverageFailureMessage(summary);
+      if (summary.unsupportedFiles.length > 0) {
+        const unsupportedSuffix = `${summary.unsupportedFiles.length} unsupported surface ${summary.unsupportedFiles.length === 1 ? 'file needs' : 'files need'} setup guidance`;
+        const action = await notify.showWarning(
+          summary.passed ? `${message}; ${unsupportedSuffix}` : message,
+          undefined,
+          'Fix Setup',
+          'Show Details'
+        );
+        if (action === 'Fix Setup') {
+          await showProjectHealth(client, true, summary);
+        } else if (action === 'Show Details') {
+          outputChannel.show(true);
+        }
+      } else if (summary.passed) {
         notify.showSuccess(message, 5000);
       } else {
         const action = await notify.showWarning(message, undefined, 'Fix Setup', 'Show Details');
         if (action === 'Fix Setup') {
-          await showProjectHealth(client, true);
+          await showProjectHealth(client, true, summary);
         } else if (action === 'Show Details') {
           outputChannel.show(true);
         }
@@ -113,7 +126,7 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
 
     const action = await notify.showWarning('Pre-CR check could not complete. Review project health for setup issues.', undefined, 'Fix Setup', 'Show Details');
     if (action === 'Fix Setup') {
-      await showProjectHealth(client, true);
+      await showProjectHealth(client, true, response.result.coverageCheck ?? undefined);
     } else if (action === 'Show Details') {
       outputChannel.show(true);
     }
@@ -152,7 +165,11 @@ async function refreshCoverage(client: LanguageClient): Promise<void> {
   notify.showSuccess(`Coverage refreshed: ${refresh.summary.linePercentage.toFixed(1)}%`, 4000);
 }
 
-async function showProjectHealth(client: LanguageClient, openPanel = false): Promise<void> {
+async function showProjectHealth(
+  client: LanguageClient,
+  openPanel = false,
+  coverageCheck?: CoverageCheckResult
+): Promise<void> {
   const result = await sendBetaRequestWithNotify(client, '$/preCr/getProjectHealth', {}, 'Project health');
   if (!result) {
     return;
@@ -172,7 +189,7 @@ async function showProjectHealth(client: LanguageClient, openPanel = false): Pro
     vscode.ViewColumn.Two
   );
 
-  panel.webview.html = buildProjectHealthHtml(panel.webview, result.health);
+  panel.webview.html = buildProjectHealthHtml(panel.webview, result.health, coverageCheck);
 }
 
 async function openProjectConfig(client: LanguageClient): Promise<void> {
@@ -189,20 +206,7 @@ async function openProjectConfig(client: LanguageClient): Promise<void> {
   }
 
   const health = await sendBetaRequestWithNotify(client, '$/preCr/getProjectHealth', {}, 'Project health');
-  const coveragePaths = health?.health.config.coveragePaths ?? ['coverage/lcov.info'];
-  const template = JSON.stringify({
-    version: 1,
-    testCommand: health?.health.framework.command ?? 'pnpm test -- --coverage',
-    coveragePaths,
-    coverageFormat: health?.health.config.coverageFormat ?? 'auto',
-    threshold: health?.health.config.threshold ?? 80,
-    excludePatterns: health?.health.config.excludePatterns ?? ['**/*.test.*', '**/*.spec.*'],
-    checks: {
-      coverage: true,
-      security: false,
-      checklist: false
-    }
-  }, null, 2);
+  const template = buildProjectConfigTemplate(health?.health);
 
   const document = await vscode.workspace.openTextDocument({
     language: 'json',
@@ -210,6 +214,24 @@ async function openProjectConfig(client: LanguageClient): Promise<void> {
   });
   await vscode.window.showTextDocument(document);
   notify.showInfo('Save this file as .pre-cr.json at the repo root to make VS Code and Neovim use the same workflow.');
+}
+
+export function buildProjectConfigTemplate(health?: ProjectHealth): string {
+  const coveragePaths = health?.config.coveragePaths ?? ['coverage/lcov.info'];
+
+  return JSON.stringify({
+    version: 1,
+    testCommand: health?.framework.command ?? 'pnpm test -- --coverage',
+    coveragePaths,
+    coverageFormat: health?.config.coverageFormat ?? 'auto',
+    threshold: health?.config.threshold ?? 80,
+    excludePatterns: health?.config.excludePatterns ?? ['**/*.test.*', '**/*.spec.*'],
+    checks: {
+      coverage: true,
+      security: true,
+      checklist: true
+    }
+  }, null, 2);
 }
 
 function renderCheckOutput(result: PreCrCheckResult): void {
@@ -287,7 +309,18 @@ export function formatCoverageSurfaceLines(coverage: CoverageSurfaceFields): str
     lines.push(`  ... and ${remaining} more`);
   }
 
+  lines.push('', ...formatUnsupportedSurfaceSetupGuidance(coverage));
+
   return lines;
+}
+
+export function formatCoverageFailureMessage(coverage: Pick<CoverageCheckResult, 'coveragePercent' | 'threshold' | 'unsupportedFiles'>): string {
+  if (coverage.unsupportedFiles.length > 0) {
+    const suffix = coverage.unsupportedFiles.length === 1 ? 'file needs' : 'files need';
+    return `${coverage.unsupportedFiles.length} unsupported surface ${suffix} setup guidance`;
+  }
+
+  return `Coverage ${coverage.coveragePercent.toFixed(1)}% is below ${coverage.threshold}%`;
 }
 
 function applyCoverageState(result: PreCrCheckResult): void {
@@ -326,7 +359,24 @@ function formatHealthBlock(health: ProjectHealth): string {
   return lines.join('\n');
 }
 
-function buildProjectHealthHtml(webviewInstance: vscode.Webview, health: ProjectHealth): string {
+function buildProjectHealthHtml(
+  webviewInstance: vscode.Webview,
+  health: ProjectHealth,
+  coverageCheck?: CoverageCheckResult
+): string {
+  const unsupportedGuidance = coverageCheck
+    ? formatUnsupportedSurfaceSetupGuidance(coverageCheck)
+    : [];
+  const unsupportedFiles = coverageCheck?.unsupportedFiles ?? [];
+  const unsupportedCard = unsupportedGuidance.length > 0
+    ? `
+      <div class="card warning">
+        <h3>Unsupported Coverage Surfaces</h3>
+        ${unsupportedGuidance.map((line) => `<p>${webview.escapeHtml(line)}</p>`).join('')}
+        <ul>${unsupportedFiles.slice(0, 10).map((file) => `<li>${webview.escapeHtml(file)}</li>`).join('')}</ul>
+      </div>
+    `
+    : '';
   const issueCards = health.issues.length > 0
     ? health.issues.map((issue) => `
       <div class="card ${issue.severity}">
@@ -362,6 +412,7 @@ function buildProjectHealthHtml(webviewInstance: vscode.Webview, health: Project
           <p class="meta">Framework: ${webview.escapeHtml(health.framework.command ?? 'not resolved')}</p>
           <p class="meta">Coverage: ${webview.escapeHtml(coverageText)}</p>
         </div>
+        ${unsupportedCard}
         ${issueCards}
         ${warnings ? `<div class="card"><h3>Warnings</h3><ul>${warnings}</ul></div>` : ''}
       </div>

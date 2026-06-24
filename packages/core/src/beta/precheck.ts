@@ -288,7 +288,14 @@ export async function getProjectHealth(
   };
 }
 
-export async function runWorkspacePreCrCheck(workspaceRoot: string): Promise<RunPreCrCheckResult> {
+export interface RunWorkspacePreCrCheckOptions {
+  changeScope?: 'worktree' | 'staged';
+}
+
+export async function runWorkspacePreCrCheck(
+  workspaceRoot: string,
+  options: RunWorkspacePreCrCheckOptions = {}
+): Promise<RunPreCrCheckResult> {
   const loadedConfig = loadProjectConfig(workspaceRoot);
   const healthBeforeRun = await getProjectHealth(workspaceRoot);
   const framework = await resolveFramework(workspaceRoot, loadedConfig);
@@ -305,7 +312,9 @@ export async function runWorkspacePreCrCheck(workspaceRoot: string): Promise<Run
     };
   }
 
-  const changedFiles = await collectGitChangedFiles(workspaceRoot);
+  const changedFiles = await collectGitChangedFiles(workspaceRoot, {
+    scope: options.changeScope ?? 'worktree'
+  });
   if (changedFiles.length === 0) {
     const health: ProjectHealth = {
       ...healthBeforeRun,

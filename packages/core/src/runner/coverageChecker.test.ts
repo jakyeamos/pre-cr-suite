@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { 
   checkChangesCoverage, 
+  formatUnsupportedSurfaceSetupGuidance,
   formatCoverageReport, 
   getShortSummary,
   ChangedFile,
@@ -223,7 +224,37 @@ describe('Coverage Checker', () => {
       expect(result.passed).toBe(true);
     });
 
-    it('models ignored and unsupported surfaces without wrapper-side policy', () => {
+    it('fails all-unsupported change sets even when no coverable lines are present', () => {
+      const changedFiles: ChangedFile[] = [
+        {
+          path: 'python/app.py',
+          additions: [1],
+          modifications: [],
+          isNew: false
+        }
+      ];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage(), {
+        surfaces: {
+          covered: ['src/**'],
+          ignored: [],
+          unsupported: ['python/**']
+        }
+      });
+
+      expect(result.passed).toBe(false);
+      expect(result.coveragePercent).toBe(100);
+      expect(result.summary.totalChangedLines).toBe(0);
+      expect(result.surfaceSummary).toEqual({
+        coveredFiles: 0,
+        ignoredFiles: 0,
+        unsupportedFiles: 1
+      });
+      expect(result.unsupportedFiles).toEqual(['python/app.py']);
+      expect(result.fileBreakdown).toEqual([]);
+    });
+
+    it('fails mixed-surface change sets when covered files meet threshold but unsupported files are present', () => {
       const changedFiles: ChangedFile[] = [
         {
           path: 'src/utils.ts',
@@ -253,7 +284,8 @@ describe('Coverage Checker', () => {
         }
       });
 
-      expect(result.passed).toBe(true);
+      expect(result.passed).toBe(false);
+      expect(result.coveragePercent).toBe(100);
       expect(result.summary.totalChangedLines).toBe(1);
       expect(result.surfaceSummary).toEqual({
         coveredFiles: 1,
@@ -323,6 +355,49 @@ describe('Coverage Checker', () => {
       expect(report).toContain('50%');
       expect(report).toContain('src/test.ts:5');
     });
+
+    it('should format unsupported files as a failing reason', () => {
+      const result: CoverageCheckResult = {
+        passed: false,
+        coveragePercent: 100,
+        threshold: 80,
+        summary: {
+          totalChangedLines: 0,
+          coveredLines: 0,
+          uncoveredLines: 0,
+          skippedLines: 0
+        },
+        surfaceSummary: {
+          coveredFiles: 0,
+          ignoredFiles: 0,
+          unsupportedFiles: 1
+        },
+        unsupportedFiles: ['python/app.py'],
+        uncoveredDetails: [],
+        fileBreakdown: []
+      };
+
+      const report = formatCoverageReport(result);
+
+      expect(report).toContain('❌ FAILED');
+      expect(report).toContain('Unsupported surface files: 1');
+      expect(report).toContain('python/app.py');
+    });
+  });
+
+  describe('formatUnsupportedSurfaceSetupGuidance', () => {
+    it('returns no guidance when there are no unsupported files', () => {
+      expect(formatUnsupportedSurfaceSetupGuidance({ unsupportedFiles: [] })).toEqual([]);
+    });
+
+    it('returns the shared Fix Setup guidance for unsupported files', () => {
+      expect(formatUnsupportedSurfaceSetupGuidance({
+        unsupportedFiles: ['python/app.py']
+      })).toEqual([
+        'Fix Setup: Unsupported files are outside the current coverage surface.',
+        '  Add a coverage adapter for these paths or reclassify them in .pre-cr.json under surfaces.covered, surfaces.ignored, or surfaces.unsupported.'
+      ]);
+    });
   });
 
   describe('getShortSummary', () => {
@@ -354,6 +429,21 @@ describe('Coverage Checker', () => {
       };
 
       expect(getShortSummary(result)).toBe('❌ Coverage: 65% (need 80%)');
+    });
+
+    it('should return unsupported summary before threshold wording', () => {
+      const result: CoverageCheckResult = {
+        passed: false,
+        coveragePercent: 100,
+        threshold: 80,
+        summary: { totalChangedLines: 0, coveredLines: 0, uncoveredLines: 0, skippedLines: 0 },
+        surfaceSummary: { coveredFiles: 0, ignoredFiles: 0, unsupportedFiles: 1 },
+        unsupportedFiles: ['python/app.py'],
+        uncoveredDetails: [],
+        fileBreakdown: []
+      };
+
+      expect(getShortSummary(result)).toBe('❌ Unsupported surface files: 1');
     });
   });
 });

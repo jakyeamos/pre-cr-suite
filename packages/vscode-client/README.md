@@ -30,8 +30,8 @@ Place `.pre-cr.json` at the repo root:
   ],
   "checks": {
     "coverage": true,
-    "security": false,
-    "checklist": false
+    "security": true,
+    "checklist": true
   }
 }
 ```

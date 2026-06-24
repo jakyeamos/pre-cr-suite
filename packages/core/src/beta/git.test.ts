@@ -17,7 +17,7 @@ function createGitWorkspace(): string {
   execFileSync('git', ['config', 'user.name', 'Test User'], { cwd: workspaceRoot });
   fs.writeFileSync(path.join(workspaceRoot, 'tracked.ts'), 'export const tracked = true;\n');
   execFileSync('git', ['add', 'tracked.ts'], { cwd: workspaceRoot });
-  execFileSync('git', ['commit', '-m', 'initial'], { cwd: workspaceRoot });
+  execFileSync('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'initial'], { cwd: workspaceRoot });
   return workspaceRoot;
 }
 
@@ -41,5 +41,29 @@ describe('collectGitChangedFiles', () => {
       'new-dir/b.ts'
     ]);
     expect(result.every((entry) => entry.isNew)).toBe(true);
+  });
+
+  it('can limit results to staged files only', async () => {
+    const workspaceRoot = createGitWorkspace();
+    fs.mkdirSync(path.join(workspaceRoot, 'src'));
+    fs.writeFileSync(path.join(workspaceRoot, 'src', 'covered.ts'), 'export const oldValue = 1;\n');
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), '{"version":1}\n');
+    execFileSync('git', ['add', '.'], { cwd: workspaceRoot });
+    execFileSync('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'initial'], { cwd: workspaceRoot });
+
+    fs.appendFileSync(path.join(workspaceRoot, 'src', 'covered.ts'), 'export const newValue = 2;\n');
+    execFileSync('git', ['add', 'src/covered.ts'], { cwd: workspaceRoot });
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), '{"version":1,"dirty":true}\n');
+
+    const changedFiles = await collectGitChangedFiles(workspaceRoot, { scope: 'staged' });
+
+    expect(changedFiles).toEqual([
+      {
+        path: 'src/covered.ts',
+        additions: [2],
+        modifications: [],
+        isNew: false
+      }
+    ]);
   });
 });

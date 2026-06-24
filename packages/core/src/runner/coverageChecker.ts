@@ -67,6 +67,19 @@ export interface CoverageCheckOptions {
   surfaces?: PreCrSurfaceConfig;
 }
 
+type UnsupportedSurfaceFields = Pick<CoverageCheckResult, 'unsupportedFiles'>;
+
+export function formatUnsupportedSurfaceSetupGuidance(coverage: UnsupportedSurfaceFields): string[] {
+  if (coverage.unsupportedFiles.length === 0) {
+    return [];
+  }
+
+  return [
+    'Fix Setup: Unsupported files are outside the current coverage surface.',
+    '  Add a coverage adapter for these paths or reclassify them in .pre-cr.json under surfaces.covered, surfaces.ignored, or surfaces.unsupported.'
+  ];
+}
+
 const DEFAULT_OPTIONS: Required<CoverageCheckOptions> = {
   threshold: 80,
   excludePatterns: [
@@ -220,8 +233,10 @@ export function checkChangesCoverage(
     ? (totalCoveredLines / totalChangedLines) * 100 
     : 100;
 
+  const hasUnsupportedFiles = unsupportedFiles.length > 0;
+
   return {
-    passed: coveragePercent >= opts.threshold,
+    passed: coveragePercent >= opts.threshold && !hasUnsupportedFiles,
     coveragePercent: Math.round(coveragePercent * 10) / 10,
     threshold: opts.threshold,
     summary: {
@@ -355,7 +370,25 @@ export function formatCoverageReport(result: CoverageCheckResult): string {
   if (result.summary.skippedLines > 0) {
     lines.push(`  Skipped (non-executable): ${result.summary.skippedLines}`);
   }
+  if (result.unsupportedFiles.length > 0) {
+    lines.push(`  Unsupported surface files: ${result.unsupportedFiles.length}`);
+  }
   lines.push('');
+
+  if (result.unsupportedFiles.length > 0) {
+    lines.push('Unsupported Files:');
+    const toShow = result.unsupportedFiles.slice(0, 20);
+
+    for (const file of toShow) {
+      lines.push(`  ${file}`);
+    }
+
+    if (result.unsupportedFiles.length > 20) {
+      lines.push(`  ... and ${result.unsupportedFiles.length - 20} more`);
+    }
+    lines.push('', ...formatUnsupportedSurfaceSetupGuidance(result));
+    lines.push('');
+  }
   
   // File breakdown (show failed files first)
   if (result.fileBreakdown.length > 0) {
@@ -397,6 +430,8 @@ export function formatCoverageReport(result: CoverageCheckResult): string {
 export function getShortSummary(result: CoverageCheckResult): string {
   if (result.passed) {
     return `✅ Coverage: ${result.coveragePercent}%`;
+  } else if (result.unsupportedFiles.length > 0) {
+    return `❌ Unsupported surface files: ${result.unsupportedFiles.length}`;
   } else {
     return `❌ Coverage: ${result.coveragePercent}% (need ${result.threshold}%)`;
   }

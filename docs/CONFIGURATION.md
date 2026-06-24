@@ -241,8 +241,8 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
   ],
   "checks": {
     "coverage": true,
-    "security": false,
-    "checklist": false
+    "security": true,
+    "checklist": true
   }
 }
 ```
@@ -271,10 +271,11 @@ During beta, `.pre-cr.json` owns project behavior. Editor settings should be use
 Use the packaged CLI when automation needs JSON without speaking LSP over stdio:
 
 ```bash
+pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
 ```
 
-The command runs the same gate used by VS Code and Neovim. It exits with `0` when the coverage gate passes and non-zero when setup, tests, or coverage fail.
+The command runs the same gate used by VS Code and Neovim. It exits with `0` when the coverage gate passes and non-zero when setup, tests, or coverage fail. Text output mirrors the editor beta flow by showing covered, ignored, and unsupported surface counts plus unsupported files; `--json` keeps the machine-readable contract unchanged.
 
 ---
 

@@ -63,19 +63,34 @@ interface GitStatusEntry {
   isDeleted: boolean;
 }
 
-export async function collectGitChangedFiles(workspaceRoot: string): Promise<ChangedFile[]> {
+export type GitChangeScope = 'worktree' | 'staged';
+
+export interface CollectGitChangedFilesOptions {
+  scope?: GitChangeScope;
+}
+
+export async function collectGitChangedFiles(
+  workspaceRoot: string,
+  options: CollectGitChangedFilesOptions = {}
+): Promise<ChangedFile[]> {
   const repository = await isGitRepository(workspaceRoot);
   if (!repository) {
     return [];
   }
 
-  const statusResult = await runGitCommand(workspaceRoot, ['status', '--porcelain=v1']);
+  const scope = options.scope ?? 'worktree';
+  const statusArgs = scope === 'staged'
+    ? ['diff', '--cached', '--name-status']
+    : ['status', '--porcelain=v1'];
+  const statusResult = await runGitCommand(workspaceRoot, statusArgs);
   if (statusResult.exitCode !== 0) {
     return [];
   }
 
   const headExists = await hasHeadCommit(workspaceRoot);
-  const entries = parsePorcelainStatus(statusResult.stdout);
+  const entries = scope === 'staged'
+    ? parseNameStatus(statusResult.stdout)
+    : parsePorcelainStatus(statusResult.stdout);
   const changedFiles: ChangedFile[] = [];
 
   for (const entry of entries) {
@@ -84,10 +99,16 @@ export async function collectGitChangedFiles(workspaceRoot: string): Promise<Cha
     }
 
     if (entry.isNew) {
-      for (const filePath of expandNewPath(workspaceRoot, entry.path)) {
+      const newPaths = scope === 'staged'
+        ? [entry.path]
+        : expandNewPath(workspaceRoot, entry.path);
+
+      for (const filePath of newPaths) {
         changedFiles.push({
           path: filePath,
-          additions: readAllLineNumbers(path.join(workspaceRoot, filePath)),
+          additions: scope === 'staged'
+            ? await getAddedLines(workspaceRoot, filePath, headExists, scope)
+            : readAllLineNumbers(path.join(workspaceRoot, filePath)),
           modifications: [],
           isNew: true
         });
@@ -97,7 +118,7 @@ export async function collectGitChangedFiles(workspaceRoot: string): Promise<Cha
 
     changedFiles.push({
       path: entry.path,
-      additions: await getAddedLines(workspaceRoot, entry.path, headExists),
+      additions: await getAddedLines(workspaceRoot, entry.path, headExists, scope),
       modifications: [],
       isNew: false
     });
@@ -130,14 +151,43 @@ function parsePorcelainStatus(output: string): GitStatusEntry[] {
   return entries;
 }
 
+function parseNameStatus(output: string): GitStatusEntry[] {
+  const entries: GitStatusEntry[] = [];
+
+  for (const rawLine of output.split('\n')) {
+    if (!rawLine.trim()) {
+      continue;
+    }
+
+    const [status, firstPath, secondPath] = rawLine.split('\t');
+    const resolvedPath = secondPath ?? firstPath;
+    if (!resolvedPath) {
+      continue;
+    }
+
+    entries.push({
+      path: resolvedPath,
+      isNew: status.startsWith('A'),
+      isDeleted: status.startsWith('D')
+    });
+  }
+
+  return entries;
+}
+
 async function getAddedLines(
   workspaceRoot: string,
   relativePath: string,
-  headExists: boolean
+  headExists: boolean,
+  scope: GitChangeScope
 ): Promise<number[]> {
-  const args = headExists
-    ? ['diff', '--no-color', '--unified=0', 'HEAD', '--', relativePath]
-    : ['diff', '--no-color', '--unified=0', '--', relativePath];
+  const args = scope === 'staged'
+    ? (headExists
+      ? ['diff', '--cached', '--no-color', '--unified=0', 'HEAD', '--', relativePath]
+      : ['diff', '--cached', '--no-color', '--unified=0', '--', relativePath])
+    : (headExists
+      ? ['diff', '--no-color', '--unified=0', 'HEAD', '--', relativePath]
+      : ['diff', '--no-color', '--unified=0', '--', relativePath]);
 
   const result = await runGitCommand(workspaceRoot, args);
   if (result.exitCode !== 0 || !result.stdout.trim()) {

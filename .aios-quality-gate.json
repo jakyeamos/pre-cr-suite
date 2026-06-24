@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "projectId": "pre-cr-suite-lsp",
+  "preCommitGates": [
+    "test_quality",
+    "pre_cr"
+  ],
+  "fullGates": [
+    "test_quality",
+    "pre_cr"
+  ]
+}

@@ -5,10 +5,10 @@
     "packages/vscode-client/coverage/coverage-final.json"
   ],
   "coverageFormat": "istanbul",
-  "threshold": 0,
+  "threshold": 80,
   "checks": {
-    "coverage": false,
-    "security": false,
-    "checklist": false
+    "coverage": true,
+    "security": true,
+    "checklist": true
   }
 }

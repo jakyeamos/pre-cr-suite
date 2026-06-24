@@ -60,8 +60,8 @@ Project behavior should live in `.pre-cr.json`:
   ],
   "checks": {
     "coverage": true,
-    "security": false,
-    "checklist": false
+    "security": true,
+    "checklist": true
   }
 }
 ```

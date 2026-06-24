@@ -35,8 +35,8 @@ export const DEFAULT_PRE_CR_CONFIG: PreCrProjectConfig = {
   ],
   checks: {
     coverage: true,
-    security: false,
-    checklist: false
+    security: true,
+    checklist: true
   }
 };
 

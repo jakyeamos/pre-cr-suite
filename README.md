@@ -57,10 +57,13 @@ See [packages/neovim-client/README.md](packages/neovim-client/README.md) for the
 Install the server package, then run the gate directly:
 
 ```bash
+pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
 ```
 
-The CLI uses the same `@pre-cr/core` pipeline as the editor integrations and exits non-zero when the gate fails.
+The CLI uses the same `@pre-cr/core` pipeline as the editor integrations and exits non-zero when the gate fails on `main`, `master`, `dev`, `develop`, `development`, or a branch connected to a dev environment through `AIOS_DEV_ENVIRONMENT`, `AIOS_DEV_ENV`, `QUALITY_GATE_DEV_ENV`, or `GATE_CONNECTED_DEV_ENV`. Failed checks on detected unprotected feature branches return exit code 0 with `gateDecision: "warn"` in JSON output. Unknown branches remain conservative and block. Human-readable output includes covered, ignored, and unsupported surface counts plus the unsupported file list. Use `--json` for the stable automation contract.
+
+When the headless gate blocks, warns, or forces iteration, it appends an AIOS-compatible event to `.aios/audit/gate-events.jsonl` in the checked workspace and refreshes `.aios/audit/gate-summary.md` plus `.aios/audit/learning-lessons.md`. Audit write failures are non-blocking; the branch-aware Pre-CR exit code remains authoritative.
 
 ## Repo Configuration
 
@@ -96,8 +99,8 @@ Project behavior lives in `.pre-cr.json` at the repo root.
   ],
   "checks": {
     "coverage": true,
-    "security": false,
-    "checklist": false
+    "security": true,
+    "checklist": true
   }
 }
 ```

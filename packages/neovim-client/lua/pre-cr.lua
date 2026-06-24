@@ -13,6 +13,7 @@
 -- ============================================================================
 
 local M = {}
+local last_coverage_check = nil
 
 -- Default configuration
 M.config = {
@@ -113,7 +114,29 @@ local function format_coverage_surface_lines(coverage_check)
     table.insert(lines, string.format('  ... and %d more', #unsupported_files - limit))
   end
 
+  table.insert(lines, '')
+  table.insert(lines, 'Fix Setup: Unsupported files are outside the current coverage surface.')
+  table.insert(lines, '  Add a coverage adapter for these paths or reclassify them in .pre-cr.json under surfaces.covered, surfaces.ignored, or surfaces.unsupported.')
+
   return lines
+end
+
+local function format_coverage_failure_message(coverage_check)
+  local unsupported_files = coverage_check.unsupportedFiles or {}
+  if #unsupported_files > 0 then
+    local suffix = #unsupported_files == 1 and 'file needs' or 'files need'
+    return string.format(
+      '%d unsupported surface %s setup guidance',
+      #unsupported_files,
+      suffix
+    )
+  end
+
+  return string.format(
+    'Coverage %.1f%% is below %d%%',
+    coverage_check.coveragePercent,
+    coverage_check.threshold
+  )
 end
 
 -- ============================================================================
@@ -231,9 +254,12 @@ local function setup_commands()
 
       local check = result.result
       if check.coverageCheck then
+        last_coverage_check = check.coverageCheck
         local lines = format_coverage_surface_lines(check.coverageCheck)
+        local status = check.coverageCheck.passed and 'passed' or format_coverage_failure_message(check.coverageCheck)
         local summary = string.format(
-          'Coverage %.1f%% (%d/%d changed lines covered)\n%s',
+          'Pre-CR check %s\nCoverage %.1f%% (%d/%d changed lines covered)\n%s',
+          status,
           check.coverageCheck.coveragePercent,
           check.coverageCheck.summary.coveredLines,
           check.coverageCheck.summary.totalChangedLines,
@@ -267,13 +293,21 @@ local function setup_commands()
       end
 
       local health = result.health
-      if not health.issues or #health.issues == 0 then
+      local last_unsupported_files = last_coverage_check and last_coverage_check.unsupportedFiles or {}
+      local has_last_unsupported_files = #last_unsupported_files > 0
+      local lines = { 'Pre-CR Setup Health:' }
+      if has_last_unsupported_files then
+        for _, line in ipairs(format_coverage_surface_lines(last_coverage_check)) do
+          table.insert(lines, line)
+        end
+      end
+
+      if (not health.issues or #health.issues == 0) and not has_last_unsupported_files then
         vim.notify('Pre-CR setup looks good', vim.log.levels.INFO)
         return
       end
 
-      local lines = { 'Pre-CR Setup Health:' }
-      for _, issue in ipairs(health.issues) do
+      for _, issue in ipairs(health.issues or {}) do
         table.insert(lines, '- ' .. issue.message)
         if issue.hint then
           table.insert(lines, '  ' .. issue.hint)
