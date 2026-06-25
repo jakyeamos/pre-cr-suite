@@ -29,11 +29,26 @@
   },
   "devDependencies": {
     "eslint-plugin-anti-slop": "file:/Users/jakyeamos/projects/eslint-plugin-anti-slop",
-    "turbo": "^2.0.0",
+    "turbo": "^2.10.0",
     "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@azure/msal-node": "5.3.0",
+      "@typescript-eslint/typescript-estree>minimatch": "9.0.7",
+      "@vscode/vsce>form-data": "4.0.6",
+      "@vscode/vsce>markdown-it": "14.2.0",
+      "@vscode/vsce>tmp": "0.2.7",
+      "cheerio>undici": "7.28.0",
+      "esbuild": "0.28.1",
+      "js-yaml": "4.2.0",
+      "postcss": "8.5.15",
+      "typed-rest-client>qs": "6.15.3",
+      "vite": "6.4.3"
+    }
   },
   "packageManager": "pnpm@9.15.0"
 }

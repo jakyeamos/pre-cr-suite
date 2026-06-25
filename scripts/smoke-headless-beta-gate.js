@@ -34,6 +34,7 @@ try {
   runGit(['add', '.']);
   runGit(['commit', '-m', 'fixture baseline']);
   fs.appendFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'module.exports.changed = true;\n');
+  runGit(['add', 'src/app.js']);
 
   const result = spawnSync(preCrBin, ['run', '--json', '--workspace', workspaceRoot], {
     cwd: workspaceRoot,

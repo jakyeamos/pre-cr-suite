@@ -1,11 +1,10 @@
 ---
 schemaVersion: 1
-healthScore: 74
-statusLabel: needs_attention
-summary: "The headless Pre-CR CLI supports branch-aware JSON/audit behavior and now emits executable-path progress to stderr while preserving JSON stdout."
-nextStep: "Triage the dependency security audit failures, then exercise a long staged-change Pre-CR run in a consuming repo to confirm real heartbeat visibility."
-blockers:
-  - "`pnpm dependency:security` fails with 25 vulnerabilities, including critical Vitest, high minimatch, tmp, form-data, vite, and undici advisories."
+healthScore: 82
+statusLabel: healthy
+summary: "The headless Pre-CR CLI supports branch-aware JSON/audit behavior, emits executable-path progress to stderr, and has a clean dependency security gate."
+nextStep: "Exercise a long staged-change Pre-CR run in a consuming repo to confirm real heartbeat visibility."
+blockers: []
 lastUpdated: "2026-06-25"
 quality:
   lint: warning
@@ -13,7 +12,7 @@ quality:
   tests: pass
   deadCode: unknown
   structure: unknown
-  security: fail
+  security: pass
 tags:
   - lsp
   - vscode
@@ -41,10 +40,11 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-05-18: Added or expanded README coverage for project and subproject roots so workspace documentation inventory is complete.
 - 2026-06-23: Added branch-aware headless CLI audit emission for blocked, warning-only, or iteration-forcing Pre-CR runs, with focused CLI test and server typecheck passing.
 - 2026-06-25: Added stderr progress output for direct `pre-cr run --json` executable runs, including start, heartbeat, and finish lines while preserving clean JSON stdout.
+- 2026-06-25: Cleared the dependency security audit by moving the Vitest/Vite/esbuild toolchain to patched versions and pinning patched transitive VSCE audit dependencies.
 
 ## Quality Ladder Notes
 
 - 2026-06-25: `pnpm lint` passed with existing warnings in `@pre-cr/core` and `pre-cr-suite`.
-- 2026-06-25: `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm secret:scan` passed.
-- 2026-06-25: `pnpm dependency:security` failed with 25 vulnerabilities: 1 critical, 9 high, 12 moderate, and 3 low.
+- 2026-06-25: `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm secret:scan`, `pnpm test:headless-beta`, and VSIX packaging smoke passed.
+- 2026-06-25: `pnpm dependency:security` passed with no known vulnerabilities.
 - 2026-06-25: No `knip`, `audit:dead-code`, or format script is configured, so dead-code and structure status remain unknown.
