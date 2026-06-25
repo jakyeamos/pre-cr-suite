@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RunPreCrCheckResult } from '@pre-cr/core';
 
-import { runHeadlessCli } from './cli';
+import { runHeadlessCli, runHeadlessCliWithProgress } from './cli';
 
 describe('runHeadlessCli', () => {
   it('runs the gate in JSON mode without using the LSP transport', async () => {
@@ -181,6 +181,41 @@ describe('runHeadlessCli', () => {
         summary: expect.stringContaining('warning only')
       }
     });
+  });
+
+  it('emits progress to stderr while preserving JSON stdout for executable runs', async () => {
+    const stderr: string[] = [];
+
+    const result = await runHeadlessCliWithProgress(
+      ['run', '--json', '--workspace', '/repo'],
+      {
+        runCheck: async (workspaceRoot) => {
+          await new Promise((resolve) => setTimeout(resolve, 25));
+          return makeRunResult(workspaceRoot);
+        },
+        currentBranch: async () => 'main'
+      },
+      {
+        heartbeatMs: 5,
+        stderr: {
+          write: (chunk: string) => {
+            stderr.push(chunk);
+            return true;
+          }
+        }
+      }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
+      ok: true,
+      ...makeRunResult('/repo')
+    });
+    expect(result.stdout).not.toContain('Pre-CR');
+    expect(stderr.join('')).toContain('[pre-cr] Running changed-line readiness for /repo');
+    expect(stderr.join('')).toContain('[pre-cr] Still running after');
+    expect(stderr.join('')).toContain('[pre-cr] Finished changed-line readiness for /repo');
   });
 });
 

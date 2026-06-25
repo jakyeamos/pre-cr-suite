@@ -26,6 +26,13 @@ interface HeadlessCliDependencies {
   currentBranch?: (workspaceRoot: string) => Promise<string | null>;
 }
 
+interface HeadlessCliProgressOptions {
+  heartbeatMs?: number;
+  stderr?: {
+    write: (chunk: string) => unknown;
+  };
+}
+
 interface ParsedHeadlessArgs {
   command: 'run';
   json: boolean;
@@ -82,6 +89,7 @@ const execFileAsync = promisify(execFile);
 const PROTECTED_BRANCHES = new Set(['main', 'master', 'dev', 'develop', 'development']);
 const BRANCH_ENV_KEYS = ['AIOS_BRANCH', 'GITHUB_REF_NAME', 'GITHUB_HEAD_REF', 'BRANCH_NAME', 'VERCEL_GIT_COMMIT_REF'];
 const DEV_ENV_KEYS = ['AIOS_DEV_ENVIRONMENT', 'AIOS_DEV_ENV', 'QUALITY_GATE_DEV_ENV', 'GATE_CONNECTED_DEV_ENV'];
+const DEFAULT_PROGRESS_HEARTBEAT_MS = 15_000;
 type GateDecision = 'block' | 'warn';
 
 export async function runHeadlessCli(
@@ -128,6 +136,48 @@ export async function runHeadlessCli(
     stdout: formatTextResult(result),
     stderr: result.error ? `${result.error}\n` : ''
   };
+}
+
+export async function runHeadlessCliWithProgress(
+  argv: string[],
+  dependencies: HeadlessCliDependencies = {},
+  options: HeadlessCliProgressOptions = {}
+): Promise<HeadlessCliResult> {
+  const parsed = parseHeadlessArgs(argv, dependencies.cwd?.() ?? process.cwd());
+  if (!parsed) {
+    return runHeadlessCli(argv, dependencies);
+  }
+
+  const stderr = options.stderr ?? process.stderr;
+  const heartbeatMs = options.heartbeatMs ?? DEFAULT_PROGRESS_HEARTBEAT_MS;
+  const startedAt = Date.now();
+  let exitCode: number | null = null;
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
+
+  writeProgress(stderr, `[pre-cr] Running changed-line readiness for ${parsed.workspaceRoot}`);
+  if (heartbeatMs > 0) {
+    heartbeat = setInterval(() => {
+      writeProgress(
+        stderr,
+        `[pre-cr] Still running after ${elapsedSeconds(startedAt)}s for ${parsed.workspaceRoot}`
+      );
+    }, heartbeatMs);
+  }
+
+  try {
+    const result = await runHeadlessCli(argv, dependencies);
+    exitCode = result.exitCode;
+    return result;
+  } finally {
+    if (heartbeat) {
+      clearInterval(heartbeat);
+    }
+    const status = exitCode === null ? 'without a result' : `with exit code ${exitCode}`;
+    writeProgress(
+      stderr,
+      `[pre-cr] Finished changed-line readiness for ${parsed.workspaceRoot} in ${elapsedSeconds(startedAt)}s ${status}`
+    );
+  }
 }
 
 function buildPreCrAuditEvent(
@@ -385,6 +435,14 @@ function redactSecrets(text: string): string {
   return text.replace(SECRET_RE, (_match, key: string) => `${key} = "[REDACTED]"`);
 }
 
+function writeProgress(stderr: { write: (chunk: string) => unknown }, message: string): void {
+  stderr.write(`${message}\n`);
+}
+
+function elapsedSeconds(startedAt: number): number {
+  return Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+}
+
 function parseHeadlessArgs(argv: string[], cwd: string): ParsedHeadlessArgs | null {
   if (argv.length === 0 || argv[0] !== 'run') {
     return null;
@@ -477,7 +535,7 @@ function usage(): string {
 }
 
 if (require.main === module) {
-  void runHeadlessCli(process.argv.slice(2)).then((result) => {
+  void runHeadlessCliWithProgress(process.argv.slice(2)).then((result) => {
     if (result.stdout) {
       process.stdout.write(result.stdout);
     }
