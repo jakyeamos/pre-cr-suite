@@ -5,6 +5,7 @@ import type {
   LoadedPreCrProjectConfig,
   PreCrCoverageAdapterConfig,
   PreCrProjectConfig,
+  PreCrQualityAdapterConfig,
   PreCrSurfaceConfig
 } from '../protocol';
 
@@ -14,11 +15,20 @@ const DEFAULT_COVERAGE_PATHS = [
   '.nyc_output/coverage.json'
 ];
 
+const DEFAULT_QUALITY_ADAPTERS: PreCrQualityAdapterConfig[] = [
+  {
+    name: 'anti-slop',
+    command: 'anti-slop gate --files {changedFiles} --mode block --format pre-cr',
+    required: false
+  }
+];
+
 export const DEFAULT_PRE_CR_CONFIG: PreCrProjectConfig = {
   version: 1,
   coveragePaths: DEFAULT_COVERAGE_PATHS,
   coverageFormat: 'auto',
   coverageAdapters: [],
+  qualityAdapters: DEFAULT_QUALITY_ADAPTERS,
   surfaces: {
     covered: [],
     ignored: [],
@@ -47,6 +57,7 @@ interface RawProjectConfig {
   coveragePath?: unknown;
   coverageFormat?: unknown;
   coverageAdapters?: unknown;
+  qualityAdapters?: unknown;
   surfaces?: unknown;
   threshold?: unknown;
   excludePatterns?: unknown;
@@ -102,6 +113,7 @@ export function loadProjectConfig(workspaceRoot: string): LoadedPreCrProjectConf
           ? raw.coverageFormat
           : DEFAULT_PRE_CR_CONFIG.coverageFormat,
       coverageAdapters: parseCoverageAdapters(raw.coverageAdapters),
+      qualityAdapters: parseQualityAdapters(raw.qualityAdapters),
       surfaces: parseSurfaces(raw.surfaces),
       threshold:
         typeof raw.threshold === 'number' && Number.isFinite(raw.threshold)
@@ -182,6 +194,36 @@ function parseCoverageAdapters(value: unknown): PreCrCoverageAdapterConfig[] {
       command,
       coveragePath,
       coverageFormat
+    });
+  }
+
+  return adapters;
+}
+
+function parseQualityAdapters(value: unknown): PreCrQualityAdapterConfig[] {
+  if (!Array.isArray(value)) {
+    return DEFAULT_PRE_CR_CONFIG.qualityAdapters;
+  }
+
+  const adapters: PreCrQualityAdapterConfig[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'object' || entry === null) {
+      continue;
+    }
+
+    const candidate = entry as Record<string, unknown>;
+    const name = typeof candidate.name === 'string' ? candidate.name.trim() : '';
+    const command = typeof candidate.command === 'string' ? candidate.command.trim() : '';
+    const required = typeof candidate.required === 'boolean' ? candidate.required : true;
+
+    if (name.length === 0 || command.length === 0) {
+      continue;
+    }
+
+    adapters.push({
+      name,
+      command,
+      required
     });
   }
 

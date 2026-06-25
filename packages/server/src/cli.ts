@@ -109,8 +109,9 @@ export async function runHeadlessCli(
 
   const runCheck = dependencies.runCheck ?? runWorkspacePreCrCheck;
   const result = await runCheck(parsed.workspaceRoot, { changeScope: 'staged' });
-  const passed = result.result?.coverageCheck?.passed ?? false;
-  const ok = Boolean(result.result && !result.error && passed);
+  const coveragePassed = result.result?.coverageCheck?.passed ?? false;
+  const qualityAdaptersPassed = result.result?.qualityAdaptersPassed ?? true;
+  const ok = Boolean(result.result && !result.error && coveragePassed && qualityAdaptersPassed);
   const branch = await (dependencies.currentBranch ?? defaultCurrentBranch)(parsed.workspaceRoot);
   const gateDecision = ok ? 'block' : qualityGateDecision(branch);
   const exitCode = ok || gateDecision === 'warn' ? 0 : 1;
@@ -186,32 +187,49 @@ function buildPreCrAuditEvent(
   policy: { branch: string | null; decision: GateDecision }
 ): QualityGateAuditEvent {
   const coverage = result.result?.coverageCheck;
-  const evidence = coverage
-    ? [
-        ...coverage.uncoveredDetails.slice(0, 10).map((detail) => ({
-          file: detail.file,
-          line_start: detail.line,
-          line_end: detail.line,
-          reason: detail.reason === 'no-coverage-data'
-            ? 'Changed line has no coverage data.'
-            : 'Changed line is not covered.'
-        })),
-        ...coverage.unsupportedFiles.slice(0, 10).map((file) => ({
-          file,
-          reason: 'File is outside the configured Pre-CR coverage surface.'
-        }))
-      ]
-    : [];
-  const ruleId = coverage ? 'pre-cr.changed-line-coverage' : 'pre-cr.execution';
-  const failurePattern = coverage?.unsupportedFiles.length
-    ? 'changed files were outside the configured coverage surface'
+  const failedQualityAdapters = (result.result?.qualityAdapters ?? []).filter((adapter) => !adapter.success);
+  const qualityAdapterFailure = failedQualityAdapters.length > 0;
+  const evidence = qualityAdapterFailure
+    ? failedQualityAdapters.slice(0, 10).map((adapter) => ({
+        file: '.',
+        reason: adapter.error ?? `Quality adapter ${adapter.name} failed.`
+      }))
     : coverage
-      ? 'changed lines lacked coverage'
-      : 'pre-cr did not produce a passing coverage result';
-  const disposition = policy.decision === 'block' ? (coverage ? 'forced iteration' : 'blocked the run') : 'warning only';
-  const summary = coverage
-    ? `Pre-CR ${disposition}: ${coverage.coveragePercent}% changed-line coverage below ${coverage.threshold}% or unsupported surfaces were present.`
-    : `Pre-CR ${disposition}: ${result.error ?? 'coverage result was unavailable'}.`;
+      ? [
+          ...coverage.uncoveredDetails.slice(0, 10).map((detail) => ({
+            file: detail.file,
+            line_start: detail.line,
+            line_end: detail.line,
+            reason: detail.reason === 'no-coverage-data'
+              ? 'Changed line has no coverage data.'
+              : 'Changed line is not covered.'
+          })),
+          ...coverage.unsupportedFiles.slice(0, 10).map((file) => ({
+            file,
+            reason: 'File is outside the configured Pre-CR coverage surface.'
+          }))
+        ]
+      : [];
+  const ruleId = qualityAdapterFailure
+    ? 'pre-cr.quality-adapter'
+    : coverage
+      ? 'pre-cr.changed-line-coverage'
+      : 'pre-cr.execution';
+  const failurePattern = qualityAdapterFailure
+    ? `quality adapters failed: ${failedQualityAdapters.map((adapter) => adapter.name).join(', ')}`
+    : coverage?.unsupportedFiles.length
+      ? 'changed files were outside the configured coverage surface'
+      : coverage
+        ? 'changed lines lacked coverage'
+        : 'pre-cr did not produce a passing coverage result';
+  const disposition = policy.decision === 'block'
+    ? (coverage || qualityAdapterFailure ? 'forced iteration' : 'blocked the run')
+    : 'warning only';
+  const summary = qualityAdapterFailure
+    ? `Pre-CR ${disposition}: quality adapter failure in ${failedQualityAdapters.map((adapter) => adapter.name).join(', ')}.`
+    : coverage
+      ? `Pre-CR ${disposition}: ${coverage.coveragePercent}% changed-line coverage below ${coverage.threshold}% or unsupported surfaces were present.`
+      : `Pre-CR ${disposition}: ${result.error ?? 'coverage result was unavailable'}.`;
   const files = evidence.map((item) => item.file);
 
   return {
@@ -227,23 +245,29 @@ function buildPreCrAuditEvent(
     gate_version: null,
     event_type: coverage ? 'iteration_forced' : 'commit_blocked',
     severity: policy.decision === 'block' ? 'error' : 'warning',
-    category: coverage ? 'test' : 'process',
+    category: coverage && !qualityAdapterFailure ? 'test' : 'process',
     rule_id: ruleId,
-    rule_name: coverage ? 'Changed-line coverage' : 'Pre-CR execution',
+    rule_name: qualityAdapterFailure ? 'Quality adapter' : coverage ? 'Changed-line coverage' : 'Pre-CR execution',
     decision: policy.decision === 'block' ? (coverage ? 'force_iteration' : 'block') : 'warn',
     summary: redactSecrets(summary),
     evidence,
     failure_pattern: failurePattern,
-    root_cause_hypothesis: coverage
-      ? 'Implementation changed covered behavior before focused tests covered the changed lines.'
-      : 'Pre-CR could not complete its configured readiness workflow.',
-    required_fix: coverage
-      ? 'Add or update focused tests and coverage configuration for the changed lines.'
-      : 'Fix the Pre-CR setup or execution error, then rerun the gate.',
+    root_cause_hypothesis: qualityAdapterFailure
+      ? 'A configured quality adapter detected a code-quality failure after changed-line coverage passed.'
+      : coverage
+        ? 'Implementation changed covered behavior before focused tests covered the changed lines.'
+        : 'Pre-CR could not complete its configured readiness workflow.',
+    required_fix: qualityAdapterFailure
+      ? 'Fix the reported quality adapter findings, then rerun Pre-CR.'
+      : coverage
+        ? 'Add or update focused tests and coverage configuration for the changed lines.'
+        : 'Fix the Pre-CR setup or execution error, then rerun the gate.',
     actual_fix: null,
-    learning_lesson: coverage
-      ? 'Run focused tests with coverage before Pre-CR; changed lines must be covered or intentionally classified.'
-      : 'Verify Pre-CR setup before relying on the readiness result.',
+    learning_lesson: qualityAdapterFailure
+      ? 'Pre-CR quality adapters are part of commit readiness; passing coverage alone is not enough.'
+      : coverage
+        ? 'Run focused tests with coverage before Pre-CR; changed lines must be covered or intentionally classified.'
+        : 'Verify Pre-CR setup before relying on the readiness result.',
     dedupe_fingerprint: dedupeFingerprint('Pre-CR', ruleId, files, failurePattern),
     related_event_ids: [],
     blocked_duration_seconds: null,
@@ -478,6 +502,18 @@ function parseHeadlessArgs(argv: string[], cwd: string): ParsedHeadlessArgs | nu
   };
 }
 
+function formatQualityAdapterSummary(result: RunPreCrCheckResult): string[] {
+  const adapters = result.result?.qualityAdapters ?? [];
+  if (adapters.length === 0) {
+    return [];
+  }
+
+  return adapters.map((adapter) => {
+    const status = adapter.skipped ? 'skipped' : adapter.success ? 'passed' : 'failed';
+    return `Quality adapter ${adapter.name} ${status}.`;
+  });
+}
+
 function formatTextResult(result: RunPreCrCheckResult): string {
   if (!result.result) {
     return '';
@@ -495,6 +531,7 @@ function formatTextResult(result: RunPreCrCheckResult): string {
   const lines = [
     `Pre-CR check ${status}: ${coverage.coveragePercent}% changed-line coverage (threshold ${coverage.threshold}%)${reason}.`,
     ...formatCoverageSurfaceLines(coverage),
+    ...formatQualityAdapterSummary(result),
     ''
   ];
 

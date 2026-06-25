@@ -86,6 +86,13 @@ Project behavior lives in `.pre-cr.json` at the repo root.
       "coverageFormat": "lcov"
     }
   ],
+  "qualityAdapters": [
+    {
+      "name": "anti-slop",
+      "command": "anti-slop gate --files {changedFiles} --mode block --format pre-cr",
+      "required": true
+    }
+  ],
   "surfaces": {
     "covered": ["src/**"],
     "ignored": ["docs/**"],
@@ -110,6 +117,8 @@ Notes:
 - `.pre-cr.json` is the canonical source of repo behavior across editors.
 - Legacy `coveragePath` is still accepted during beta and maps to the first `coveragePaths` entry.
 - `coverageAdapters` can generate LCOV or Istanbul coverage after the test command succeeds.
+- `qualityAdapters` run after changed-line coverage and can block the Pre-CR result; `{changedFiles}` expands to the same changed-file set Pre-CR checked.
+- Anti-Slop is the default optional quality adapter. If `anti-slop` is available and reports blocking findings, Pre-CR fails; if the binary is unavailable, the adapter is skipped unless the repo marks it `required`.
 - `surfaces` lets repos declare covered, ignored, and unsupported directories in repo config.
 - Editor settings are for presentation only: colors, notifications, and experimental visibility.
 

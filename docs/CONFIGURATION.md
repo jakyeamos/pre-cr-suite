@@ -228,6 +228,13 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
       "coverageFormat": "lcov"
     }
   ],
+  "qualityAdapters": [
+    {
+      "name": "anti-slop",
+      "command": "anti-slop gate --files {changedFiles} --mode block --format pre-cr",
+      "required": true
+    }
+  ],
   "surfaces": {
     "covered": ["src/**"],
     "ignored": ["docs/**"],
@@ -257,6 +264,7 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
 | `coveragePath` | `string` | Legacy alias accepted during beta; mapped to the first `coveragePaths` entry |
 | `coverageFormat` | `"auto"` \| `"lcov"` \| `"istanbul"` | Coverage file format |
 | `coverageAdapters` | `object[]` | Commands that can emit LCOV or Istanbul coverage after `testCommand` succeeds |
+| `qualityAdapters` | `object[]` | Commands that run after coverage and can block commit readiness; `{changedFiles}` expands to Pre-CR's changed-file list |
 | `surfaces.covered` | `string[]` | Glob patterns where changed lines should be checked for coverage |
 | `surfaces.ignored` | `string[]` | Glob patterns excluded from gate policy |
 | `surfaces.unsupported` | `string[]` | Glob patterns reported as not yet supported without wrapper-side policy |

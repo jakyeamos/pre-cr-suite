@@ -66,7 +66,7 @@ describe('loadProjectConfig', () => {
     );
   });
 
-  it('loads coverage adapters and surface declarations', () => {
+  it('loads coverage adapters, quality adapters, and surface declarations', () => {
     const workspaceRoot = createWorkspace();
     fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
       version: 1,
@@ -76,6 +76,13 @@ describe('loadProjectConfig', () => {
           command: 'python scripts/emit_lcov.py',
           coveragePath: 'build/python.lcov',
           coverageFormat: 'lcov'
+        }
+      ],
+      qualityAdapters: [
+        {
+          name: 'anti-slop',
+          command: 'anti-slop gate --files {changedFiles} --mode block --format pre-cr',
+          required: true
         }
       ],
       surfaces: {
@@ -93,6 +100,13 @@ describe('loadProjectConfig', () => {
         command: 'python scripts/emit_lcov.py',
         coveragePath: 'build/python.lcov',
         coverageFormat: 'lcov'
+      }
+    ]);
+    expect(result.config.qualityAdapters).toEqual([
+      {
+        name: 'anti-slop',
+        command: 'anti-slop gate --files {changedFiles} --mode block --format pre-cr',
+        required: true
       }
     ]);
     expect(result.config.surfaces).toEqual({

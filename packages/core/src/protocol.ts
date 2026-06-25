@@ -10,6 +10,12 @@ export interface PreCrCoverageAdapterConfig {
   coverageFormat: Exclude<PreCrCoverageFormat, 'auto'>;
 }
 
+export interface PreCrQualityAdapterConfig {
+  name: string;
+  command: string;
+  required: boolean;
+}
+
 export interface PreCrSurfaceConfig {
   covered: string[];
   ignored: string[];
@@ -28,6 +34,7 @@ export interface PreCrProjectConfig {
   coveragePaths: string[];
   coverageFormat: PreCrCoverageFormat;
   coverageAdapters: PreCrCoverageAdapterConfig[];
+  qualityAdapters: PreCrQualityAdapterConfig[];
   surfaces: PreCrSurfaceConfig;
   threshold: number;
   excludePatterns: string[];
@@ -131,11 +138,26 @@ export interface PreCrCheckExecution {
   error?: string;
 }
 
+export interface PreCrQualityAdapterResult {
+  name: string;
+  command: string;
+  required: boolean;
+  success: boolean;
+  skipped: boolean;
+  exitCode: number | null;
+  duration: number;
+  stdout: string;
+  stderr: string;
+  error?: string;
+}
+
 export interface PreCrCheckResult {
   health: ProjectHealth;
   changedFiles: ChangedFile[];
   testRun: PreCrCheckExecution | null;
   coverageCheck: CoverageCheckResult | null;
+  qualityAdapters: PreCrQualityAdapterResult[];
+  qualityAdaptersPassed: boolean;
   coveragePath: string | null;
 }
 

@@ -183,6 +183,55 @@ describe('runHeadlessCli', () => {
     });
   });
 
+  it('blocks when changed-line coverage passes but a quality adapter fails', async () => {
+    const events: unknown[] = [];
+    const result = await runHeadlessCli(['run', '--json', '--workspace', '/repo'], {
+      runCheck: async (workspaceRoot) => {
+        const runResult = makeRunResult(workspaceRoot);
+        if (runResult.result) {
+          runResult.result.qualityAdaptersPassed = false;
+          runResult.result.qualityAdapters = [
+            {
+              name: 'anti-slop',
+              command: 'anti-slop gate --files src/app.ts --mode block --format pre-cr',
+              required: true,
+              success: false,
+              skipped: false,
+              exitCode: 1,
+              duration: 42,
+              stdout: '',
+              stderr: '',
+              error: 'Quality adapter "anti-slop" exited with code 1.'
+            }
+          ];
+        }
+        return runResult;
+      },
+      currentBranch: async () => 'main',
+      audit: {
+        append: async (workspaceRoot, event) => {
+          events.push({ workspaceRoot, event });
+        }
+      }
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      ok: false,
+      gateDecision: 'block'
+    });
+    expect(events[0]).toMatchObject({
+      workspaceRoot: '/repo',
+      event: {
+        gate: 'Pre-CR',
+        rule_id: 'pre-cr.quality-adapter',
+        rule_name: 'Quality adapter',
+        decision: 'force_iteration',
+        summary: expect.stringContaining('anti-slop')
+      }
+    });
+  });
+
   it('emits progress to stderr while preserving JSON stdout for executable runs', async () => {
     const stderr: string[] = [];
 
@@ -233,6 +282,7 @@ function makeRunResult(workspaceRoot: string): RunPreCrCheckResult {
           threshold: 80,
           excludePatterns: [],
           coverageAdapters: [],
+          qualityAdapters: [],
           surfaces: {
             covered: [],
             ignored: [],
@@ -262,6 +312,8 @@ function makeRunResult(workspaceRoot: string): RunPreCrCheckResult {
       },
       changedFiles: [],
       testRun: null,
+      qualityAdapters: [],
+      qualityAdaptersPassed: true,
       coverageCheck: {
         passed: true,
         coveragePercent: 100,

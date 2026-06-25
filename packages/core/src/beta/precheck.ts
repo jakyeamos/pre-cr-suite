@@ -8,6 +8,8 @@ import type {
   PreCrCoverageAdapterConfig,
   PreCrCheckExecution,
   PreCrCheckResult,
+  PreCrQualityAdapterConfig,
+  PreCrQualityAdapterResult,
   ProjectHealth,
   ProjectHealthIssue,
   RunPreCrCheckResult
@@ -116,6 +118,11 @@ export function loadWorkspaceCoverage(
   };
 }
 
+interface QualityAdapterRunContext {
+  workspaceRoot: string;
+  changedFiles: string[];
+}
+
 interface CoverageAdapterResult {
   success: boolean;
   coveragePath: string | null;
@@ -146,6 +153,87 @@ async function runCoverageAdapters(
       ? 'No configured coverage adapter produced a coverage report.'
       : undefined
   };
+}
+
+async function runQualityAdapters(
+  workspaceRoot: string,
+  adapters: PreCrQualityAdapterConfig[],
+  changedFiles: string[]
+): Promise<PreCrQualityAdapterResult[]> {
+  const results: PreCrQualityAdapterResult[] = [];
+  for (const adapter of adapters) {
+    results.push(await runQualityAdapter(adapter, { workspaceRoot, changedFiles }));
+  }
+  return results;
+}
+
+async function runQualityAdapter(
+  adapter: PreCrQualityAdapterConfig,
+  context: QualityAdapterRunContext
+): Promise<PreCrQualityAdapterResult> {
+  const commandLine = adapter.command.replace(/\{changedFiles\}/g, context.changedFiles.join(','));
+  const parsed = parseCommandString(commandLine);
+  if (!parsed) {
+    return {
+      name: adapter.name,
+      command: adapter.command,
+      required: adapter.required,
+      success: false,
+      skipped: false,
+      exitCode: null,
+      duration: 0,
+      stdout: '',
+      stderr: '',
+      error: `Invalid quality adapter command for "${adapter.name}".`
+    };
+  }
+
+  const startTime = Date.now();
+  return new Promise((resolve) => {
+    const child = spawn(parsed.command, parsed.args, {
+      cwd: context.workspaceRoot,
+      env: { ...process.env, FORCE_COLOR: '0' }
+    });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', (error) => {
+      resolve({
+        name: adapter.name,
+        command: commandLine,
+        required: adapter.required,
+        success: !adapter.required,
+        skipped: !adapter.required,
+        exitCode: null,
+        duration: Date.now() - startTime,
+        stdout,
+        stderr,
+        error: `Failed to start quality adapter "${adapter.name}": ${error.message}`
+      });
+    });
+    child.on('close', (exitCode) => {
+      resolve({
+        name: adapter.name,
+        command: commandLine,
+        required: adapter.required,
+        success: exitCode === 0,
+        skipped: false,
+        exitCode: exitCode ?? 0,
+        duration: Date.now() - startTime,
+        stdout,
+        stderr,
+        error: exitCode === 0
+          ? undefined
+          : `Quality adapter "${adapter.name}" exited with code ${exitCode ?? 0}.`
+      });
+    });
+  });
 }
 
 async function runCoverageAdapter(
@@ -307,6 +395,8 @@ export async function runWorkspacePreCrCheck(
         changedFiles: [],
         testRun: null,
         coverageCheck: null,
+        qualityAdapters: [],
+        qualityAdaptersPassed: true,
         coveragePath: null
       }
     };
@@ -335,6 +425,8 @@ export async function runWorkspacePreCrCheck(
         changedFiles,
         testRun: null,
         coverageCheck: null,
+        qualityAdapters: [],
+        qualityAdaptersPassed: true,
         coveragePath: null
       }
     };
@@ -363,6 +455,8 @@ export async function runWorkspacePreCrCheck(
         changedFiles,
         testRun: execution,
         coverageCheck: null,
+        qualityAdapters: [],
+        qualityAdaptersPassed: true,
         coveragePath: testRunResult.coveragePath
       }
     };
@@ -386,6 +480,8 @@ export async function runWorkspacePreCrCheck(
           coveragePath: null
         },
         coverageCheck: null,
+        qualityAdapters: [],
+        qualityAdaptersPassed: true,
         coveragePath: null
       }
     };
@@ -411,6 +507,12 @@ export async function runWorkspacePreCrCheck(
     excludePatterns: loadedConfig.config.excludePatterns,
     surfaces: loadedConfig.config.surfaces
   });
+  const qualityAdapters = await runQualityAdapters(
+    workspaceRoot,
+    loadedConfig.config.qualityAdapters,
+    changedFiles.map((file) => file.path)
+  );
+  const qualityAdaptersPassed = qualityAdapters.every((adapter) => adapter.success);
 
   const result: PreCrCheckResult = {
     health: await getProjectHealth(workspaceRoot, parseResult.data),
@@ -422,6 +524,8 @@ export async function runWorkspacePreCrCheck(
       stderr: `${execution.stderr}${adapterResult?.stderr ?? ''}`
     },
     coverageCheck,
+    qualityAdapters,
+    qualityAdaptersPassed,
     coveragePath
   };
 

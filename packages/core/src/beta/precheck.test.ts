@@ -136,4 +136,128 @@ fs.writeFileSync('build/python.lcov', [
     expect(result.result?.coveragePath).toBe(path.join(workspaceRoot, 'build', 'python.lcov'));
     expect(result.result?.coverageCheck?.passed).toBe(true);
   });
+
+  it('runs quality adapters against the Pre-CR changed-file set', async () => {
+    const workspaceRoot = createGitWorkspace();
+    fs.mkdirSync(path.join(workspaceRoot, 'src'));
+    fs.mkdirSync(path.join(workspaceRoot, 'scripts'));
+    fs.writeFileSync(path.join(workspaceRoot, '.gitignore'), 'build/\nquality-args.json\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'console.log("old");\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'test-ok.js'), '');
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'emit-coverage.js'), `
+const fs = require('fs');
+fs.mkdirSync('build', { recursive: true });
+fs.writeFileSync('build/app.lcov', [
+  'TN:',
+  'SF:src/app.js',
+  'DA:1,1',
+  'DA:2,1',
+  'LF:2',
+  'LH:2',
+  'end_of_record',
+  ''
+].join('\\n'));
+`);
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'quality-gate.js'), `
+const fs = require('fs');
+const args = process.argv.slice(2);
+fs.writeFileSync('quality-args.json', JSON.stringify(args));
+process.exit(0);
+`);
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      testCommand: 'node scripts/test-ok.js',
+      coverageAdapters: [
+        {
+          name: 'js-lcov',
+          command: 'node scripts/emit-coverage.js',
+          coveragePath: 'build/app.lcov',
+          coverageFormat: 'lcov'
+        }
+      ],
+      qualityAdapters: [
+        {
+          name: 'anti-slop',
+          command: 'node scripts/quality-gate.js --files {changedFiles}',
+          required: true
+        }
+      ],
+      surfaces: {
+        covered: ['src/**'],
+        ignored: [],
+        unsupported: []
+      },
+      threshold: 100
+    }));
+    execFileSync('git', ['add', '.'], { cwd: workspaceRoot });
+    execFileSync('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'initial'], { cwd: workspaceRoot });
+    fs.appendFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'console.log("new");\n');
+
+    const result = await runWorkspacePreCrCheck(workspaceRoot);
+    const qualityArgs = JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'quality-args.json'), 'utf-8'));
+
+    expect(result.result?.coverageCheck?.passed).toBe(true);
+    expect(result.result?.qualityAdaptersPassed).toBe(true);
+    expect(result.result?.qualityAdapters[0].name).toBe('anti-slop');
+    expect(qualityArgs).toEqual(['--files', 'src/app.js']);
+  });
+
+  it('marks the Pre-CR result failed when a required quality adapter fails', async () => {
+    const workspaceRoot = createGitWorkspace();
+    fs.mkdirSync(path.join(workspaceRoot, 'src'));
+    fs.mkdirSync(path.join(workspaceRoot, 'scripts'));
+    fs.writeFileSync(path.join(workspaceRoot, '.gitignore'), 'build/\nquality-args.json\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'console.log("old");\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'test-ok.js'), '');
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'emit-coverage.js'), `
+const fs = require('fs');
+fs.mkdirSync('build', { recursive: true });
+fs.writeFileSync('build/app.lcov', [
+  'TN:',
+  'SF:src/app.js',
+  'DA:1,1',
+  'DA:2,1',
+  'LF:2',
+  'LH:2',
+  'end_of_record',
+  ''
+].join('\\n'));
+`);
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'quality-gate.js'), 'process.exit(1);\n');
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      testCommand: 'node scripts/test-ok.js',
+      coverageAdapters: [
+        {
+          name: 'js-lcov',
+          command: 'node scripts/emit-coverage.js',
+          coveragePath: 'build/app.lcov',
+          coverageFormat: 'lcov'
+        }
+      ],
+      qualityAdapters: [
+        {
+          name: 'anti-slop',
+          command: 'node scripts/quality-gate.js --files {changedFiles}',
+          required: true
+        }
+      ],
+      surfaces: {
+        covered: ['src/**'],
+        ignored: [],
+        unsupported: []
+      },
+      threshold: 100
+    }));
+    execFileSync('git', ['add', '.'], { cwd: workspaceRoot });
+    execFileSync('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'initial'], { cwd: workspaceRoot });
+    fs.appendFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'console.log("new");\n');
+
+    const result = await runWorkspacePreCrCheck(workspaceRoot);
+
+    expect(result.result?.coverageCheck?.passed).toBe(true);
+    expect(result.result?.qualityAdaptersPassed).toBe(false);
+    expect(result.result?.qualityAdapters[0].success).toBe(false);
+  });
+
 });
