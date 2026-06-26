@@ -55,3 +55,11 @@ None yet.
 Last session: 2026-04-10 00:00
 Stopped at: Planning baseline initialized
 Resume file: None
+
+### AIOS Adoption Backfill Update - 2026-06-26
+
+- Phase 04 added: AIOS Format Gate Backfill.
+- Phase 05 added: AIOS Server Simplification Gates, clustering complexity and thermo because both failures share `packages/server/src/server.ts`.
+- Phase 06 added: AIOS Final Certification Gate.
+- Current adoption-pilot next action: execute Phase 04, then 05 -> 06.
+- Source artifact pack: `AIOS-backfill/gate-adoption/phase29-pre-cr-suite-lsp-pilot-final-doc-pass-001`.

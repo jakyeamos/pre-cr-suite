@@ -70,3 +70,30 @@ Phases execute in numeric order: 1 → 2 → 3
 | 1. Reconfirm Beta Contract | 0/2 | Not started | - |
 | 2. Run Release Gates | 0/2 | Not started | - |
 | 3. Harden Cross-Editor Reliability | 0/2 | Not started | - |
+
+### Phase 4: AIOS Format Gate Backfill
+**Goal**: Clear the formatter adoption gate with a mechanical whitespace cleanup.
+**Depends on**: Phase 2 release-gate baseline
+**Requirements**: AIOS-FORMAT
+**Success Criteria**: `node scripts/aios-adoption-gates.mjs format` exits 0.
+**Plans**: 1 plan
+Plans:
+- [ ] 04-01: Format-check remediation
+
+### Phase 5: AIOS Server Simplification Gates
+**Goal**: Clear the coupled complexity and thermo blockers in `packages/server/src/server.ts`.
+**Depends on**: Phase 4
+**Requirements**: AIOS-COMPLEXITY, AIOS-THERMO
+**Success Criteria**: `node scripts/aios-adoption-gates.mjs complexity` and `node scripts/aios-adoption-gates.mjs thermo` exit 0.
+**Plans**: 1 plan
+Plans:
+- [ ] 05-01: Split server responsibilities without weakening LSP behavior
+
+### Phase 6: AIOS Final Certification Gate
+**Goal**: Refresh developer-tool adoption certification after remediation.
+**Depends on**: Phase 5
+**Requirements**: AIOS-CERT
+**Success Criteria**: Fresh adoption docs report absent=0, warning_count=0, with non-UI classification and local CI proof explicit.
+**Plans**: 1 plan
+Plans:
+- [ ] 06-01: Final adoption certification proof
