@@ -28,6 +28,13 @@ describe('loadProjectConfig', () => {
 
     expect(result.path).toBeNull();
     expect(result.config).toEqual(DEFAULT_PRE_CR_CONFIG);
+    expect(result.config.qualityAdapters).toEqual([
+      {
+        name: 'anti-slop',
+        command: 'anti-slop gate --files {changedFiles} --mode block --format pre-cr',
+        required: true
+      }
+    ]);
     expect(result.warnings).toEqual([]);
   });
 

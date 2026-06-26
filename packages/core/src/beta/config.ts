@@ -19,7 +19,7 @@ const DEFAULT_QUALITY_ADAPTERS: PreCrQualityAdapterConfig[] = [
   {
     name: 'anti-slop',
     command: 'anti-slop gate --files {changedFiles} --mode block --format pre-cr',
-    required: false
+    required: true
   }
 ];
 

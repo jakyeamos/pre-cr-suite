@@ -118,7 +118,7 @@ Notes:
 - Legacy `coveragePath` is still accepted during beta and maps to the first `coveragePaths` entry.
 - `coverageAdapters` can generate LCOV or Istanbul coverage after the test command succeeds.
 - `qualityAdapters` run after changed-line coverage and can block the Pre-CR result; `{changedFiles}` expands to the same changed-file set Pre-CR checked.
-- Anti-Slop is the default optional quality adapter. If `anti-slop` is available and reports blocking findings, Pre-CR fails; if the binary is unavailable, the adapter is skipped unless the repo marks it `required`.
+- Anti-Slop is the default required quality adapter. If `anti-slop` reports blocking findings or the binary is unavailable, Pre-CR fails unless the repo explicitly overrides `qualityAdapters`.
 - `surfaces` lets repos declare covered, ignored, and unsupported directories in repo config.
 - Editor settings are for presentation only: colors, notifications, and experimental visibility.
 
