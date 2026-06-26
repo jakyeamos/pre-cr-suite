@@ -1,9 +1,9 @@
 ---
 schemaVersion: 1
-healthScore: 82
+healthScore: 86
 statusLabel: healthy
 summary: "The headless Pre-CR CLI supports branch-aware JSON/audit behavior, emits executable-path progress to stderr, and has a clean dependency security gate."
-nextStep: "Exercise a long staged-change Pre-CR run in a consuming repo to confirm real heartbeat visibility."
+nextStep: "Resolve the full Turbo test harness interaction with the global AIOS commit hook, then rerun final adoption certification."
 blockers: []
 lastUpdated: "2026-06-26"
 quality:
@@ -12,7 +12,7 @@ quality:
   tests: pass
   format: pass
   deadCode: unknown
-  structure: unknown
+  structure: pass
   security: pass
 tags:
   - lsp
@@ -43,6 +43,7 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-25: Added stderr progress output for direct `pre-cr run --json` executable runs, including start, heartbeat, and finish lines while preserving clean JSON stdout.
 - 2026-06-25: Cleared the dependency security audit by moving the Vitest/Vite/esbuild toolchain to patched versions and pinning patched transitive VSCE audit dependencies.
 - 2026-06-26: Cleared the AIOS formatter adoption gate with a mechanical whitespace normalization pass.
+- 2026-06-26: Split the LSP server request handlers out of `packages/server/src/server.ts`, clearing the AIOS complexity and thermo-nuclear simplification gates.
 
 ## Quality Ladder Notes
 
@@ -51,3 +52,5 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-25: `pnpm dependency:security` passed with no known vulnerabilities.
 - 2026-06-25: No `knip` or `audit:dead-code` script is configured, so dead-code and structure status remain unknown.
 - 2026-06-26: `node scripts/aios-adoption-gates.mjs format` and `git diff --check` pass after Phase 04 format remediation.
+- 2026-06-26: `node scripts/aios-adoption-gates.mjs complexity` and `node scripts/aios-adoption-gates.mjs thermo` pass after reducing `packages/server/src/server.ts` from 1684 to 228 lines.
+- 2026-06-26: `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass with pnpm 9.15.0; full `pnpm test` is blocked by temporary fixture commits invoking the user global AIOS commit hook under Turbo, while the affected `src/beta/precheck.test.ts` passes directly with isolated Git config.
