@@ -1,6 +1,6 @@
 /**
  * Logger Utility Tests
- * 
+ *
  * Tests for structured logging functionality
  */
 
@@ -21,7 +21,7 @@ import { logger, initLogger, createLogger, withTiming, withErrorLogging } from '
 
 describe('Logger Utility', () => {
   let mockOutputChannel: any;
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockOutputChannel = {
@@ -91,19 +91,19 @@ describe('Logger Utility', () => {
     it('should create a child logger with context', () => {
       const childLogger = createLogger('MyModule');
       childLogger.info('Child message');
-      
+
       const call = mockOutputChannel.appendLine.mock.calls[0][0];
       expect(call).toContain('MyModule');
     });
 
     it('should support all log levels', () => {
       const childLogger = createLogger('TestModule');
-      
+
       childLogger.debug('Debug');
       childLogger.info('Info');
       childLogger.warn('Warn');
       childLogger.error('Error');
-      
+
       expect(mockOutputChannel.appendLine).toHaveBeenCalledTimes(4);
     });
   });
@@ -115,12 +115,12 @@ describe('Logger Utility', () => {
 
     it('should measure and log timing', async () => {
       const end = logger.time('Test operation');
-      
+
       // Simulate some work
       await new Promise(resolve => setTimeout(resolve, 10));
-      
+
       end();
-      
+
       const call = mockOutputChannel.appendLine.mock.calls[0][0];
       expect(call).toContain('Test operation');
       expect(call).toContain('completed');
@@ -135,24 +135,24 @@ describe('Logger Utility', () => {
     it('should call error handlers on error', () => {
       const handler = vi.fn();
       const disposable = logger.onError(handler);
-      
+
       logger.error('Test error', new Error('Something broke'));
-      
+
       expect(handler).toHaveBeenCalled();
       expect(handler.mock.calls[0][0]).toHaveProperty('level', 'error');
       expect(handler.mock.calls[0][0]).toHaveProperty('message', 'Test error');
-      
+
       disposable.dispose();
     });
 
     it('should not call handler after dispose', () => {
       const handler = vi.fn();
       const disposable = logger.onError(handler);
-      
+
       disposable.dispose();
-      
+
       logger.error('Another error');
-      
+
       expect(handler).not.toHaveBeenCalled();
     });
   });
@@ -167,7 +167,7 @@ describe('Logger Utility', () => {
         await new Promise(resolve => setTimeout(resolve, 5));
         return 'done';
       });
-      
+
       expect(result).toBe('done');
       expect(mockOutputChannel.appendLine).toHaveBeenCalled();
     });
@@ -187,7 +187,7 @@ describe('Logger Utility', () => {
       const result = await withErrorLogging('Failing op', async () => {
         throw new Error('Failed');
       });
-      
+
       expect(result).toBeNull();
       const call = mockOutputChannel.appendLine.mock.calls[0][0];
       expect(call).toContain('Failing op');
@@ -198,21 +198,21 @@ describe('Logger Utility', () => {
   describe('log level filtering', () => {
     it('should filter out debug when min level is info', () => {
       initLogger(mockOutputChannel, 'info');
-      
+
       logger.debug('Should not appear');
       expect(mockOutputChannel.appendLine).not.toHaveBeenCalled();
-      
+
       logger.info('Should appear');
       expect(mockOutputChannel.appendLine).toHaveBeenCalledTimes(1);
     });
 
     it('should filter out debug and info when min level is warn', () => {
       initLogger(mockOutputChannel, 'warn');
-      
+
       logger.debug('No');
       logger.info('No');
       expect(mockOutputChannel.appendLine).not.toHaveBeenCalled();
-      
+
       logger.warn('Yes');
       expect(mockOutputChannel.appendLine).toHaveBeenCalledTimes(1);
     });

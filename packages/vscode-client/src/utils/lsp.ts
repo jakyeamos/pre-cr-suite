@@ -1,6 +1,6 @@
 /**
  * LSP Request Utilities
- * 
+ *
  * Type-safe request wrappers with standardized error handling
  */
 
@@ -11,7 +11,7 @@ import * as notify from './notifications';
 /**
  * Result type for LSP requests
  */
-export type Result<T, E = string> = 
+export type Result<T, E = string> =
   | { success: true; data: T }
   | { success: false; error: E };
 

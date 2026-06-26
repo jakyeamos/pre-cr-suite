@@ -1,6 +1,6 @@
 /**
  * Documentation Formatter
- * 
+ *
  * Generates JSDoc/TSDoc documentation from extracted items.
  * Can generate template documentation or use AI for richer descriptions.
  */
@@ -35,19 +35,19 @@ export function generateDocs(
 ): DocGenResult {
   const logger = getLogger();
   const fullConfig: DocGenConfig = { ...DEFAULT_DOC_GEN_CONFIG, ...config };
-  
+
   const items = extractItems(source);
   const docs: GeneratedDoc[] = [];
   const skipped: string[] = [];
   const errors: Array<{ item: string; error: string }> = [];
-  
+
   // Generate for functions
   for (const fn of items.functions) {
     if (fn.existingDoc) {
       skipped.push(fn.name);
       continue;
     }
-    
+
     try {
       const doc = generateFunctionDoc(fn, fullConfig);
       docs.push(doc);
@@ -55,7 +55,7 @@ export function generateDocs(
       errors.push({ item: fn.name, error: String(err) });
     }
   }
-  
+
   // Generate for classes
   for (const cls of items.classes) {
     if (cls.existingDoc) {
@@ -68,14 +68,14 @@ export function generateDocs(
         errors.push({ item: cls.name, error: String(err) });
       }
     }
-    
+
     // Generate for undocumented methods
     for (const method of cls.methods) {
       if (method.existingDoc) {
         skipped.push(`${cls.name}.${method.name}`);
         continue;
       }
-      
+
       try {
         const doc = generateFunctionDoc(method, fullConfig);
         docs.push(doc);
@@ -84,14 +84,14 @@ export function generateDocs(
       }
     }
   }
-  
+
   // Generate for interfaces
   for (const iface of items.interfaces) {
     if (iface.existingDoc) {
       skipped.push(iface.name);
       continue;
     }
-    
+
     try {
       const doc = generateInterfaceDoc(iface, fullConfig);
       docs.push(doc);
@@ -99,14 +99,14 @@ export function generateDocs(
       errors.push({ item: iface.name, error: String(err) });
     }
   }
-  
+
   // Generate for types
   for (const type of items.types) {
     if (type.existingDoc) {
       skipped.push(type.name);
       continue;
     }
-    
+
     try {
       const doc = generateTypeDoc(type, fullConfig);
       docs.push(doc);
@@ -114,13 +114,13 @@ export function generateDocs(
       errors.push({ item: type.name, error: String(err) });
     }
   }
-  
+
   logger.info('Documentation generation complete', {
     generated: docs.length,
     skipped: skipped.length,
     errors: errors.length
   });
-  
+
   return { docs, skipped, errors };
 }
 
@@ -132,16 +132,16 @@ export function generateFunctionDoc(
   config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
 ): GeneratedDoc {
   const lines: string[] = ['/**'];
-  
+
   // Description
   const description = inferFunctionDescription(fn);
   lines.push(` * ${description}`);
-  
+
   // Add blank line before tags if we have any
   if (fn.params.length > 0 || fn.returnType || fn.typeParams) {
     lines.push(' *');
   }
-  
+
   // Type parameters
   if (fn.typeParams) {
     for (const tp of fn.typeParams) {
@@ -149,13 +149,13 @@ export function generateFunctionDoc(
       lines.push(` * @template ${tp}`);
     }
   }
-  
+
   // Parameters
   for (const param of fn.params) {
     const paramDoc = formatParam(param, config);
     lines.push(` * ${paramDoc}`);
   }
-  
+
   // Return type
   if (fn.returnType && fn.returnType !== 'void' && fn.kind !== 'constructor') {
     const returnDesc = inferReturnDescription(fn);
@@ -165,21 +165,21 @@ export function generateFunctionDoc(
       lines.push(` * @returns ${returnDesc}`);
     }
   }
-  
+
   // Throws
   if (config.includeThrows && mightThrow(fn)) {
     lines.push(` * @throws {Error} If operation fails`);
   }
-  
+
   // Example
   if (config.includeExamples) {
     lines.push(' *');
     lines.push(' * @example');
     lines.push(` * ${generateExample(fn)}`);
   }
-  
+
   lines.push(' */');
-  
+
   return {
     text: lines.join('\n'),
     insertLine: fn.line,
@@ -196,11 +196,11 @@ export function generateClassDoc(
   config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
 ): GeneratedDoc {
   const lines: string[] = ['/**'];
-  
+
   // Description
   const description = inferClassDescription(cls);
   lines.push(` * ${description}`);
-  
+
   // Type parameters
   if (cls.typeParams) {
     lines.push(' *');
@@ -208,29 +208,29 @@ export function generateClassDoc(
       lines.push(` * @template ${tp}`);
     }
   }
-  
+
   // Extends
   if (cls.extends) {
     lines.push(' *');
     lines.push(` * @extends ${cls.extends}`);
   }
-  
+
   // Implements
   if (cls.implements && cls.implements.length > 0) {
     for (const impl of cls.implements) {
       lines.push(` * @implements ${impl}`);
     }
   }
-  
+
   // Example
   if (config.includeExamples) {
     lines.push(' *');
     lines.push(' * @example');
     lines.push(` * const instance = new ${cls.name}();`);
   }
-  
+
   lines.push(' */');
-  
+
   return {
     text: lines.join('\n'),
     insertLine: cls.line,
@@ -247,11 +247,11 @@ export function generateInterfaceDoc(
   config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
 ): GeneratedDoc {
   const lines: string[] = ['/**'];
-  
+
   // Description
   const description = inferInterfaceDescription(iface);
   lines.push(` * ${description}`);
-  
+
   // Type parameters
   if (iface.typeParams) {
     lines.push(' *');
@@ -259,7 +259,7 @@ export function generateInterfaceDoc(
       lines.push(` * @template ${tp}`);
     }
   }
-  
+
   // Extends
   if (iface.extends && iface.extends.length > 0) {
     lines.push(' *');
@@ -267,7 +267,7 @@ export function generateInterfaceDoc(
       lines.push(` * @extends ${ext}`);
     }
   }
-  
+
   // Properties
   if (iface.properties.length > 0) {
     lines.push(' *');
@@ -277,9 +277,9 @@ export function generateInterfaceDoc(
       lines.push(` * @property {${prop.type || 'unknown'}} ${prop.name}${optional}${type ? '' : ''}`);
     }
   }
-  
+
   lines.push(' */');
-  
+
   return {
     text: lines.join('\n'),
     insertLine: iface.line,
@@ -296,11 +296,11 @@ export function generateTypeDoc(
   config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
 ): GeneratedDoc {
   const lines: string[] = ['/**'];
-  
+
   // Description
   const description = inferTypeDescription(type);
   lines.push(` * ${description}`);
-  
+
   // Type parameters
   if (type.typeParams) {
     lines.push(' *');
@@ -308,15 +308,15 @@ export function generateTypeDoc(
       lines.push(` * @template ${tp}`);
     }
   }
-  
+
   // Type definition
   if (type.definition.includes('|')) {
     lines.push(' *');
     lines.push(` * @typedef {${type.definition}} ${type.name}`);
   }
-  
+
   lines.push(' */');
-  
+
   return {
     text: lines.join('\n'),
     insertLine: type.line,
@@ -336,7 +336,7 @@ export function generateAIPrompt(
   fn: ExtractedFunction,
   config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
 ): DocGenPrompt {
-  const system = `You are a documentation expert. Generate concise, accurate JSDoc documentation for TypeScript/JavaScript code. 
+  const system = `You are a documentation expert. Generate concise, accurate JSDoc documentation for TypeScript/JavaScript code.
 Follow these rules:
 - Be concise but informative
 - Use present tense ("Returns" not "Will return")
@@ -385,85 +385,85 @@ Generate ONLY the JSDoc comment, no code. Start with /** and end with */`;
  */
 function inferFunctionDescription(fn: ExtractedFunction): string {
   const name = fn.name;
-  
+
   // Handle common prefixes
   if (name.startsWith('get')) {
     const subject = camelToWords(name.slice(3));
     return `Gets the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('set')) {
     const subject = camelToWords(name.slice(3));
     return `Sets the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('is') || name.startsWith('has') || name.startsWith('can')) {
     const subject = camelToWords(name);
     return `Checks ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('create')) {
     const subject = camelToWords(name.slice(6));
     return `Creates a new ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('delete') || name.startsWith('remove')) {
     const prefix = name.startsWith('delete') ? 6 : 6;
     const subject = camelToWords(name.slice(prefix));
     return `Removes the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('update')) {
     const subject = camelToWords(name.slice(6));
     return `Updates the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('fetch') || name.startsWith('load')) {
     const prefix = name.startsWith('fetch') ? 5 : 4;
     const subject = camelToWords(name.slice(prefix));
     return `Fetches the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('save') || name.startsWith('store')) {
     const prefix = name.startsWith('save') ? 4 : 5;
     const subject = camelToWords(name.slice(prefix));
     return `Saves the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('validate')) {
     const subject = camelToWords(name.slice(8));
     return `Validates the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('parse')) {
     const subject = camelToWords(name.slice(5));
     return `Parses the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('format')) {
     const subject = camelToWords(name.slice(6));
     return `Formats the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('convert')) {
     const subject = camelToWords(name.slice(7));
     return `Converts the ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('handle')) {
     const subject = camelToWords(name.slice(6));
     return `Handles ${subject.toLowerCase()}.`;
   }
-  
+
   if (name.startsWith('on')) {
     const subject = camelToWords(name.slice(2));
     return `Handles the ${subject.toLowerCase()} event.`;
   }
-  
+
   if (name === 'constructor') {
     return `Creates a new ${fn.parent || 'instance'}.`;
   }
-  
+
   // Default
   const words = camelToWords(name);
   return `${words.charAt(0).toUpperCase() + words.slice(1)}.`;
@@ -474,43 +474,43 @@ function inferFunctionDescription(fn: ExtractedFunction): string {
  */
 function inferClassDescription(cls: ExtractedClass): string {
   const name = cls.name;
-  
+
   if (name.endsWith('Service')) {
     return `Service for ${camelToWords(name.slice(0, -7)).toLowerCase()} operations.`;
   }
-  
+
   if (name.endsWith('Controller')) {
     return `Controller for ${camelToWords(name.slice(0, -10)).toLowerCase()}.`;
   }
-  
+
   if (name.endsWith('Manager')) {
     return `Manages ${camelToWords(name.slice(0, -7)).toLowerCase()}.`;
   }
-  
+
   if (name.endsWith('Handler')) {
     return `Handles ${camelToWords(name.slice(0, -7)).toLowerCase()}.`;
   }
-  
+
   if (name.endsWith('Factory')) {
     return `Factory for creating ${camelToWords(name.slice(0, -7)).toLowerCase()} instances.`;
   }
-  
+
   if (name.endsWith('Builder')) {
     return `Builder for constructing ${camelToWords(name.slice(0, -7)).toLowerCase()} objects.`;
   }
-  
+
   if (name.endsWith('Repository')) {
     return `Repository for ${camelToWords(name.slice(0, -10)).toLowerCase()} data access.`;
   }
-  
+
   if (name.endsWith('Client')) {
     return `Client for ${camelToWords(name.slice(0, -6)).toLowerCase()} API.`;
   }
-  
+
   if (name.endsWith('Error') || name.endsWith('Exception')) {
     return `Error thrown when ${camelToWords(name.replace(/Error$|Exception$/, '')).toLowerCase()} fails.`;
   }
-  
+
   return `Represents a ${camelToWords(name).toLowerCase()}.`;
 }
 
@@ -519,36 +519,36 @@ function inferClassDescription(cls: ExtractedClass): string {
  */
 function inferInterfaceDescription(iface: ExtractedInterface): string {
   const name = iface.name;
-  
+
   if (name.endsWith('Options') || name.endsWith('Config')) {
     const subject = name.endsWith('Options') ? name.slice(0, -7) : name.slice(0, -6);
     return `Configuration options for ${camelToWords(subject).toLowerCase()}.`;
   }
-  
+
   if (name.endsWith('Props')) {
     return `Props for the ${camelToWords(name.slice(0, -5))} component.`;
   }
-  
+
   if (name.endsWith('State')) {
     return `State for ${camelToWords(name.slice(0, -5)).toLowerCase()}.`;
   }
-  
+
   if (name.endsWith('Result')) {
     return `Result of ${camelToWords(name.slice(0, -6)).toLowerCase()} operation.`;
   }
-  
+
   if (name.endsWith('Request')) {
     return `Request payload for ${camelToWords(name.slice(0, -7)).toLowerCase()}.`;
   }
-  
+
   if (name.endsWith('Response')) {
     return `Response from ${camelToWords(name.slice(0, -8)).toLowerCase()}.`;
   }
-  
+
   if (name.endsWith('Data')) {
     return `Data structure for ${camelToWords(name.slice(0, -4)).toLowerCase()}.`;
   }
-  
+
   return `Interface for ${camelToWords(name).toLowerCase()}.`;
 }
 
@@ -557,23 +557,23 @@ function inferInterfaceDescription(iface: ExtractedInterface): string {
  */
 function inferTypeDescription(type: ExtractedType): string {
   const name = type.name;
-  
+
   if (type.definition.includes('|')) {
     return `Type representing ${camelToWords(name).toLowerCase()} variants.`;
   }
-  
+
   if (type.definition.includes('keyof')) {
     return `Keys of ${camelToWords(name).toLowerCase()}.`;
   }
-  
+
   if (type.definition.includes('Partial<')) {
     return `Partial ${camelToWords(name).toLowerCase()}.`;
   }
-  
+
   if (type.definition.includes('Required<')) {
     return `Required ${camelToWords(name).toLowerCase()}.`;
   }
-  
+
   return `Type alias for ${camelToWords(name).toLowerCase()}.`;
 }
 
@@ -583,55 +583,55 @@ function inferTypeDescription(type: ExtractedType): string {
 function inferReturnDescription(fn: ExtractedFunction): string {
   const name = fn.name;
   const returnType = fn.returnType || 'unknown';
-  
+
   if (name.startsWith('get') || name.startsWith('fetch') || name.startsWith('load')) {
     const subject = camelToWords(name.replace(/^(get|fetch|load)/, '')).toLowerCase();
     return `The ${subject || 'result'}`;
   }
-  
+
   if (name.startsWith('is') || name.startsWith('has') || name.startsWith('can')) {
     return `True if condition is met, false otherwise`;
   }
-  
+
   if (name.startsWith('create')) {
     const subject = camelToWords(name.slice(6)).toLowerCase();
     return `The created ${subject || 'instance'}`;
   }
-  
+
   if (name.startsWith('find')) {
     const subject = camelToWords(name.slice(4)).toLowerCase();
     return `The found ${subject || 'item'} or null`;
   }
-  
+
   if (name.startsWith('parse')) {
     return `The parsed result`;
   }
-  
+
   if (name.startsWith('validate')) {
     return `Validation result`;
   }
-  
+
   if (returnType === 'boolean') {
     return `True if successful, false otherwise`;
   }
-  
+
   if (returnType === 'number') {
     return `The computed value`;
   }
-  
+
   if (returnType === 'string') {
     return `The resulting string`;
   }
-  
+
   if (returnType.includes('Promise<')) {
     const inner = returnType.match(/Promise<(.+)>/)?.[1] || 'result';
     return `Promise resolving to ${inner.toLowerCase()}`;
   }
-  
+
   if (returnType.includes('[]') || returnType.includes('Array<')) {
     return `Array of results`;
   }
-  
+
   return `The result`;
 }
 
@@ -646,11 +646,11 @@ function formatParam(param: ExtractedParam, config: DocGenConfig): string {
   const optional = param.optional ? ' (optional)' : '';
   const defaultVal = param.defaultValue ? ` (default: ${param.defaultValue})` : '';
   const description = param.inferredDescription || 'Parameter';
-  
+
   if (config.includeTypes && param.type) {
     return `@param {${param.type}} ${param.name} - ${description}${optional}${defaultVal}`;
   }
-  
+
   return `@param ${param.name} - ${description}${optional}${defaultVal}`;
 }
 
@@ -670,8 +670,8 @@ function camelToWords(str: string): string {
  */
 function mightThrow(fn: ExtractedFunction): boolean {
   if (!fn.body) return false;
-  
-  return fn.body.includes('throw ') || 
+
+  return fn.body.includes('throw ') ||
          fn.body.includes('throw(') ||
          fn.body.includes('.reject(');
 }
@@ -688,16 +688,16 @@ function generateExample(fn: ExtractedFunction): string {
     if (p.type?.includes('[]')) return '[]';
     return `/* ${p.name} */`;
   });
-  
+
   const call = `${fn.name}(${args.join(', ')})`;
-  
+
   if (fn.async) {
     return `const result = await ${call};`;
   }
-  
+
   if (fn.returnType && fn.returnType !== 'void') {
     return `const result = ${call};`;
   }
-  
+
   return `${call};`;
 }

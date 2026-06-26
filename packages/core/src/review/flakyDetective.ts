@@ -1,6 +1,6 @@
 /**
  * Flaky Test Detective
- * 
+ *
  * Identifies and tracks flaky tests:
  * - Tracks pass/fail history across runs
  * - Calculates flakiness scores
@@ -155,19 +155,19 @@ export class FlakyTestDetective {
   private history: Map<string, TestHistory> = new Map();
   private config: FlakyTestConfig;
   private quarantined: Set<string> = new Set();
-  
+
   constructor(config: Partial<FlakyTestConfig> = {}) {
     this.config = { ...DEFAULT_FLAKY_CONFIG, ...config };
   }
-  
+
   /**
    * Record a test result
    */
   recordResult(result: TestRunResult): void {
     const logger = getLogger();
-    
+
     let testHistory = this.history.get(result.testId);
-    
+
     if (!testHistory) {
       testHistory = {
         testId: result.testId,
@@ -187,7 +187,7 @@ export class FlakyTestDetective {
       };
       this.history.set(result.testId, testHistory);
     }
-    
+
     // Update stats
     testHistory.totalRuns++;
     if (result.passed) {
@@ -196,7 +196,7 @@ export class FlakyTestDetective {
       testHistory.failures++;
     }
     testHistory.lastSeen = result.timestamp;
-    
+
     // Add to recent results (keep last 20)
     testHistory.recentResults.unshift({
       passed: result.passed,
@@ -206,25 +206,25 @@ export class FlakyTestDetective {
     if (testHistory.recentResults.length > 20) {
       testHistory.recentResults.pop();
     }
-    
+
     // Update duration stats
     this.updateDurationStats(testHistory, result.duration);
-    
+
     // Calculate flakiness
     this.calculateFlakiness(testHistory);
-    
+
     // Detect root causes
     if (testHistory.isFlaky) {
       this.detectRootCauses(testHistory, result);
     }
-    
+
     logger.debug('Recorded test result', {
       testId: result.testId,
       passed: result.passed,
       flakinessScore: testHistory.flakinessScore
     });
   }
-  
+
   /**
    * Record multiple results at once
    */
@@ -233,14 +233,14 @@ export class FlakyTestDetective {
       this.recordResult(result);
     }
   }
-  
+
   /**
    * Get history for a specific test
    */
   getTestHistory(testId: string): TestHistory | undefined {
     return this.history.get(testId);
   }
-  
+
   /**
    * Get all flaky tests
    */
@@ -249,14 +249,14 @@ export class FlakyTestDetective {
       .filter(h => h.isFlaky)
       .sort((a, b) => b.flakinessScore - a.flakinessScore);
   }
-  
+
   /**
    * Check if a test is quarantined
    */
   isQuarantined(testId: string): boolean {
     return this.quarantined.has(testId);
   }
-  
+
   /**
    * Quarantine a test
    */
@@ -265,14 +265,14 @@ export class FlakyTestDetective {
       this.quarantined.add(testId);
     }
   }
-  
+
   /**
    * Remove test from quarantine
    */
   unquarantine(testId: string): void {
     this.quarantined.delete(testId);
   }
-  
+
   /**
    * Get tests that should be skipped (if auto-skip enabled)
    */
@@ -282,16 +282,16 @@ export class FlakyTestDetective {
     }
     return Array.from(this.quarantined);
   }
-  
+
   /**
    * Generate a flaky test report
    */
   generateReport(): FlakyTestReport {
     const logger = getLogger();
-    
+
     const allTests = Array.from(this.history.values());
     const flakyTests = this.getFlakyTests();
-    
+
     // Root cause breakdown
     const rootCauseBreakdown: Record<RootCauseType, number> = {
       timing: 0,
@@ -304,7 +304,7 @@ export class FlakyTestDetective {
       'time-sensitive': 0,
       unknown: 0
     };
-    
+
     for (const test of flakyTests) {
       for (const hint of test.rootCauseHints) {
         rootCauseBreakdown[hint.type]++;
@@ -313,24 +313,24 @@ export class FlakyTestDetective {
         rootCauseBreakdown.unknown++;
       }
     }
-    
+
     // Calculate health score
-    const flakyPercentage = allTests.length > 0 
-      ? (flakyTests.length / allTests.length) * 100 
+    const flakyPercentage = allTests.length > 0
+      ? (flakyTests.length / allTests.length) * 100
       : 0;
-    
+
     // Health score: 100 - (flaky% * 2), minimum 0
     const healthScore = Math.max(0, Math.round(100 - flakyPercentage * 2));
-    
+
     // Generate recommendations
     const recommendations = this.generateRecommendations(flakyTests, rootCauseBreakdown);
-    
+
     logger.info('Generated flaky test report', {
       totalTests: allTests.length,
       flakyCount: flakyTests.length,
       healthScore
     });
-    
+
     return {
       timestamp: new Date(),
       totalTests: allTests.length,
@@ -343,7 +343,7 @@ export class FlakyTestDetective {
       recommendations
     };
   }
-  
+
   /**
    * Import history from JSON
    */
@@ -360,21 +360,21 @@ export class FlakyTestDetective {
       });
     }
   }
-  
+
   /**
    * Export history to JSON
    */
   exportHistory(): TestHistory[] {
     return Array.from(this.history.values());
   }
-  
+
   /**
    * Clear old history
    */
   pruneHistory(): number {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - this.config.historyDays);
-    
+
     let pruned = 0;
     for (const [testId, history] of this.history) {
       if (history.lastSeen < cutoff) {
@@ -382,21 +382,21 @@ export class FlakyTestDetective {
         pruned++;
       }
     }
-    
+
     return pruned;
   }
-  
+
   // ============================================================================
   // Private Methods
   // ============================================================================
-  
+
   private updateDurationStats(history: TestHistory, newDuration: number): void {
     const runs = history.totalRuns;
-    
+
     // Update average
     const oldAverage = history.averageDuration;
     history.averageDuration = oldAverage + (newDuration - oldAverage) / runs;
-    
+
     // Update variance using Welford's algorithm
     if (runs > 1) {
       const diff = newDuration - oldAverage;
@@ -405,7 +405,7 @@ export class FlakyTestDetective {
       history.durationVariance = (oldVariance + diff * diff2) / (runs - 1);
     }
   }
-  
+
   private calculateFlakiness(history: TestHistory): void {
     // Need minimum runs to calculate
     if (history.totalRuns < this.config.minRuns) {
@@ -413,46 +413,46 @@ export class FlakyTestDetective {
       history.isFlaky = false;
       return;
     }
-    
+
     // Simple failure rate
     const failureRate = history.failures / history.totalRuns;
-    
+
     // A test is flaky if it sometimes passes and sometimes fails
     // Pure failures or pure passes are not flaky
     const hasBothOutcomes = history.passes > 0 && history.failures > 0;
-    
+
     if (!hasBothOutcomes) {
       history.flakinessScore = 0;
       history.isFlaky = false;
       return;
     }
-    
+
     // Flakiness score: how unpredictable is it?
     // Maximum flakiness at 50% failure rate
     history.flakinessScore = 1 - Math.abs(0.5 - failureRate) * 2;
-    
+
     // Check recent results for patterns
     const recentFailures = history.recentResults
       .slice(0, 10)
       .filter(r => !r.passed).length;
     const recentRate = recentFailures / Math.min(10, history.recentResults.length);
-    
+
     // Weight recent results more heavily
     history.flakinessScore = (history.flakinessScore + recentRate) / 2;
-    
+
     // Is it flaky?
     history.isFlaky = failureRate >= this.config.flakinessThreshold &&
                       failureRate <= (1 - this.config.flakinessThreshold);
   }
-  
+
   private detectRootCauses(history: TestHistory, result: TestRunResult): void {
     const hints: RootCauseHint[] = [];
-    
+
     // High duration variance suggests timing issues
     const avgDuration = history.averageDuration;
     const variance = history.durationVariance;
     const coefficientOfVariation = Math.sqrt(variance) / avgDuration;
-    
+
     if (coefficientOfVariation > this.config.durationVarianceThreshold) {
       hints.push({
         type: 'timing',
@@ -461,11 +461,11 @@ export class FlakyTestDetective {
         suggestion: 'Check for race conditions, increase timeouts, or use explicit waits'
       });
     }
-    
+
     // Check error messages for patterns
     if (result.error) {
       const errorLower = result.error.toLowerCase();
-      
+
       if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
         hints.push({
           type: 'timing',
@@ -474,8 +474,8 @@ export class FlakyTestDetective {
           suggestion: 'Increase timeout or investigate slow operations'
         });
       }
-      
-      if (errorLower.includes('econnrefused') || 
+
+      if (errorLower.includes('econnrefused') ||
           errorLower.includes('network') ||
           errorLower.includes('fetch')) {
         hints.push({
@@ -485,8 +485,8 @@ export class FlakyTestDetective {
           suggestion: 'Mock external services or ensure they are available'
         });
       }
-      
-      if (errorLower.includes('enoent') || 
+
+      if (errorLower.includes('enoent') ||
           errorLower.includes('not found') ||
           errorLower.includes('undefined')) {
         hints.push({
@@ -496,8 +496,8 @@ export class FlakyTestDetective {
           suggestion: 'Ensure proper test isolation and setup'
         });
       }
-      
-      if (errorLower.includes('date') || 
+
+      if (errorLower.includes('date') ||
           errorLower.includes('time') ||
           errorLower.includes('timestamp')) {
         hints.push({
@@ -507,8 +507,8 @@ export class FlakyTestDetective {
           suggestion: 'Mock Date/time or use relative comparisons'
         });
       }
-      
-      if (errorLower.includes('random') || 
+
+      if (errorLower.includes('random') ||
           errorLower.includes('uuid') ||
           errorLower.includes('math.random')) {
         hints.push({
@@ -519,10 +519,10 @@ export class FlakyTestDetective {
         });
       }
     }
-    
+
     // Check for order-dependent patterns
     const recentPattern = history.recentResults.slice(0, 10).map(r => r.passed);
-    const alternating = recentPattern.every((v, i, arr) => 
+    const alternating = recentPattern.every((v, i, arr) =>
       i === 0 || v !== arr[i - 1]
     );
     if (alternating && history.recentResults.length >= 6) {
@@ -533,7 +533,7 @@ export class FlakyTestDetective {
         suggestion: 'Run tests in isolation or fix shared state cleanup'
       });
     }
-    
+
     // Default hint if nothing detected
     if (hints.length === 0 && history.isFlaky) {
       hints.push({
@@ -543,43 +543,43 @@ export class FlakyTestDetective {
         suggestion: 'Add logging to identify failure patterns'
       });
     }
-    
+
     history.rootCauseHints = hints;
   }
-  
+
   private generateRecommendations(
     flakyTests: TestHistory[],
     rootCauses: Record<RootCauseType, number>
   ): string[] {
     const recommendations: string[] = [];
-    
+
     if (flakyTests.length === 0) {
       recommendations.push('No flaky tests detected - great job!');
       return recommendations;
     }
-    
+
     // General recommendations based on count
     if (flakyTests.length > 10) {
       recommendations.push('High number of flaky tests - consider a dedicated cleanup sprint');
     }
-    
+
     // Root cause specific recommendations
     if (rootCauses.timing > 3) {
       recommendations.push('Multiple timing issues - review async handling and timeouts');
     }
-    
+
     if (rootCauses.network > 2) {
       recommendations.push('Network dependencies causing issues - implement better mocking');
     }
-    
+
     if (rootCauses['shared-state'] > 2) {
       recommendations.push('Shared state issues detected - improve test isolation');
     }
-    
+
     if (rootCauses['order-dependent'] > 1) {
       recommendations.push('Order-dependent tests found - ensure proper cleanup between tests');
     }
-    
+
     // Top offenders
     const topFlaky = flakyTests.slice(0, 3);
     if (topFlaky.length > 0) {
@@ -587,7 +587,7 @@ export class FlakyTestDetective {
         `Prioritize fixing: ${topFlaky.map(t => t.name).join(', ')}`
       );
     }
-    
+
     return recommendations;
   }
 }
@@ -613,11 +613,11 @@ export function parseJestResults(jestOutput: {
 }): TestRunResult[] {
   const results: TestRunResult[] = [];
   const timestamp = new Date(jestOutput.startTime);
-  
+
   for (const fileResult of jestOutput.testResults) {
     for (const testResult of fileResult.testResults) {
       if (testResult.status === 'pending') continue;
-      
+
       results.push({
         testId: `${fileResult.testFilePath}:${testResult.title}`,
         file: fileResult.testFilePath,
@@ -629,7 +629,7 @@ export function parseJestResults(jestOutput: {
       });
     }
   }
-  
+
   return results;
 }
 
@@ -650,7 +650,7 @@ export function parseVitestResults(vitestOutput: {
 }): TestRunResult[] {
   const results: TestRunResult[] = [];
   const timestamp = new Date(vitestOutput.startTime);
-  
+
   for (const fileResult of vitestOutput.testResults) {
     for (const testResult of fileResult.assertionResults) {
       results.push({
@@ -664,6 +664,6 @@ export function parseVitestResults(vitestOutput: {
       });
     }
   }
-  
+
   return results;
 }

@@ -1,6 +1,6 @@
 /**
  * Dashboard Webview
- * 
+ *
  * Provides a unified view of all Pre-CR Suite status:
  * - Coverage summary
  * - Security scan results
@@ -123,7 +123,7 @@ function getDashboardHtml(s: ExtensionState): string {
   const coverageStatus = s.coverage.isLoaded
     ? `<span class="status-badge ${getStatusClass(s.coverage.percent || 0)}">${s.coverage.percent?.toFixed(0)}%</span>`
     : '<span class="status-badge neutral">Not loaded</span>';
-  
+
   const coverageDetails = s.coverage.isLoaded
     ? `<p>${s.coverage.fileCount} files analyzed</p>`
     : '<p>Load a coverage file to see results</p>';
@@ -446,7 +446,7 @@ function getDashboardHtml(s: ExtensionState): string {
         ${debugDetails}
       </div>
       <div class="card-actions">
-        ${s.debug.isRecording 
+        ${s.debug.isRecording
           ? '<button class="danger" onclick="stopDebug()">Stop Recording</button>'
           : '<button onclick="startDebug()">Start Capture</button>'
         }

@@ -1,6 +1,6 @@
 /**
  * Review Optimization Feature Module
- * 
+ *
  * Handles:
  * - Review time estimation
  * - Flaky test detection
@@ -36,7 +36,7 @@ export function registerReviewFeatures(
  */
 async function initFlakyDetective(client: LanguageClient) {
   const config = vscode.workspace.getConfiguration('preCr.flakyTests');
-  
+
   if (!config.get('enabled')) return;
 
   try {
@@ -151,9 +151,9 @@ function showReviewTimeDetails(estimate: any) {
     table { width: 100%; border-collapse: collapse; margin: 20px 0; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--vscode-panel-border); }
     th { background: var(--vscode-editor-background); }
-    .warning { 
-      padding: 10px; 
-      margin: 5px 0; 
+    .warning {
+      padding: 10px;
+      margin: 5px 0;
       background: rgba(255, 152, 0, 0.1);
       border-left: 3px solid #ff9800;
       border-radius: 4px;
@@ -168,7 +168,7 @@ function showReviewTimeDetails(estimate: any) {
 </head>
 <body>
   <h1>Review Time Estimate</h1>
-  
+
   <div class="total">
     <strong>${estimate.formatted}</strong>
     <small>(${estimate.confidence} confidence)</small>
@@ -223,8 +223,8 @@ function showFlakyTestReport(report: any) {
   <style>
     body { font-family: var(--vscode-font-family); padding: 20px; }
     .summary { display: flex; gap: 20px; margin: 20px 0; }
-    .summary-item { 
-      padding: 15px 25px; 
+    .summary-item {
+      padding: 15px 25px;
       background: var(--vscode-editor-background);
       border-radius: 4px;
     }
@@ -243,7 +243,7 @@ function showFlakyTestReport(report: any) {
 </head>
 <body>
   <h1>Flaky Tests Report</h1>
-  
+
   <div class="summary">
     <div class="summary-item">
       <strong>Health Score</strong><br>

@@ -1,6 +1,6 @@
 /**
  * Documentation Generator Feature Module
- * 
+ *
  * Handles:
  * - Generating docs for files
  * - Generating docs at cursor
@@ -61,7 +61,7 @@ async function generateDocs(client: LanguageClient) {
     // Build list of item names for preview
     const itemNames = docs.items.slice(0, 5).map((d: any) => d.name).join(', ');
     const moreText = docs.items.length > 5 ? ` and ${docs.items.length - 5} more` : '';
-    
+
     // Show preview with option to apply
     const action = await notify.showInfo(
       `Found ${docs.items.length} undocumented item(s): ${itemNames}${moreText}`,
@@ -141,7 +141,7 @@ async function checkDocHealth(client: LanguageClient, mode: 'file' | 'workspace'
         notify.showWarning('No active file');
         return;
       }
-      
+
       const result = await client.sendRequest('$/preCr/checkFileHealth', {
         uri: editor.document.uri.toString(),
         content: editor.document.getText()
@@ -160,7 +160,7 @@ async function checkDocHealth(client: LanguageClient, mode: 'file' | 'workspace'
         async (progress) => {
         const files = await getCodeFiles();
         progress.report({ message: `Scanning ${files.length} files...` });
-        
+
         let totalItems = 0;
         let documentedItems = 0;
         const allIssues: any[] = [];
@@ -258,16 +258,16 @@ function showDocsPreview(items: any[]) {
 <head>
   <style>
     body { font-family: var(--vscode-font-family); padding: 20px; }
-    .doc-item { 
-      margin: 20px 0; 
-      padding: 15px; 
+    .doc-item {
+      margin: 20px 0;
+      padding: 15px;
       background: var(--vscode-editor-background);
       border-radius: 4px;
     }
     h3 { margin-top: 0; color: var(--vscode-textLink-foreground); }
-    pre { 
-      background: var(--vscode-textCodeBlock-background); 
-      padding: 10px; 
+    pre {
+      background: var(--vscode-textCodeBlock-background);
+      padding: 10px;
       border-radius: 4px;
       overflow-x: auto;
     }
@@ -285,7 +285,7 @@ function showDocsPreview(items: any[]) {
  */
 function showHealthReport(report: any, fileName: string) {
   const issues = report.issues || [];
-  
+
   if (issues.length === 0) {
     notify.showSuccess(`Doc health good for ${fileName.split('/').pop()}`);
     return;
@@ -311,9 +311,9 @@ function showHealthReport(report: any, fileName: string) {
 <head>
   <style>
     body { font-family: var(--vscode-font-family); padding: 20px; }
-    .issue { 
-      display: flex; 
-      gap: 10px; 
+    .issue {
+      display: flex;
+      gap: 10px;
       padding: 10px;
       margin: 5px 0;
       border-radius: 4px;
@@ -345,7 +345,7 @@ function showWorkspaceHealthReport(report: any) {
   );
 
   const coverageClass = report.coveragePercent >= 80 ? 'good' : report.coveragePercent >= 50 ? 'warning' : 'bad';
-  
+
   const issuesHtml = (report.issues || []).slice(0, 50).map((issue: any) => `
     <div class="issue ${issue.severity}">
       <span class="file">${issue.file}:${issue.line}</span>
@@ -360,8 +360,8 @@ function showWorkspaceHealthReport(report: any) {
   <style>
     body { font-family: var(--vscode-font-family); padding: 20px; }
     .summary { display: flex; gap: 20px; margin: 20px 0; }
-    .summary-item { 
-      padding: 20px; 
+    .summary-item {
+      padding: 20px;
       background: var(--vscode-editor-background);
       border-radius: 8px;
       text-align: center;
@@ -370,9 +370,9 @@ function showWorkspaceHealthReport(report: any) {
     .good { color: #4caf50; }
     .warning { color: #ff9800; }
     .bad { color: #f44336; }
-    .issue { 
-      display: flex; 
-      gap: 10px; 
+    .issue {
+      display: flex;
+      gap: 10px;
       padding: 8px;
       margin: 4px 0;
       border-radius: 4px;
@@ -387,7 +387,7 @@ function showWorkspaceHealthReport(report: any) {
 </head>
 <body>
   <h1>Documentation Health</h1>
-  
+
   <div class="summary">
     <div class="summary-item">
       <div class="big-number ${coverageClass}">${report.coveragePercent?.toFixed(0) || 0}%</div>

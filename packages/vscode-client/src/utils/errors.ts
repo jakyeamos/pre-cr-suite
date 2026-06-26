@@ -1,6 +1,6 @@
 /**
  * Standardized Error Messages
- * 
+ *
  * Provides user-friendly, actionable error messages
  */
 
@@ -54,7 +54,7 @@ export const messages = {
     detail: 'Run your tests with coverage enabled. Looked in: coverage/, .coverage/',
   },
 
-  // LSP errors  
+  // LSP errors
   serverNotResponding: {
     message: 'Pre-CR server not responding',
     detail: 'Try reloading the window to restart the server.',
@@ -109,13 +109,13 @@ export async function showError(
   key: MessageKey | { message: string; detail: string; action?: string; command?: string }
 ) {
   const msg = typeof key === 'string' ? messages[key] : key;
-  
+
   if (typeof msg === 'function') {
     throw new Error('Use showErrorWithArg for parameterized messages');
   }
 
   const msgObj = msg as { message: string; detail: string; action?: string; command?: string };
-  
+
   if (msgObj.action && msgObj.command) {
     const action = await notify.showError(
       `${msgObj.message}: ${msgObj.detail}`,
@@ -137,13 +137,13 @@ export async function showWarning(
   key: MessageKey | { message: string; detail: string; action?: string; command?: string }
 ) {
   const msg = typeof key === 'string' ? messages[key] : key;
-  
+
   if (typeof msg === 'function') {
     throw new Error('Use showWarningWithArg for parameterized messages');
   }
 
   const msgObj = msg as { message: string; detail: string; action?: string; command?: string };
-  
+
   if (msgObj.action && msgObj.command) {
     const action = await notify.showWarning(
       `${msgObj.message}: ${msgObj.detail}`,
@@ -165,13 +165,13 @@ export async function showInfo(
   key: MessageKey | { message: string; detail: string; action?: string; command?: string }
 ) {
   const msg = typeof key === 'string' ? messages[key] : key;
-  
+
   if (typeof msg === 'function') {
     throw new Error('Use showInfoWithArg for parameterized messages');
   }
 
   const msgObj = msg as { message: string; detail: string; action?: string; command?: string };
-  
+
   if (msgObj.action && msgObj.command) {
     const action = await notify.showInfo(
       `${msgObj.message}: ${msgObj.detail}`,

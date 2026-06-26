@@ -3,9 +3,9 @@ export { parseLcovFile, parseLcovContent } from './lcov';
 export { parseIstanbulFile, parseIstanbulContent } from './istanbul';
 
 // Streaming parser (memory efficient for large files)
-export { 
-  parseLcovFileStreaming, 
+export {
+  parseLcovFileStreaming,
   parseLcovContentStreaming,
   type StreamingParseOptions,
-  type StreamingParseResult 
+  type StreamingParseResult
 } from './lcovStreaming';

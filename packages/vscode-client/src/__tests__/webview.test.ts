@@ -1,6 +1,6 @@
 /**
  * Webview Utility Tests
- * 
+ *
  * Tests for HTML escaping, CSP, and webview helpers
  */
 
@@ -69,7 +69,7 @@ describe('html template tag', () => {
   it('should escape interpolated values', () => {
     const userInput = '<script>alert("xss")</script>';
     const result = html`<div>${userInput}</div>`;
-    
+
     expect(result).toBe('<div>&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;</div>');
   });
 
@@ -77,7 +77,7 @@ describe('html template tag', () => {
     const name = '<b>John</b>';
     const age = 30;
     const result = html`Name: ${name}, Age: ${age}`;
-    
+
     expect(result).toBe('Name: &lt;b&gt;John&lt;/b&gt;, Age: 30');
   });
 
@@ -118,7 +118,7 @@ describe('generateNonce', () => {
     // Both should produce the same type of output
     const nonce1 = getNonce();
     const nonce2 = generateNonce();
-    
+
     expect(nonce1).toHaveLength(32);
     expect(nonce2).toHaveLength(32);
     expect(nonce1).not.toBe(nonce2); // But different values
@@ -179,7 +179,7 @@ describe('XSS Prevention', () => {
   it('should neutralize script injection via escapeHtml', () => {
     const malicious = '<script>document.cookie</script>';
     const safe = escapeHtml(malicious);
-    
+
     // The < and > are escaped, making the script tag inert
     expect(safe).not.toContain('<script>');
     expect(safe).toContain('&lt;script&gt;');
@@ -188,7 +188,7 @@ describe('XSS Prevention', () => {
   it('should neutralize event handler injection', () => {
     const malicious = '<img onerror="alert(1)" src="x">';
     const safe = escapeHtml(malicious);
-    
+
     // The < is escaped, so the img tag won't render as HTML
     expect(safe).not.toContain('<img');
     expect(safe).toContain('&lt;img');
@@ -197,7 +197,7 @@ describe('XSS Prevention', () => {
   it('should neutralize javascript: URL injection', () => {
     const malicious = '<a href="javascript:alert(1)">click</a>';
     const safe = escapeHtml(malicious);
-    
+
     // The < is escaped, so the anchor tag won't render as HTML
     expect(safe).not.toContain('<a');
     expect(safe).toContain('&lt;a');
@@ -206,7 +206,7 @@ describe('XSS Prevention', () => {
   it('should handle nested attack patterns', () => {
     const malicious = '<<script>script>alert(1)<</script>/script>';
     const safe = escapeHtml(malicious);
-    
+
     expect(safe).not.toContain('<script>');
     expect(safe.match(/&lt;/g)?.length).toBe(4);
   });
@@ -214,7 +214,7 @@ describe('XSS Prevention', () => {
   it('should handle unicode escape attempts', () => {
     const malicious = '\u003cscript\u003e';
     const safe = escapeHtml(malicious);
-    
+
     expect(safe).toContain('&lt;script&gt;');
   });
 });

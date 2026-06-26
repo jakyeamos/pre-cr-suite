@@ -1,6 +1,6 @@
 /**
  * Debug Intelligence Feature Module
- * 
+ *
  * Handles:
  * - Debug session capture
  * - Session analysis
@@ -183,7 +183,7 @@ function startCaptureTimer() {
       const elapsed = Math.floor((Date.now() - captureStartTime) / 1000);
       const minutes = Math.floor(elapsed / 60);
       const seconds = elapsed % 60;
-      const timeStr = minutes > 0 
+      const timeStr = minutes > 0
         ? `${minutes}:${seconds.toString().padStart(2, '0')}`
         : `${seconds}s`;
       statusBar.updateRecordingTime(timeStr, breakpointHitCount);
@@ -296,7 +296,7 @@ async function onDebugEvent(client: LanguageClient, event: vscode.DebugSessionCu
   // Handle stopped events (breakpoints, exceptions)
   if (event.event === 'stopped') {
     const body = event.body;
-    
+
     if (body.reason === 'breakpoint' || body.reason === 'step') {
       breakpointHitCount++;
       // Record step
@@ -353,8 +353,8 @@ function showAnalysisReport(analysis: any) {
 
   const additionalStyles = `
     .summary { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
-    .summary-item { 
-      padding: 15px 25px; 
+    .summary-item {
+      padding: 15px 25px;
       background: var(--vscode-editor-background);
       border: 1px solid var(--vscode-panel-border);
       border-radius: 4px;
@@ -372,7 +372,7 @@ function showAnalysisReport(analysis: any) {
     .pattern.low { border-left: 3px solid var(--vscode-editorInfo-foreground); }
     .pattern-type { font-weight: bold; text-transform: uppercase; font-size: 0.9em; }
     .pattern-desc { margin: 10px 0; }
-    .pattern-suggestion { 
+    .pattern-suggestion {
       color: var(--vscode-textLink-foreground);
       font-style: italic;
     }

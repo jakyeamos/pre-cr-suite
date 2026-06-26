@@ -1,6 +1,6 @@
 /**
  * Documentation Health Monitor
- * 
+ *
  * Monitors documentation health across a codebase:
  * - Detects stale documentation (code changed but docs didn't)
  * - Finds documentation-code drift
@@ -30,7 +30,7 @@ export enum HealthIssueSeverity {
 /**
  * Type of documentation health issue
  */
-export type HealthIssueType = 
+export type HealthIssueType =
   | 'stale-doc'           // Docs don't match code
   | 'missing-doc'         // Export has no docs
   | 'missing-param'       // Parameter not documented
@@ -131,9 +131,9 @@ export function checkFileHealth(
 ): FileHealthReport {
   const logger = getLogger();
   const fullConfig = { ...DEFAULT_HEALTH_CONFIG, ...config };
-  
+
   const issues: HealthIssue[] = [];
-  
+
   // Skip excluded files
   if (shouldExclude(file.path, fullConfig.excludePatterns)) {
     return {
@@ -142,7 +142,7 @@ export function checkFileHealth(
       coverage: { total: 0, documented: 0, percentage: 100 }
     };
   }
-  
+
   // Get existing doc health issues (param mismatches, etc.)
   if (fullConfig.checkStale) {
     const docIssues = checkDocHealth(file);
@@ -158,12 +158,12 @@ export function checkFileHealth(
       });
     }
   }
-  
+
   // Check for missing documentation
   const exports = parseExports(file);
   const documented = exports.filter(e => e.hasDoc);
   const undocumented = exports.filter(e => !e.hasDoc);
-  
+
   if (fullConfig.checkMissing) {
     for (const exp of undocumented) {
       issues.push({
@@ -177,21 +177,21 @@ export function checkFileHealth(
       });
     }
   }
-  
+
   const coverage = {
     total: exports.length,
     documented: documented.length,
-    percentage: exports.length > 0 
-      ? Math.round((documented.length / exports.length) * 100) 
+    percentage: exports.length > 0
+      ? Math.round((documented.length / exports.length) * 100)
       : 100
   };
-  
+
   logger.debug('File health check complete', {
     file: file.path,
     issues: issues.length,
     coverage: coverage.percentage
   });
-  
+
   return { file: file.path, issues, coverage };
 }
 
@@ -204,49 +204,49 @@ export function checkWorkspaceHealth(
 ): WorkspaceHealthReport {
   const logger = getLogger();
   const fullConfig = { ...DEFAULT_HEALTH_CONFIG, ...config };
-  
+
   const fileReports: FileHealthReport[] = [];
-  
+
   for (const file of files) {
     const report = checkFileHealth(file, fullConfig);
     fileReports.push(report);
   }
-  
+
   // Aggregate stats
   const issuesByType: Record<string, number> = {};
   const issuesBySeverity: Record<string, number> = {};
   let totalIssues = 0;
   let totalExports = 0;
   let totalDocumented = 0;
-  
+
   for (const report of fileReports) {
     totalIssues += report.issues.length;
     totalExports += report.coverage.total;
     totalDocumented += report.coverage.documented;
-    
+
     for (const issue of report.issues) {
       issuesByType[issue.type] = (issuesByType[issue.type] || 0) + 1;
       issuesBySeverity[issue.severity] = (issuesBySeverity[issue.severity] || 0) + 1;
     }
   }
-  
+
   // Find critical files (most issues)
   const criticalFiles = fileReports
     .filter(r => r.issues.length > 0)
     .sort((a, b) => b.issues.length - a.issues.length)
     .slice(0, 5)
     .map(r => r.file);
-  
+
   const overallCoverage = totalExports > 0
     ? Math.round((totalDocumented / totalExports) * 100)
     : 100;
-  
+
   logger.info('Workspace health check complete', {
     files: files.length,
     totalIssues,
     overallCoverage
   });
-  
+
   return {
     files: fileReports,
     summary: {
@@ -285,11 +285,11 @@ export function checkReadmeHealth(
 ): ReadmeIssue[] {
   const issues: ReadmeIssue[] = [];
   const lines = readmeContent.split('\n');
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
-    
+
     // Check for references to files
     const fileRefs = extractFileReferences(line);
     for (const ref of fileRefs) {
@@ -304,7 +304,7 @@ export function checkReadmeHealth(
         });
       }
     }
-    
+
     // Check for npm/yarn commands
     if (packageJson?.scripts) {
       const commandMatch = line.match(/(?:npm run|yarn|pnpm)\s+(\w+)/);
@@ -320,7 +320,7 @@ export function checkReadmeHealth(
         }
       }
     }
-    
+
     // Check for version references
     if (packageJson?.version) {
       const versionMatch = line.match(/version[:\s]+["']?(\d+\.\d+\.\d+)/i);
@@ -334,7 +334,7 @@ export function checkReadmeHealth(
       }
     }
   }
-  
+
   return issues;
 }
 
@@ -343,20 +343,20 @@ export function checkReadmeHealth(
  */
 function extractFileReferences(line: string): string[] {
   const refs: string[] = [];
-  
+
   // Match markdown links: [text](path)
   const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
   let match;
   while ((match = linkPattern.exec(line)) !== null) {
     refs.push(match[2]);
   }
-  
+
   // Match code references: `path/to/file`
   const codePattern = /`([^`]+\.\w+)`/g;
   while ((match = codePattern.exec(line)) !== null) {
     refs.push(match[1]);
   }
-  
+
   return refs;
 }
 
@@ -364,8 +364,8 @@ function extractFileReferences(line: string): string[] {
  * Check if a path is an external URL
  */
 function isExternalUrl(path: string): boolean {
-  return path.startsWith('http://') || 
-         path.startsWith('https://') || 
+  return path.startsWith('http://') ||
+         path.startsWith('https://') ||
          path.startsWith('//') ||
          path.startsWith('#');
 }
@@ -375,7 +375,7 @@ function isExternalUrl(path: string): boolean {
  */
 function shouldExclude(filePath: string, patterns: string[]): boolean {
   const normalized = filePath.replace(/\\/g, '/');
-  
+
   for (const pattern of patterns) {
     // Simple glob matching
     const regexPattern = pattern
@@ -383,13 +383,13 @@ function shouldExclude(filePath: string, patterns: string[]): boolean {
       .replace(/\*\*/g, '{{GLOBSTAR}}')
       .replace(/\*/g, '[^/]*')
       .replace(/{{GLOBSTAR}}/g, '.*');
-    
+
     const regex = new RegExp(regexPattern);
     if (regex.test(normalized)) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -419,7 +419,7 @@ export function detectStaleDocumentation(
 ): StaleDetectionResult[] {
   const results: StaleDetectionResult[] = [];
   const exports = parseExports(file);
-  
+
   if (!gitBlameData) {
     // Without git data, we can only do basic checks
     return exports
@@ -433,35 +433,35 @@ export function detectStaleDocumentation(
         reason: 'Git data not available'
       }));
   }
-  
+
   // With git data, compare documentation line dates with code line dates
   for (const exp of exports) {
     if (!exp.hasDoc) continue;
-    
+
     // This is a simplified check - real implementation would
     // analyze the full function body and doc block
     const docLine = exp.line - 1; // Doc is usually on the line before
     const codeLine = exp.line;
-    
+
     const docBlame = gitBlameData.get(docLine);
     const codeBlame = gitBlameData.get(codeLine);
-    
-    const isLikelyStale = docBlame && codeBlame && 
+
+    const isLikelyStale = docBlame && codeBlame &&
       docBlame.date < codeBlame.date &&
       (codeBlame.date.getTime() - docBlame.date.getTime()) > 7 * 24 * 60 * 60 * 1000; // 7 days
-    
+
     results.push({
       file: exp.file,
       exportName: exp.name,
       lastDocChange: docBlame?.date || null,
       lastCodeChange: codeBlame?.date || null,
       isLikelyStale: !!isLikelyStale,
-      reason: isLikelyStale 
+      reason: isLikelyStale
         ? `Code changed ${formatDateDiff(codeBlame!.date, docBlame!.date)} after documentation`
         : undefined
     });
   }
-  
+
   return results;
 }
 
@@ -471,7 +471,7 @@ export function detectStaleDocumentation(
 function formatDateDiff(newer: Date, older: Date): string {
   const diffMs = newer.getTime() - older.getTime();
   const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  
+
   if (diffDays < 1) return 'less than a day';
   if (diffDays === 1) return '1 day';
   if (diffDays < 7) return `${diffDays} days`;

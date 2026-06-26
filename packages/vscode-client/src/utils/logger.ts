@@ -1,6 +1,6 @@
 /**
  * Structured Logging Utility
- * 
+ *
  * Provides consistent, leveled logging with:
  * - Log levels (debug, info, warn, error)
  * - Structured metadata
@@ -131,7 +131,7 @@ class Logger {
    */
   error(message: string, error?: Error, metadata?: Record<string, unknown>): void {
     this.log('error', message, undefined, { ...metadata, error: error?.message, stack: error?.stack });
-    
+
     // Notify error handlers
     const entry: LogEntry = {
       level: 'error',
@@ -140,7 +140,7 @@ class Logger {
       metadata,
       error
     };
-    
+
     for (const handler of this.errorHandlers) {
       try {
         handler(entry);
@@ -154,9 +154,9 @@ class Logger {
    * Core logging method
    */
   log(
-    level: LogLevel, 
-    message: string, 
-    context?: string, 
+    level: LogLevel,
+    message: string,
+    context?: string,
     metadata?: Record<string, unknown>
   ): void {
     // Check if we should log this level
@@ -167,10 +167,10 @@ class Logger {
     const timestamp = new Date().toISOString();
     const ctx = context || this.defaultContext;
     const levelStr = level.toUpperCase().padEnd(5);
-    
+
     // Format message
     let formattedMessage = `[${timestamp}] ${levelStr} [${ctx}] ${message}`;
-    
+
     // Add metadata if present
     if (metadata && Object.keys(metadata).length > 0) {
       const metaStr = Object.entries(metadata)
@@ -247,7 +247,7 @@ export const logger = new Logger();
  * Initialize the logger (call once during extension activation)
  */
 export function initLogger(
-  outputChannel: vscode.OutputChannel, 
+  outputChannel: vscode.OutputChannel,
   minLevel?: LogLevel
 ): void {
   logger.init(outputChannel, minLevel);
@@ -283,8 +283,8 @@ export async function withErrorLogging<T>(
   try {
     return await fn();
   } catch (error) {
-    logger.log('error', `${label} failed`, context, { 
-      error: error instanceof Error ? error.message : String(error) 
+    logger.log('error', `${label} failed`, context, {
+      error: error instanceof Error ? error.message : String(error)
     });
     return null;
   }

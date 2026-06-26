@@ -1,6 +1,6 @@
 /**
  * Notification Utilities
- * 
+ *
  * Auto-dismissing notifications for Pre-CR Suite.
  * All notifications automatically disappear after a configurable timeout.
  */
@@ -67,12 +67,12 @@ export function loadNotificationConfig() {
  * Show an auto-dismissing information message
  */
 export function showInfo(
-  message: string, 
+  message: string,
   timeout?: number,
   ...actions: string[]
 ): Promise<string | undefined> {
   if (!config.enabled) return Promise.resolve(undefined);
-  
+
   const ms = timeout ?? config.infoTimeout;
   return showWithTimeout(
     () => vscode.window.showInformationMessage(message, ...actions),
@@ -89,7 +89,7 @@ export function showSuccess(
   ...actions: string[]
 ): Promise<string | undefined> {
   if (!config.enabled) return Promise.resolve(undefined);
-  
+
   const ms = timeout ?? config.successTimeout;
   return showWithTimeout(
     () => vscode.window.showInformationMessage(`✓ ${message}`, ...actions),
@@ -106,7 +106,7 @@ export function showWarning(
   ...actions: string[]
 ): Promise<string | undefined> {
   if (!config.enabled) return Promise.resolve(undefined);
-  
+
   const ms = timeout ?? config.warningTimeout;
   return showWithTimeout(
     () => vscode.window.showWarningMessage(message, ...actions),
@@ -123,7 +123,7 @@ export function showError(
   ...actions: string[]
 ): Promise<string | undefined> {
   if (!config.enabled) return Promise.resolve(undefined);
-  
+
   const ms = timeout ?? config.errorTimeout;
   return showWithTimeout(
     () => vscode.window.showErrorMessage(message, ...actions),
@@ -181,7 +181,7 @@ async function showWithTimeout(
   // Note: VS Code's native notifications don't support programmatic dismissal,
   // so we return undefined after timeout but the notification may still be visible
   // until the user dismisses it. This is a VS Code limitation.
-  
+
   // For true auto-dismiss, we use a workaround with modal: false
   const result = await Promise.race([
     showFn(),
@@ -230,7 +230,7 @@ export function showComplete(operation: string, details?: string): Promise<strin
  * Show "feature not available" message
  */
 export function showNotAvailable(feature: string, reason?: string): Promise<string | undefined> {
-  const message = reason 
+  const message = reason
     ? `${feature} not available: ${reason}`
     : `${feature} not available`;
   return showInfo(message);

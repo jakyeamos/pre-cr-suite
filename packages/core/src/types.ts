@@ -1,6 +1,6 @@
 /**
  * Core type definitions for Pre-CR Suite
- * 
+ *
  * These types are shared across all packages (core, server, clients).
  * NO editor-specific imports allowed here.
  */
@@ -67,14 +67,14 @@ export interface CoverageSummary {
   coveredLines: number;
   /** Line coverage percentage (0-100) */
   linePercentage: number;
-  
+
   /** Total branches */
   totalBranches: number;
   /** Branches taken at least once */
   coveredBranches: number;
   /** Branch coverage percentage (0-100) */
   branchPercentage: number;
-  
+
   /** Total functions */
   totalFunctions: number;
   /** Functions called at least once */
@@ -232,7 +232,7 @@ export function lineCoverageToDecoration(
   lineLength: number
 ): CoverageDecoration {
   const lineIndex = lineCoverage.lineNumber - 1; // Convert to 0-based
-  
+
   let status: 'covered' | 'uncovered' | 'partial';
   switch (lineCoverage.status) {
     case LineCoverageStatus.Covered:

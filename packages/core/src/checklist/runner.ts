@@ -1,6 +1,6 @@
 /**
  * PR Checklist Runner
- * 
+ *
  * Orchestrates all checklist analyzers and produces
  * a unified checklist result.
  */
@@ -60,27 +60,27 @@ export function runChecklist(
 ): ChecklistResult {
   const logger = getLogger();
   const startTime = Date.now();
-  
+
   const fullConfig: ChecklistConfig = {
     ...DEFAULT_CHECKLIST_CONFIG,
     ...config
   };
-  
+
   const items: ChecklistItem[] = [];
   const details: ChecklistResult['details'] = {};
-  
+
   // 1. PR Size Analysis
   logger.info('Running PR size analysis');
   const prSizeResult = analyzePRSize(input.changes, fullConfig.prSize);
   details.prSize = prSizeResult;
   items.push(createPRSizeItem(prSizeResult, fullConfig.prSize));
-  
+
   // 2. Security Scan
   logger.info('Running security scan');
   const securityResult = scanSecurity(input.files, fullConfig.security);
   details.security = securityResult;
   items.push(createSecurityItem(securityResult));
-  
+
   // 3. Documentation Coverage
   logger.info('Running documentation coverage analysis');
   const docResult = analyzeDocCoverage(
@@ -90,7 +90,7 @@ export function runChecklist(
   );
   details.docCoverage = docResult;
   items.push(createDocCoverageItem(docResult, fullConfig.docCoverage));
-  
+
   // 4. Test Coverage Delta
   if (input.headCoverage) {
     logger.info('Running test coverage delta analysis');
@@ -103,12 +103,12 @@ export function runChecklist(
     details.testCoverageDelta = coverageDeltaResult;
     items.push(createTestCoverageDeltaItem(coverageDeltaResult, fullConfig.testCoverageDelta));
   }
-  
+
   // Calculate overall status
   const hasErrors = items.some(i => i.status === CheckStatus.Fail && i.severity === CheckSeverity.Error);
-  const hasWarnings = items.some(i => i.status === CheckStatus.Warn || 
+  const hasWarnings = items.some(i => i.status === CheckStatus.Warn ||
     (i.status === CheckStatus.Fail && i.severity === CheckSeverity.Warning));
-  
+
   let status: ChecklistResult['status'];
   if (hasErrors) {
     status = 'fail';
@@ -117,18 +117,18 @@ export function runChecklist(
   } else {
     status = 'pass';
   }
-  
+
   // Generate summary
   const passCount = items.filter(i => i.status === CheckStatus.Pass).length;
   const totalCount = items.filter(i => i.status !== CheckStatus.Skip).length;
   const summary = `${passCount}/${totalCount} checks passed`;
-  
+
   // Suggest reviewers
   const suggestedReviewers = suggestReviewers(input.changes, input.blameInfo);
-  
+
   const elapsed = Date.now() - startTime;
   logger.info('Checklist complete', { status, elapsed, passCount, totalCount });
-  
+
   return {
     status,
     summary,
@@ -145,11 +145,11 @@ export function runChecklist(
 
 function createPRSizeItem(result: PRSizeResult, _config: typeof DEFAULT_PR_SIZE_CONFIG): ChecklistItem {
   const { linesChanged, filesChanged, recommendation, suggestedSplitPoints } = result;
-  
+
   let status: CheckStatus;
   let severity: CheckSeverity;
   let message: string;
-  
+
   switch (recommendation) {
     case 'good':
       status = CheckStatus.Pass;
@@ -167,7 +167,7 @@ function createPRSizeItem(result: PRSizeResult, _config: typeof DEFAULT_PR_SIZE_
       message = `PR is too large (${linesChanged} lines, ${filesChanged} files)`;
       break;
   }
-  
+
   return {
     id: 'pr-size',
     name: 'PR Size',
@@ -180,14 +180,14 @@ function createPRSizeItem(result: PRSizeResult, _config: typeof DEFAULT_PR_SIZE_
 
 function createSecurityItem(result: SecurityResult): ChecklistItem {
   const { findings, scannedFiles } = result;
-  
+
   const errors = findings.filter(f => f.severity === CheckSeverity.Error);
   const warnings = findings.filter(f => f.severity === CheckSeverity.Warning);
-  
+
   let status: CheckStatus;
   let severity: CheckSeverity;
   let message: string;
-  
+
   if (errors.length > 0) {
     status = CheckStatus.Fail;
     severity = CheckSeverity.Error;
@@ -201,14 +201,14 @@ function createSecurityItem(result: SecurityResult): ChecklistItem {
     severity = CheckSeverity.Info;
     message = `No security issues found (${scannedFiles} files scanned)`;
   }
-  
+
   return {
     id: 'security',
     name: 'Security Scan',
     status,
     severity,
     message,
-    details: findings.length > 0 
+    details: findings.length > 0
       ? findings.map(f => `${f.file}:${f.line} - ${f.message}`).join('\n')
       : undefined,
     locations: findings.map(f => ({
@@ -220,15 +220,15 @@ function createSecurityItem(result: SecurityResult): ChecklistItem {
 }
 
 function createDocCoverageItem(
-  result: DocCoverageResult, 
+  result: DocCoverageResult,
   config: typeof DEFAULT_DOC_COVERAGE_CONFIG
 ): ChecklistItem {
   const { coveragePercent, undocumented, newUndocumented, totalExports } = result;
-  
+
   let status: CheckStatus;
   let severity: CheckSeverity;
   let message: string;
-  
+
   if (totalExports === 0) {
     status = CheckStatus.Skip;
     severity = CheckSeverity.Info;
@@ -246,7 +246,7 @@ function createDocCoverageItem(
     severity = CheckSeverity.Info;
     message = `Documentation coverage: ${coveragePercent}%`;
   }
-  
+
   return {
     id: 'doc-coverage',
     name: 'Documentation Coverage',
@@ -269,11 +269,11 @@ function createTestCoverageDeltaItem(
   config: typeof DEFAULT_TEST_COVERAGE_DELTA_CONFIG
 ): ChecklistItem {
   const { deltaCoverage, newCodeCoverage, uncoveredChanges, newLinesTotal } = result;
-  
+
   let status: CheckStatus;
   let severity: CheckSeverity;
   let message: string;
-  
+
   if (newLinesTotal === 0) {
     status = CheckStatus.Skip;
     severity = CheckSeverity.Info;
@@ -291,7 +291,7 @@ function createTestCoverageDeltaItem(
     severity = CheckSeverity.Info;
     message = `Test coverage: ${newCodeCoverage}% of new code covered`;
   }
-  
+
   return {
     id: 'test-coverage',
     name: 'Test Coverage',
@@ -322,19 +322,19 @@ function analyzeTestCoverageDelta(
   const baseCoveragePercent = baseCoverage?.summary.linePercentage ?? headCoverage.summary.linePercentage;
   const headCoveragePercent = headCoverage.summary.linePercentage;
   const deltaCoverage = headCoveragePercent - baseCoveragePercent;
-  
+
   // Find uncovered new lines
   const uncoveredChanges: TestCoverageDeltaResult['uncoveredChanges'] = [];
   let newLinesTotal = 0;
   let newLinesCovered = 0;
-  
+
   for (const change of changes) {
     if (change.isDeleted) continue;
-    
+
     // Get coverage for this file
     const fileCoverage = headCoverage.files.get(change.path);
     if (!fileCoverage) continue;
-    
+
     // For new files, all lines are "new"
     if (change.isNew) {
       for (const [lineNum, lineCov] of fileCoverage.lines) {
@@ -358,11 +358,11 @@ function analyzeTestCoverageDelta(
       newLinesCovered += Math.round(change.additions * (fileCoverage.summary.linePercentage / 100));
     }
   }
-  
-  const newCodeCoverage = newLinesTotal > 0 
+
+  const newCodeCoverage = newLinesTotal > 0
     ? Math.round((newLinesCovered / newLinesTotal) * 100)
     : 100;
-  
+
   return {
     baseCoverage: baseCoveragePercent,
     headCoverage: headCoveragePercent,
@@ -385,10 +385,10 @@ function suggestReviewers(
   if (!blameInfo) {
     return [];
   }
-  
+
   // Count contributions by author
   const authorCounts = new Map<string, number>();
-  
+
   for (const change of changes) {
     const authors = blameInfo.get(change.path);
     if (authors) {
@@ -397,13 +397,13 @@ function suggestReviewers(
       }
     }
   }
-  
+
   // Sort by contribution count
   const sorted = [...authorCounts.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([author]) => author);
-  
+
   return sorted;
 }
 

@@ -3,10 +3,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { 
-  checkChangesCoverage, 
+import {
+  checkChangesCoverage,
   formatUnsupportedSurfaceSetupGuidance,
-  formatCoverageReport, 
+  formatCoverageReport,
   getShortSummary,
   ChangedFile,
   CoverageCheckResult
@@ -57,7 +57,7 @@ describe('Coverage Checker', () => {
       [4, 0],
       [5, 0],
     ]));
-    
+
     return {
       files,
       summary: createEmptySummary(),
@@ -76,7 +76,7 @@ describe('Coverage Checker', () => {
       }];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage(), { threshold: 80 });
-      
+
       expect(result.passed).toBe(true);
       expect(result.coveragePercent).toBe(100);
       expect(result.summary.coveredLines).toBe(3);
@@ -92,7 +92,7 @@ describe('Coverage Checker', () => {
       }];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage(), { threshold: 80 });
-      
+
       expect(result.passed).toBe(false);
       expect(result.coveragePercent).toBe(60); // 3/5 = 60%
       expect(result.summary.uncoveredLines).toBe(2);
@@ -107,7 +107,7 @@ describe('Coverage Checker', () => {
       }];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage());
-      
+
       expect(result.uncoveredDetails).toHaveLength(2);
       expect(result.uncoveredDetails[0]).toEqual({
         file: 'src/utils.ts',
@@ -133,7 +133,7 @@ describe('Coverage Checker', () => {
       ];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage());
-      
+
       expect(result.fileBreakdown).toHaveLength(2);
       expect(result.summary.totalChangedLines).toBe(5);
       expect(result.summary.coveredLines).toBe(5);
@@ -147,10 +147,10 @@ describe('Coverage Checker', () => {
         isNew: true
       }];
 
-      const result = checkChangesCoverage(changedFiles, createSampleCoverage(), { 
-        includeNewFiles: true 
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage(), {
+        includeNewFiles: true
       });
-      
+
       expect(result.passed).toBe(false);
       expect(result.summary.uncoveredLines).toBe(3);
       expect(result.uncoveredDetails[0].reason).toBe('no-coverage-data');
@@ -165,7 +165,7 @@ describe('Coverage Checker', () => {
       }];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage());
-      
+
       expect(result.summary.totalChangedLines).toBe(0);
       expect(result.passed).toBe(true);
     });
@@ -196,7 +196,7 @@ describe('Coverage Checker', () => {
       }];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage());
-      
+
       // Only lines 1, 2 should be counted
       expect(result.summary.totalChangedLines).toBe(2);
       expect(result.summary.skippedLines).toBe(3);
@@ -204,7 +204,7 @@ describe('Coverage Checker', () => {
 
     it('should handle empty changed files', () => {
       const result = checkChangesCoverage([], createSampleCoverage());
-      
+
       expect(result.passed).toBe(true);
       expect(result.coveragePercent).toBe(100);
     });
@@ -218,7 +218,7 @@ describe('Coverage Checker', () => {
       }];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage());
-      
+
       expect(result.summary.totalChangedLines).toBe(3);
       expect(result.summary.coveredLines).toBe(3);
       expect(result.passed).toBe(true);
@@ -320,7 +320,7 @@ describe('Coverage Checker', () => {
       };
 
       const report = formatCoverageReport(result);
-      
+
       expect(report).toContain('✅ PASSED');
       expect(report).toContain('95%');
       expect(report).toContain('threshold: 80%');
@@ -350,7 +350,7 @@ describe('Coverage Checker', () => {
       };
 
       const report = formatCoverageReport(result);
-      
+
       expect(report).toContain('❌ FAILED');
       expect(report).toContain('50%');
       expect(report).toContain('src/test.ts:5');

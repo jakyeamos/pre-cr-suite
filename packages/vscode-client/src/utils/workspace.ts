@@ -1,6 +1,6 @@
 /**
  * Workspace Utilities
- * 
+ *
  * Centralized workspace operations for file scanning and management
  */
 
@@ -44,7 +44,7 @@ export function getWorkspaceRoot(): vscode.Uri | undefined {
  * Check if workspace is open
  */
 export function hasWorkspace(): boolean {
-  return vscode.workspace.workspaceFolders !== undefined && 
+  return vscode.workspace.workspaceFolders !== undefined &&
          vscode.workspace.workspaceFolders.length > 0;
 }
 

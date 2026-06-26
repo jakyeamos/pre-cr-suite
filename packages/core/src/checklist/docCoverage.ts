@@ -1,6 +1,6 @@
 /**
  * Documentation Coverage Analyzer
- * 
+ *
  * Analyzes code for documentation coverage:
  * - Finds exported symbols (functions, classes, interfaces, types)
  * - Checks if they have documentation
@@ -47,37 +47,37 @@ export interface SourceFile {
 const EXPORT_PATTERNS = {
   // export function name() {}
   exportFunction: /^export\s+(?:async\s+)?function\s+(\w+)/gm,
-  
+
   // export const name = () => {}
   exportConstArrow: /^export\s+const\s+(\w+)\s*=\s*(?:async\s*)?\(/gm,
-  
+
   // export const name = function() {}
   exportConstFunction: /^export\s+const\s+(\w+)\s*=\s*(?:async\s+)?function/gm,
-  
+
   // export class Name {}
   exportClass: /^export\s+class\s+(\w+)/gm,
-  
+
   // export interface Name {}
   exportInterface: /^export\s+interface\s+(\w+)/gm,
-  
-  // export type Name = 
+
+  // export type Name =
   exportType: /^export\s+type\s+(\w+)\s*=/gm,
-  
+
   // export enum Name {}
   exportEnum: /^export\s+enum\s+(\w+)/gm,
-  
+
   // export const/let/var name = (non-function)
   exportVariable: /^export\s+(?:const|let|var)\s+(\w+)\s*(?::\s*[^=]+)?\s*=/gm,
-  
+
   // export default function name() {}
   exportDefaultFunction: /^export\s+default\s+(?:async\s+)?function\s+(\w+)/gm,
-  
+
   // export default class Name {}
   exportDefaultClass: /^export\s+default\s+class\s+(\w+)/gm,
-  
+
   // export { name } from './module'
   reExport: /^export\s+\{\s*([^}]+)\s*\}\s+from/gm,
-  
+
   // export * from './module'
   reExportAll: /^export\s+\*\s+from/gm
 };
@@ -89,10 +89,10 @@ const EXPORT_PATTERNS = {
 const _DOC_PATTERNS = {
   // JSDoc style: /** ... */
   jsdoc: /\/\*\*[\s\S]*?\*\//g,
-  
+
   // Single line: /** ... */
   jsdocSingle: /\/\*\*[^*].*\*\//g,
-  
+
   // TSDoc is same as JSDoc
   tsdoc: /\/\*\*[\s\S]*?\*\//g
 };
@@ -103,14 +103,14 @@ const _DOC_PATTERNS = {
 export function parseExports(file: SourceFile): ParsedExport[] {
   const exports: ParsedExport[] = [];
   const lines = file.content.split('\n');
-  
+
   // Build a map of line numbers to their content
   const lineMap = new Map<number, string>();
   lines.forEach((line, i) => lineMap.set(i, line));
-  
+
   // Find all doc comments and their end lines
   const docComments = findDocComments(file.content);
-  
+
   // Parse each type of export
   parsePattern(file, EXPORT_PATTERNS.exportFunction, 'function', exports, docComments);
   parsePattern(file, EXPORT_PATTERNS.exportConstArrow, 'function', exports, docComments);
@@ -121,23 +121,23 @@ export function parseExports(file: SourceFile): ParsedExport[] {
   parsePattern(file, EXPORT_PATTERNS.exportEnum, 'const', exports, docComments);
   parsePattern(file, EXPORT_PATTERNS.exportDefaultFunction, 'function', exports, docComments);
   parsePattern(file, EXPORT_PATTERNS.exportDefaultClass, 'class', exports, docComments);
-  
+
   // Parse variable exports (but filter out arrow functions we already caught)
   const varExports: ParsedExport[] = [];
   parsePattern(file, EXPORT_PATTERNS.exportVariable, 'variable', varExports, docComments);
-  
+
   // Only add variable exports that aren't already captured as functions
   for (const varExport of varExports) {
-    const isDuplicate = exports.some(e => 
-      e.name === varExport.name && 
-      e.file === varExport.file && 
+    const isDuplicate = exports.some(e =>
+      e.name === varExport.name &&
+      e.file === varExport.file &&
       Math.abs(e.line - varExport.line) < 3
     );
     if (!isDuplicate) {
       exports.push(varExport);
     }
   }
-  
+
   return exports;
 }
 
@@ -147,20 +147,20 @@ export function parseExports(file: SourceFile): ParsedExport[] {
 function findDocComments(content: string): Map<number, string> {
   const docs = new Map<number, string>();
   const lines = content.split('\n');
-  
+
   let inDoc = false;
   let _docStart = -1;
   let docContent = '';
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Single-line JSDoc
     if (line.startsWith('/**') && line.endsWith('*/')) {
       docs.set(i + 1, line); // Doc ends on this line, export on next
       continue;
     }
-    
+
     // Start of multi-line doc
     if (line.startsWith('/**')) {
       inDoc = true;
@@ -168,11 +168,11 @@ function findDocComments(content: string): Map<number, string> {
       docContent = line;
       continue;
     }
-    
+
     // Inside doc
     if (inDoc) {
       docContent += '\n' + line;
-      
+
       // End of doc
       if (line.endsWith('*/')) {
         inDoc = false;
@@ -181,7 +181,7 @@ function findDocComments(content: string): Map<number, string> {
       }
     }
   }
-  
+
   return docs;
 }
 
@@ -197,23 +197,23 @@ function parsePattern(
 ): void {
   // Reset regex
   pattern.lastIndex = 0;
-  
+
   const lines = file.content.split('\n');
   let match;
-  
+
   // We need to track line numbers, so process line by line
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
     const line = lines[lineNum];
     pattern.lastIndex = 0;
-    
+
     match = pattern.exec(line);
     if (match) {
       const name = match[1];
-      
+
       // Check if there's a doc comment immediately before
       const hasDoc = hasDocumentation(lineNum, docComments);
       const docContent = docComments.get(lineNum);
-      
+
       exports.push({
         name,
         kind,
@@ -252,20 +252,20 @@ export function analyzeDocCoverage(
     ...DEFAULT_DOC_COVERAGE_CONFIG,
     ...config
   };
-  
+
   // Parse all exports from current files
   const allExports: ParsedExport[] = [];
-  
+
   for (const file of files) {
     // Skip non-TypeScript/JavaScript files
     if (!isSourceFile(file.path)) {
       continue;
     }
-    
+
     const exports = parseExports(file);
     allExports.push(...exports);
   }
-  
+
   // Filter exports based on config
   const relevantExports = allExports.filter(exp => {
     switch (exp.kind) {
@@ -281,13 +281,13 @@ export function analyzeDocCoverage(
         return false;
     }
   });
-  
+
   const totalExports = relevantExports.length;
   const documentedExports = relevantExports.filter(e => e.hasDoc).length;
-  const coveragePercent = totalExports > 0 
-    ? Math.round((documentedExports / totalExports) * 100) 
+  const coveragePercent = totalExports > 0
+    ? Math.round((documentedExports / totalExports) * 100)
     : 100;
-  
+
   // Find undocumented exports
   const undocumented: UndocumentedExport[] = relevantExports
     .filter(e => !e.hasDoc)
@@ -298,13 +298,13 @@ export function analyzeDocCoverage(
       line: e.line,
       isNew: false
     }));
-  
+
   // Find NEW undocumented exports (not in base)
   let newUndocumented: UndocumentedExport[] = [];
-  
+
   if (baseExports) {
     const baseNames = new Set(baseExports.map(e => `${e.file}:${e.name}`));
-    
+
     newUndocumented = undocumented
       .filter(e => !baseNames.has(`${e.file}:${e.name}`))
       .map(e => ({ ...e, isNew: true }));
@@ -315,7 +315,7 @@ export function analyzeDocCoverage(
       .filter(e => newFiles.has(e.file))
       .map(e => ({ ...e, isNew: true }));
   }
-  
+
   logger.info('Documentation coverage analysis complete', {
     totalExports,
     documentedExports,
@@ -323,7 +323,7 @@ export function analyzeDocCoverage(
     undocumentedCount: undocumented.length,
     newUndocumentedCount: newUndocumented.length
   });
-  
+
   return {
     totalExports,
     documentedExports,
@@ -361,7 +361,7 @@ export interface DocHealthIssue {
 export function checkDocHealth(file: SourceFile): DocHealthIssue[] {
   const issues: DocHealthIssue[] = [];
   const exports = parseExports(file);
-  
+
   for (const exp of exports) {
     if (exp.hasDoc && exp.docContent && exp.kind === 'function') {
       // Check for @param tags that might be outdated
@@ -370,18 +370,18 @@ export function checkDocHealth(file: SourceFile): DocHealthIssue[] {
         const match = t.match(/@param\s+\{?[^}]*\}?\s*(\w+)/);
         return match ? match[1] : '';
       });
-      
+
       // Try to find the function signature
       const lines = file.content.split('\n');
       const funcLine = lines[exp.line - 1] || '';
       const signatureMatch = funcLine.match(/\(([^)]*)\)/);
-      
+
       if (signatureMatch) {
         const params = signatureMatch[1]
           .split(',')
           .map(p => p.trim().split(/[:\s=]/)[0].trim())
           .filter(p => p && p !== '');
-        
+
         // Check for documented params that don't exist
         for (const docParam of docParamNames) {
           if (!params.includes(docParam)) {
@@ -395,7 +395,7 @@ export function checkDocHealth(file: SourceFile): DocHealthIssue[] {
             });
           }
         }
-        
+
         // Check for params without documentation
         for (const param of params) {
           if (param && !docParamNames.includes(param)) {
@@ -412,6 +412,6 @@ export function checkDocHealth(file: SourceFile): DocHealthIssue[] {
       }
     }
   }
-  
+
   return issues;
 }

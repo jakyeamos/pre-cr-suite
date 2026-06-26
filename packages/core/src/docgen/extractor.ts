@@ -1,6 +1,6 @@
 /**
  * Signature Extractor
- * 
+ *
  * Parses TypeScript/JavaScript source files to extract
  * functions, classes, interfaces, and types that can be documented.
  */
@@ -23,31 +23,31 @@ import {
 const PATTERNS = {
   // Match function declarations: function name(params): returnType
   functionDecl: /^(\s*)(export\s+)?(async\s+)?function\s*(\*?)\s*(\w+)\s*(<[^>]+>)?\s*\(([^)]*)\)\s*(?::\s*([^{]+))?\s*\{/gm,
-  
+
   // Match arrow functions: const name = (params) => or const name = async (params) =>
   arrowFunction: /^(\s*)(export\s+)?(const|let|var)\s+(\w+)\s*(?::\s*[^=]+)?\s*=\s*(async\s*)?\(([^)]*)\)\s*(?::\s*([^=]+))?\s*=>/gm,
-  
+
   // Match class declarations
   classDecl: /^(\s*)(export\s+)?(abstract\s+)?class\s+(\w+)\s*(<[^>]+>)?(?:\s+extends\s+(\w+(?:<[^>]+>)?))?\s*(?:implements\s+([^{]+))?\s*\{/gm,
-  
+
   // Match interface declarations
   interfaceDecl: /^(\s*)(export\s+)?interface\s+(\w+)\s*(<[^>]+>)?(?:\s+extends\s+([^{]+))?\s*\{/gm,
-  
+
   // Match type alias declarations
   typeDecl: /^(\s*)(export\s+)?type\s+(\w+)\s*(<[^>]+>)?\s*=\s*([^;]+);/gm,
-  
+
   // Match method declarations inside classes
   methodDecl: /^(\s*)(public\s+|private\s+|protected\s+)?(static\s+)?(async\s+)?(\w+)\s*(<[^>]+>)?\s*\(([^)]*)\)\s*(?::\s*([^{]+))?\s*\{/gm,
-  
+
   // Match property declarations
   propertyDecl: /^(\s*)(public\s+|private\s+|protected\s+)?(readonly\s+)?(static\s+)?(\w+)(\?)?\s*(?::\s*([^;=]+))?\s*(?:=\s*([^;]+))?;/gm,
-  
+
   // Match constructor
   constructorDecl: /^(\s*)(public\s+|private\s+|protected\s+)?constructor\s*\(([^)]*)\)\s*\{/gm,
-  
+
   // Match JSDoc comment
   jsdocComment: /\/\*\*[\s\S]*?\*\//g,
-  
+
   // Parameter parsing
   paramPattern: /(\w+)(\?)?(?:\s*:\s*([^,=]+))?(?:\s*=\s*([^,)]+))?/g
 };
@@ -61,34 +61,34 @@ const PATTERNS = {
  */
 export function extractItems(source: string, filePath?: string): ExtractedItems {
   const logger = getLogger();
-  
+
   const result: ExtractedItems = {
     functions: [],
     classes: [],
     interfaces: [],
     types: []
   };
-  
+
   const lines = source.split('\n');
-  
+
   // Track existing documentation
   const docComments = findDocComments(source);
-  
+
   // Extract standalone functions
   result.functions.push(...extractFunctions(source, lines, docComments));
-  
+
   // Extract arrow functions
   result.functions.push(...extractArrowFunctions(source, lines, docComments));
-  
+
   // Extract classes
   result.classes.push(...extractClasses(source, lines, docComments));
-  
+
   // Extract interfaces
   result.interfaces.push(...extractInterfaces(source, lines, docComments));
-  
+
   // Extract type aliases
   result.types.push(...extractTypes(source, lines, docComments));
-  
+
   logger.debug('Extracted items', {
     functions: result.functions.length,
     classes: result.classes.length,
@@ -96,7 +96,7 @@ export function extractItems(source: string, filePath?: string): ExtractedItems 
     types: result.types.length,
     file: filePath
   });
-  
+
   return result;
 }
 
@@ -106,20 +106,20 @@ export function extractItems(source: string, filePath?: string): ExtractedItems 
 function findDocComments(source: string): Map<number, string> {
   const comments = new Map<number, string>();
   const lines = source.split('\n');
-  
+
   let inComment = false;
   let commentStart = -1;
   let commentLines: string[] = [];
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Single-line JSDoc
     if (line.startsWith('/**') && line.endsWith('*/')) {
       comments.set(i + 1, line); // Maps to next line
       continue;
     }
-    
+
     // Start of multi-line
     if (line.startsWith('/**')) {
       inComment = true;
@@ -127,10 +127,10 @@ function findDocComments(source: string): Map<number, string> {
       commentLines = [line];
       continue;
     }
-    
+
     if (inComment) {
       commentLines.push(line);
-      
+
       if (line.endsWith('*/')) {
         inComment = false;
         comments.set(i + 1, commentLines.join('\n'));
@@ -138,7 +138,7 @@ function findDocComments(source: string): Map<number, string> {
       }
     }
   }
-  
+
   return comments;
 }
 
@@ -153,19 +153,19 @@ function getLineNumber(source: string, index: number): number {
  * Extract function declarations
  */
 function extractFunctions(
-  source: string, 
-  lines: string[], 
+  source: string,
+  lines: string[],
   docComments: Map<number, string>
 ): ExtractedFunction[] {
   const functions: ExtractedFunction[] = [];
-  
+
   PATTERNS.functionDecl.lastIndex = 0;
   let match;
-  
+
   while ((match = PATTERNS.functionDecl.exec(source)) !== null) {
     const [fullMatch, indent, exportKw, asyncKw, generator, name, typeParams, params, returnType] = match;
     const lineNum = getLineNumber(source, match.index);
-    
+
     const fn: ExtractedFunction = {
       name,
       kind: 'function',
@@ -179,10 +179,10 @@ function extractFunctions(
       signature: buildSignature(name, params || '', returnType, !!asyncKw, typeParams),
       body: extractBody(source, match.index + fullMatch.length - 1)
     };
-    
+
     functions.push(fn);
   }
-  
+
   return functions;
 }
 
@@ -195,14 +195,14 @@ function extractArrowFunctions(
   docComments: Map<number, string>
 ): ExtractedFunction[] {
   const functions: ExtractedFunction[] = [];
-  
+
   PATTERNS.arrowFunction.lastIndex = 0;
   let match;
-  
+
   while ((match = PATTERNS.arrowFunction.exec(source)) !== null) {
     const [fullMatch, indent, exportKw, varKw, name, asyncKw, params, returnType] = match;
     const lineNum = getLineNumber(source, match.index);
-    
+
     const fn: ExtractedFunction = {
       name,
       kind: 'arrow',
@@ -214,10 +214,10 @@ function extractArrowFunctions(
       line: lineNum,
       signature: buildSignature(name, params || '', returnType, !!asyncKw)
     };
-    
+
     functions.push(fn);
   }
-  
+
   return functions;
 }
 
@@ -230,15 +230,15 @@ function extractClasses(
   docComments: Map<number, string>
 ): ExtractedClass[] {
   const classes: ExtractedClass[] = [];
-  
+
   PATTERNS.classDecl.lastIndex = 0;
   let match;
-  
+
   while ((match = PATTERNS.classDecl.exec(source)) !== null) {
     const [fullMatch, indent, exportKw, abstractKw, name, typeParams, extendsClause, implementsClause] = match;
     const lineNum = getLineNumber(source, match.index);
     const classBody = extractBody(source, match.index + fullMatch.length - 1);
-    
+
     const cls: ExtractedClass = {
       name,
       extends: extendsClause?.trim(),
@@ -249,17 +249,17 @@ function extractClasses(
       existingDoc: docComments.get(lineNum),
       line: lineNum
     };
-    
+
     // Find constructor
     const ctorMethod = cls.methods.find(m => m.kind === 'constructor');
     if (ctorMethod) {
       cls.ctor = ctorMethod;
       cls.methods = cls.methods.filter(m => m.kind !== 'constructor');
     }
-    
+
     classes.push(cls);
   }
-  
+
   return classes;
 }
 
@@ -269,14 +269,14 @@ function extractClasses(
 function extractMethods(classBody: string, className: string, classStartLine: number): ExtractedFunction[] {
   const methods: ExtractedFunction[] = [];
   const docComments = findDocComments(classBody);
-  
+
   // Extract constructor
   PATTERNS.constructorDecl.lastIndex = 0;
   let match = PATTERNS.constructorDecl.exec(classBody);
   if (match) {
     const [fullMatch, indent, access, params] = match;
     const lineNum = classStartLine + getLineNumber(classBody, match.index);
-    
+
     methods.push({
       name: 'constructor',
       kind: 'constructor',
@@ -290,18 +290,18 @@ function extractMethods(classBody: string, className: string, classStartLine: nu
       signature: `constructor(${params || ''})`
     });
   }
-  
+
   // Extract methods
   PATTERNS.methodDecl.lastIndex = 0;
   while ((match = PATTERNS.methodDecl.exec(classBody)) !== null) {
     const [fullMatch, indent, access, staticKw, asyncKw, name, typeParams, params, returnType] = match;
-    
+
     // Skip constructor (already handled)
     if (name === 'constructor') continue;
-    
+
     const relativeLineNum = getLineNumber(classBody, match.index);
     const lineNum = classStartLine + relativeLineNum;
-    
+
     methods.push({
       name,
       kind: 'method',
@@ -316,7 +316,7 @@ function extractMethods(classBody: string, className: string, classStartLine: nu
       signature: buildSignature(name, params || '', returnType, !!asyncKw, typeParams)
     });
   }
-  
+
   return methods;
 }
 
@@ -326,14 +326,14 @@ function extractMethods(classBody: string, className: string, classStartLine: nu
 function extractProperties(classBody: string, classStartLine: number): ExtractedProperty[] {
   const properties: ExtractedProperty[] = [];
   const docComments = findDocComments(classBody);
-  
+
   PATTERNS.propertyDecl.lastIndex = 0;
   let match;
-  
+
   while ((match = PATTERNS.propertyDecl.exec(classBody)) !== null) {
     const [fullMatch, indent, access, readonly, staticKw, name, optional, type, defaultValue] = match;
     const relativeLineNum = getLineNumber(classBody, match.index);
-    
+
     properties.push({
       name,
       type: type?.trim() || null,
@@ -345,7 +345,7 @@ function extractProperties(classBody: string, classStartLine: number): Extracted
       line: classStartLine + relativeLineNum
     });
   }
-  
+
   return properties;
 }
 
@@ -358,15 +358,15 @@ function extractInterfaces(
   docComments: Map<number, string>
 ): ExtractedInterface[] {
   const interfaces: ExtractedInterface[] = [];
-  
+
   PATTERNS.interfaceDecl.lastIndex = 0;
   let match;
-  
+
   while ((match = PATTERNS.interfaceDecl.exec(source)) !== null) {
     const [fullMatch, indent, exportKw, name, typeParams, extendsClause] = match;
     const lineNum = getLineNumber(source, match.index);
     const body = extractBody(source, match.index + fullMatch.length - 1);
-    
+
     interfaces.push({
       name,
       extends: extendsClause?.split(',').map(s => s.trim()),
@@ -377,7 +377,7 @@ function extractInterfaces(
       line: lineNum
     });
   }
-  
+
   return interfaces;
 }
 
@@ -387,20 +387,20 @@ function extractInterfaces(
 function extractInterfaceProperties(body: string, startLine: number): ExtractedProperty[] {
   const properties: ExtractedProperty[] = [];
   const lines = body.split('\n');
-  
+
   // Simple property pattern: name?: type;
   const propPattern = /^\s*(\w+)(\?)?\s*:\s*([^;]+);?\s*$/;
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const match = propPattern.exec(line);
-    
+
     if (match) {
       const [, name, optional, type] = match;
-      
+
       // Skip if it looks like a method
       if (type.includes('=>') || type.includes('(')) continue;
-      
+
       properties.push({
         name,
         type: type.trim(),
@@ -411,7 +411,7 @@ function extractInterfaceProperties(body: string, startLine: number): ExtractedP
       });
     }
   }
-  
+
   return properties;
 }
 
@@ -421,17 +421,17 @@ function extractInterfaceProperties(body: string, startLine: number): ExtractedP
 function extractInterfaceMethods(body: string, startLine: number): ExtractedFunction[] {
   const methods: ExtractedFunction[] = [];
   const lines = body.split('\n');
-  
+
   // Method pattern: name(params): returnType; or name: (params) => returnType;
   const methodPattern = /^\s*(\w+)\s*(?:<[^>]+>)?\s*\(([^)]*)\)\s*:\s*([^;]+);?\s*$/;
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const match = methodPattern.exec(line);
-    
+
     if (match) {
       const [, name, params, returnType] = match;
-      
+
       methods.push({
         name,
         kind: 'method',
@@ -444,7 +444,7 @@ function extractInterfaceMethods(body: string, startLine: number): ExtractedFunc
       });
     }
   }
-  
+
   return methods;
 }
 
@@ -457,14 +457,14 @@ function extractTypes(
   docComments: Map<number, string>
 ): ExtractedType[] {
   const types: ExtractedType[] = [];
-  
+
   PATTERNS.typeDecl.lastIndex = 0;
   let match;
-  
+
   while ((match = PATTERNS.typeDecl.exec(source)) !== null) {
     const [fullMatch, indent, exportKw, name, typeParams, definition] = match;
     const lineNum = getLineNumber(source, match.index);
-    
+
     types.push({
       name,
       typeParams: typeParams ? parseTypeParams(typeParams) : undefined,
@@ -473,7 +473,7 @@ function extractTypes(
       line: lineNum
     });
   }
-  
+
   return types;
 }
 
@@ -486,16 +486,16 @@ function extractTypes(
  */
 function parseParams(paramsStr: string): ExtractedParam[] {
   if (!paramsStr.trim()) return [];
-  
+
   const params: ExtractedParam[] = [];
-  
+
   // Split by comma, but respect nested brackets
   const paramParts = splitParams(paramsStr);
-  
+
   for (const part of paramParts) {
     const trimmed = part.trim();
     if (!trimmed) continue;
-    
+
     // Handle destructuring - simplify to object/array
     if (trimmed.startsWith('{')) {
       params.push({
@@ -507,7 +507,7 @@ function parseParams(paramsStr: string): ExtractedParam[] {
       });
       continue;
     }
-    
+
     if (trimmed.startsWith('[')) {
       params.push({
         name: 'items',
@@ -518,10 +518,10 @@ function parseParams(paramsStr: string): ExtractedParam[] {
       });
       continue;
     }
-    
+
     // Parse normal parameter
     const paramMatch = /^(\w+)(\?)?\s*(?::\s*([^=]+))?\s*(?:=\s*(.+))?$/.exec(trimmed);
-    
+
     if (paramMatch) {
       const [, name, optional, type, defaultValue] = paramMatch;
       params.push({
@@ -533,7 +533,7 @@ function parseParams(paramsStr: string): ExtractedParam[] {
       });
     }
   }
-  
+
   return params;
 }
 
@@ -544,14 +544,14 @@ function splitParams(str: string): string[] {
   const parts: string[] = [];
   let current = '';
   let depth = 0;
-  
+
   for (const char of str) {
     if (char === '(' || char === '[' || char === '{' || char === '<') {
       depth++;
     } else if (char === ')' || char === ']' || char === '}' || char === '>') {
       depth--;
     }
-    
+
     if (char === ',' && depth === 0) {
       parts.push(current);
       current = '';
@@ -559,11 +559,11 @@ function splitParams(str: string): string[] {
       current += char;
     }
   }
-  
+
   if (current.trim()) {
     parts.push(current);
   }
-  
+
   return parts;
 }
 
@@ -601,13 +601,13 @@ function buildSignature(
 function extractBody(source: string, startIndex: number): string {
   let depth = 1;
   let i = startIndex + 1;
-  
+
   while (i < source.length && depth > 0) {
     if (source[i] === '{') depth++;
     if (source[i] === '}') depth--;
     i++;
   }
-  
+
   return source.substring(startIndex + 1, i - 1);
 }
 
@@ -717,13 +717,13 @@ function inferParamDescription(name: string): string {
     [/^event$/i, 'Event'],
     [/^events$/i, 'Array of events'],
   ];
-  
+
   for (const [pattern, description] of patterns) {
     if (pattern.test(name)) {
       return description;
     }
   }
-  
+
   // Convert camelCase to words
   const words = name.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
   return words.charAt(0).toUpperCase() + words.slice(1);

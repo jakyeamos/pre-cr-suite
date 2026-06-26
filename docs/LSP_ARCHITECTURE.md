@@ -263,7 +263,7 @@ let coverageProvider: CoverageProvider;
 connection.onInitialize((params: InitializeParams) => {
   const workspaceRoot = params.workspaceFolders?.[0]?.uri;
   coverageProvider = new CoverageProvider(workspaceRoot);
-  
+
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
@@ -289,9 +289,9 @@ connection.onHover((params) => {
     params.textDocument.uri,
     params.position.line
   );
-  
+
   if (!coverage) return null;
-  
+
   return {
     contents: {
       kind: 'markdown',
@@ -323,12 +323,12 @@ export function activate(context: vscode.ExtensionContext) {
   const serverModule = context.asAbsolutePath(
     'node_modules/@pre-cr/server/out/server.js'
   );
-  
+
   const serverOptions: ServerOptions = {
     run: { module: serverModule, transport: TransportKind.ipc },
     debug: { module: serverModule, transport: TransportKind.ipc }
   };
-  
+
   const clientOptions: LanguageClientOptions = {
     // Activate for all files (coverage applies to any language)
     documentSelector: [{ scheme: 'file' }],
@@ -339,14 +339,14 @@ export function activate(context: vscode.ExtensionContext) {
       )
     }
   };
-  
+
   client = new LanguageClient(
     'preCrSuite',
     'Pre-CR Suite',
     serverOptions,
     clientOptions
   );
-  
+
   // Handle custom coverage decorations
   client.onReady().then(() => {
     client.onNotification('$/preCr/coverageChanged', (params) => {
@@ -354,7 +354,7 @@ export function activate(context: vscode.ExtensionContext) {
       applyCoverageDecorations(params);
     });
   });
-  
+
   client.start();
 }
 
@@ -392,7 +392,7 @@ lspconfig.precr.setup({
     -- Handle coverage decorations via extmarks
     if client.server_capabilities.experimental and
        client.server_capabilities.experimental.coverageProvider then
-      
+
       vim.api.nvim_create_autocmd('BufEnter', {
         buffer = bufnr,
         callback = function()
@@ -414,14 +414,14 @@ lspconfig.precr.setup({
 local function apply_coverage_extmarks(bufnr, decorations)
   local ns = vim.api.nvim_create_namespace('pre-cr-coverage')
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-  
+
   for _, dec in ipairs(decorations) do
     local hl_group = ({
       covered = 'PreCrCovered',
       uncovered = 'PreCrUncovered',
       partial = 'PreCrPartial'
     })[dec.status]
-    
+
     vim.api.nvim_buf_add_highlight(
       bufnr, ns, hl_group,
       dec.range.start.line,

@@ -1,6 +1,6 @@
 /**
  * Config Utility Tests
- * 
+ *
  * Tests for configuration access
  */
 
@@ -76,7 +76,7 @@ describe('Config Utilities', () => {
   describe('getConfigs', () => {
     it('should return multiple config values', () => {
       const values = getConfigs(['coverage.autoLoad', 'docs.style']);
-      
+
       expect(values).toHaveProperty('coverage.autoLoad');
       expect(values).toHaveProperty('docs.style');
     });
@@ -110,7 +110,7 @@ describe('Config Utilities', () => {
   describe('getFullConfig', () => {
     it('should return complete configuration object', () => {
       const config = getFullConfig();
-      
+
       expect(config).toHaveProperty('coverage');
       expect(config).toHaveProperty('security');
       expect(config).toHaveProperty('checklist');
@@ -123,7 +123,7 @@ describe('Config Utilities', () => {
 
     it('should have nested configuration', () => {
       const config = getFullConfig();
-      
+
       expect(typeof config.coverage).toBe('object');
       expect(typeof config.security).toBe('object');
     });

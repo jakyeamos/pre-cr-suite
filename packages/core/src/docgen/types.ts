@@ -1,6 +1,6 @@
 /**
  * Documentation Generator Types
- * 
+ *
  * Types for AI-powered documentation generation.
  */
 

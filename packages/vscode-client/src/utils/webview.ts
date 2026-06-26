@@ -1,6 +1,6 @@
 /**
  * Webview Utilities
- * 
+ *
  * Secure webview creation with CSP and HTML sanitization
  */
 
@@ -64,18 +64,18 @@ export function getContentSecurityPolicy(
   }
 ): string {
   const cspSource = webview.cspSource;
-  
+
   const directives = [
     "default-src 'none'",
     `script-src 'nonce-${nonce}'`,
-    options?.allowStyles !== false 
-      ? `style-src ${cspSource} 'unsafe-inline'` 
+    options?.allowStyles !== false
+      ? `style-src ${cspSource} 'unsafe-inline'`
       : "style-src 'none'",
-    options?.allowImages !== false 
-      ? `img-src ${cspSource} https: data:` 
+    options?.allowImages !== false
+      ? `img-src ${cspSource} https: data:`
       : "img-src 'none'",
-    options?.allowFonts !== false 
-      ? `font-src ${cspSource}` 
+    options?.allowFonts !== false
+      ? `font-src ${cspSource}`
       : "font-src 'none'",
   ];
 
@@ -115,7 +115,7 @@ export const WEBVIEW_STYLES = `
     --vscode-font-family: var(--vscode-editor-font-family, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
     --vscode-font-size: var(--vscode-editor-font-size, 13px);
   }
-  
+
   body {
     font-family: var(--vscode-font-family);
     font-size: var(--vscode-font-size);
@@ -307,7 +307,7 @@ export function buildTableWebview(
   rows: string[][]
 ): string {
   const headerHtml = headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
-  const rowsHtml = rows.map(row => 
+  const rowsHtml = rows.map(row =>
     `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`
   ).join('');
 

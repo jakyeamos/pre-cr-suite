@@ -1,6 +1,6 @@
 /**
  * Context Preservation Feature Module
- * 
+ *
  * Handles:
  * - Capturing context snapshots
  * - Restoring context on branch switch
@@ -40,7 +40,7 @@ async function initContextManager(client: LanguageClient) {
         autoRestoreOnBranchReturn: config.get('autoRestoreOnBranchReturn')
       }
     });
-    
+
     // Check if there's an existing snapshot for current branch
     const branch = await git.getCurrentBranch();
     if (branch) {
@@ -58,7 +58,7 @@ async function checkForExistingSnapshot(client: LanguageClient, branch: string) 
   try {
     const result = await client.sendRequest('$/preCr/getContextSummary', { branch });
     const summary = (result as any).summary;
-    
+
     if (summary) {
       statusBar.setSnapshot(branch);
     } else {
@@ -87,7 +87,7 @@ async function captureContext(client: LanguageClient) {
 
   try {
     const context = getCurrentEditorContext();
-    
+
     const result = await client.sendRequest('$/preCr/captureContext', {
       branch,
       description,
@@ -157,13 +157,13 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: any) {
 
   // Ask how to restore
   const restoreMode = await vscode.window.showQuickPick([
-    { 
-      label: '$(files) Full Restore', 
+    {
+      label: '$(files) Full Restore',
       description: 'Open all files and restore cursor positions',
       value: 'full'
     },
-    { 
-      label: '$(location) Cursor Only', 
+    {
+      label: '$(location) Cursor Only',
       description: 'Only restore cursor positions in already-open files',
       value: 'cursor'
     }
@@ -176,18 +176,18 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: any) {
   if (restoreMode.value === 'cursor') {
     // Only restore cursor positions in already-open files
     let restoredCount = 0;
-    
+
     for (const file of snapshot.files || []) {
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
       if (!workspaceRoot) continue;
 
       const fileUri = vscode.Uri.joinPath(workspaceRoot, file.path);
-      
+
       // Find if file is already open
       const openEditor = vscode.window.visibleTextEditors.find(
         e => e.document.uri.fsPath === fileUri.fsPath
       );
-      
+
       if (openEditor) {
         const position = new vscode.Position(file.cursor.line, file.cursor.character);
         openEditor.selection = new vscode.Selection(position, position);
@@ -195,7 +195,7 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: any) {
         restoredCount++;
       }
     }
-    
+
     notify.showSuccess(`Restored cursor positions in ${restoredCount} file(s)`);
     return;
   }
@@ -250,7 +250,7 @@ async function whereWasI(client: LanguageClient) {
         undefined,
         'Save Snapshot'
       );
-      
+
       if (action === 'Save Snapshot') {
         vscode.commands.executeCommand('preCr.captureContext');
       }

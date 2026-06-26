@@ -1,8 +1,8 @@
 /**
  * Istanbul JSON Parser
- * 
+ *
  * Parses coverage-final.json format from Istanbul/nyc.
- * 
+ *
  * Istanbul JSON Format:
  * {
  *   "/path/to/file.ts": {
@@ -93,7 +93,7 @@ export function parseIstanbulFile(
   workspaceRoot?: string
 ): ParseResult<WorkspaceCoverage> {
   const logger = getLogger();
-  
+
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
     return parseIstanbulContent(content, workspaceRoot);
@@ -147,11 +147,11 @@ export function parseIstanbulContent(
     // Parse line coverage from statements
     const lines = new Map<number, LineCoverage>();
     const lineExecCounts = new Map<number, number>();
-    
+
     for (const [stmtId, stmt] of Object.entries(fileCov.statementMap)) {
       const lineNumber = stmt.start.line;
       const count = fileCov.s[stmtId] ?? 0;
-      
+
       // Track max execution count per line (multiple statements can be on same line)
       const existing = lineExecCounts.get(lineNumber) ?? 0;
       lineExecCounts.set(lineNumber, Math.max(existing, count));
@@ -180,20 +180,20 @@ export function parseIstanbulContent(
     // Parse branch coverage
     const branchesByLine = new Map<number, BranchCoverage[]>();
     let branchIdCounter = 0;
-    
+
     for (const [branchId, branch] of Object.entries(fileCov.branchMap)) {
       const counts = fileCov.b[branchId] ?? [];
       const lineNumber = branch.loc.start.line;
-      
+
       if (!branchesByLine.has(lineNumber)) {
         branchesByLine.set(lineNumber, []);
       }
-      
+
       const lineBranches = branchesByLine.get(lineNumber)!;
-      
+
       // Map Istanbul branch types to our types
       const branchType = mapBranchType(branch.type);
-      
+
       for (let i = 0; i < counts.length; i++) {
         lineBranches.push({
           branchId: branchIdCounter++,
@@ -208,11 +208,11 @@ export function parseIstanbulContent(
       const lineCov = lines.get(lineNumber);
       if (lineCov) {
         lineCov.branches = branches;
-        
+
         // Update status based on branch coverage
         const allTaken = branches.every(b => b.taken > 0);
         const someTaken = branches.some(b => b.taken > 0);
-        
+
         if (!allTaken && someTaken) {
           lineCov.status = LineCoverageStatus.Partial;
         } else if (!someTaken && lineCov.executionCount > 0) {
@@ -288,7 +288,7 @@ function calculateFileSummary(
   for (const line of lines.values()) {
     if (line.status !== LineCoverageStatus.NotExecutable) {
       totalLines++;
-      if (line.status === LineCoverageStatus.Covered || 
+      if (line.status === LineCoverageStatus.Covered ||
           line.status === LineCoverageStatus.Partial) {
         coveredLines++;
       }

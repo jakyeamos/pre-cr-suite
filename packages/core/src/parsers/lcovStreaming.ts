@@ -1,9 +1,9 @@
 /**
  * Streaming LCOV Parser
- * 
+ *
  * Parses LCOV coverage files line-by-line without loading
  * the entire file into memory. Ideal for large coverage reports.
- * 
+ *
  * Performance improvements over standard parser:
  * - Memory: O(1) vs O(n) for file size
  * - Supports files > 100MB without memory spikes
@@ -12,9 +12,9 @@
 
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
-import { 
-  WorkspaceCoverage, 
-  FileCoverage, 
+import {
+  WorkspaceCoverage,
+  FileCoverage,
   LineCoverage,
   FunctionCoverage,
   LineCoverageStatus,
@@ -61,12 +61,12 @@ export async function parseLcovFileStreaming(
 ): Promise<StreamingParseResult> {
   const startTime = performance.now();
   const { onFile, onProgress, progressInterval = 10000, signal } = options;
-  
+
   const files = new Map<string, FileCoverage>();
   let currentFile: Partial<FileCoverage> | null = null;
   let currentLines = new Map<number, LineCoverage>();
   let currentFunctions: FunctionCoverage[] = [];
-  
+
   let linesProcessed = 0;
   let filesFound = 0;
 
@@ -93,7 +93,7 @@ export async function parseLcovFileStreaming(
 
     rl.on('line', (line) => {
       linesProcessed++;
-      
+
       // Progress callback
       if (onProgress && linesProcessed % progressInterval === 0) {
         onProgress(linesProcessed, filesFound);
@@ -121,10 +121,10 @@ export async function parseLcovFileStreaming(
             functions: currentFunctions,
             summary: coverage
           };
-          
+
           files.set(file.filePath, file);
           filesFound++;
-          
+
           if (onFile) {
             onFile(file);
           }
@@ -140,7 +140,7 @@ export async function parseLcovFileStreaming(
         const [lineStr, countStr] = trimmed.substring(3).split(',');
         const lineNumber = parseInt(lineStr, 10);
         const count = parseInt(countStr, 10);
-        
+
         if (!isNaN(lineNumber)) {
           currentLines.set(lineNumber, {
             lineNumber,
@@ -181,7 +181,7 @@ export async function parseLcovFileStreaming(
         const parts = trimmed.substring(5).split(',');
         const lineNumber = parseInt(parts[0], 10);
         const taken = parts[3] === '-' ? 0 : parseInt(parts[3], 10);
-        
+
         // Update line status to partial if branch not taken
         const existing = currentLines.get(lineNumber);
         if (existing && taken === 0 && existing.status === LineCoverageStatus.Covered) {
@@ -194,7 +194,7 @@ export async function parseLcovFileStreaming(
     rl.on('close', () => {
       const summary = calculateWorkspaceSummary(files);
       const parseTimeMs = performance.now() - startTime;
-      
+
       const logger = getLogger();
       logger.info(`Streaming LCOV parse complete`, {
         files: files.size,
@@ -242,20 +242,20 @@ export function parseLcovContentStreaming(
 ): StreamingParseResult {
   const startTime = performance.now();
   const { onFile, onProgress, progressInterval = 10000 } = options;
-  
+
   const files = new Map<string, FileCoverage>();
   let currentFile: Partial<FileCoverage> | null = null;
   let currentLines = new Map<number, LineCoverage>();
   let currentFunctions: FunctionCoverage[] = [];
-  
+
   let linesProcessed = 0;
   let filesFound = 0;
 
   const lines = content.split('\n');
-  
+
   for (const line of lines) {
     linesProcessed++;
-    
+
     if (onProgress && linesProcessed % progressInterval === 0) {
       onProgress(linesProcessed, filesFound);
     }
@@ -280,10 +280,10 @@ export function parseLcovContentStreaming(
           functions: currentFunctions,
           summary: coverage
         };
-        
+
         files.set(file.filePath, file);
         filesFound++;
-        
+
         if (onFile) {
           onFile(file);
         }
@@ -298,7 +298,7 @@ export function parseLcovContentStreaming(
       const [lineStr, countStr] = trimmed.substring(3).split(',');
       const lineNumber = parseInt(lineStr, 10);
       const count = parseInt(countStr, 10);
-      
+
       if (!isNaN(lineNumber)) {
         currentLines.set(lineNumber, {
           lineNumber,
@@ -336,7 +336,7 @@ export function parseLcovContentStreaming(
       const parts = trimmed.substring(5).split(',');
       const lineNumber = parseInt(parts[0], 10);
       const taken = parts[3] === '-' ? 0 : parseInt(parts[3], 10);
-      
+
       const existing = currentLines.get(lineNumber);
       if (existing && taken === 0 && existing.status === LineCoverageStatus.Covered) {
         existing.status = LineCoverageStatus.Partial;

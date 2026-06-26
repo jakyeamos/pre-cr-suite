@@ -1,6 +1,6 @@
 /**
  * Pre-CR Suite VS Code Extension
- * 
+ *
  * Main entry point that:
  * - Starts the LSP server
  * - Registers commands
@@ -47,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Create output channel first
   outputChannel = vscode.window.createOutputChannel('Pre-CR Suite');
   context.subscriptions.push(outputChannel);
-  
+
   // Log to both output channel and console for debugging
   console.log('[Pre-CR Suite] ========================================');
   console.log('[Pre-CR Suite] Extension activating...');
@@ -72,7 +72,7 @@ export async function activate(context: vscode.ExtensionContext) {
   } catch (error) {
     console.error('[Pre-CR Suite] Status bar init failed:', error);
     log(`Status bar init failed: ${error}`);
-    
+
     // Fallback: create a simple status bar item manually
     try {
       statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -94,7 +94,7 @@ export async function activate(context: vscode.ExtensionContext) {
   } catch (error) {
     console.error('[Pre-CR Suite] Quick actions registration failed:', error);
   }
-  
+
   // Register utility commands
   try {
     registerUtilityCommands(context);
@@ -106,12 +106,12 @@ export async function activate(context: vscode.ExtensionContext) {
   // Path to server module
   const serverModule = context.asAbsolutePath(path.join('dist', 'server.js'));
   console.log('[Pre-CR Suite] Server module path:', serverModule);
-  
+
   // Check if server exists
   if (!fs.existsSync(serverModule)) {
     console.error('[Pre-CR Suite] Server module NOT FOUND at:', serverModule);
     log(`Server not found: ${serverModule}`);
-    
+
     // Try alternative path (in case running from different location)
     const altServerModule = path.join(context.extensionPath, '..', 'server', 'dist', 'server.js');
     console.log('[Pre-CR Suite] Trying alternative path:', altServerModule);
@@ -177,7 +177,7 @@ export async function activate(context: vscode.ExtensionContext) {
     registerDebugFeatures(context, client);
     registerDashboardFeature(context, client);
     registerPreCrCheckFeature(context, client);
-    
+
     // Mark LSP as connected
     state.setLspConnected(true);
 
@@ -197,7 +197,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   } catch (error) {
     console.error('Failed to start Pre-CR LSP server:', error);
-    
+
     // Show a non-blocking notification
     notify.showWarning('Pre-CR server failed to start. Build with: npm run build');
   }
@@ -269,7 +269,7 @@ function getShortcut(command: string): string {
     'preCr.runChecklist': { mac: '⌘⇧C', win: 'Ctrl+Shift+C' },
     'preCr.whereWasI': { mac: '⌘⇧W', win: 'Ctrl+Shift+W' },
   };
-  
+
   const shortcut = shortcuts[command];
   if (!shortcut) return '';
   return isMac ? shortcut.mac : shortcut.win;
@@ -279,8 +279,8 @@ function getShortcut(command: string): string {
  * Create a quick pick item with optional shortcut
  */
 function quickItem(
-  label: string, 
-  description: string, 
+  label: string,
+  description: string,
   command: string
 ): vscode.QuickPickItem & { command: string } {
   const shortcut = getShortcut(command);
@@ -335,7 +335,7 @@ function trackRecentAction(command: string) {
  */
 function getRecentActionsItems(): (vscode.QuickPickItem & { command?: string })[] {
   const recent = state.getRecentActions().slice(0, MAX_RECENT_ACTIONS);
-  
+
   if (recent.length === 0) return [];
 
   const items: (vscode.QuickPickItem & { command?: string })[] = [
@@ -362,7 +362,7 @@ function registerQuickActions(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('preCr.showQuickActions', async () => {
       // Get recent actions
       const recentItems = getRecentActionsItems();
-      
+
       // First, ask for scope (or pick from recent)
       const scopeItems: (vscode.QuickPickItem & { value?: string; command?: string })[] = [
         ...recentItems,
@@ -395,7 +395,7 @@ function registerQuickActions(context: vscode.ExtensionContext) {
           quickItem('$(check) Refresh Coverage', 'Load the configured coverage report', 'preCr.quickCoverageCheck'),
           quickItem('$(tools) Fix Setup', 'Inspect repo config and coverage paths', 'preCr.fixSetup'),
           quickItem('$(dashboard) Show File Coverage', 'View line coverage for this file', 'preCr.showFileCoverage'),
-          
+
           { label: 'Experimental', kind: vscode.QuickPickItemKind.Separator },
           quickItem('$(shield) Security Scan', 'Check for vulnerabilities', 'preCr.quickSecurityScan'),
           quickItem('$(book) Generate Doc at Cursor', 'Add JSDoc to function', 'preCr.generateDocAtCursor'),
@@ -409,7 +409,7 @@ function registerQuickActions(context: vscode.ExtensionContext) {
           quickItem('$(check) Refresh Coverage', 'Load the configured coverage report', 'preCr.quickCoverageCheck'),
           quickItem('$(tools) Fix Setup', 'Inspect repo config and coverage paths', 'preCr.fixSetup'),
           quickItem('$(dashboard) Coverage Summary', 'View overall coverage stats', 'preCr.showCoverageSummary'),
-          
+
           { label: 'Experimental', kind: vscode.QuickPickItemKind.Separator },
           quickItem('$(shield) Security Scan', 'Audit all files for vulnerabilities', 'preCr.securityScanWorkspace'),
           quickItem('$(pulse) Check Doc Health', 'Documentation coverage report', 'preCr.checkDocHealthWorkspace'),
@@ -423,7 +423,7 @@ function registerQuickActions(context: vscode.ExtensionContext) {
           quickItem('$(check) Refresh Coverage', 'Load the configured coverage report', 'preCr.quickCoverageCheck'),
           quickItem('$(tools) Fix Setup', 'Inspect repo config and coverage paths', 'preCr.fixSetup'),
           quickItem('$(dashboard) Check Changes Coverage', 'Are changes covered by tests?', 'preCr.checkChangesCoverage'),
-          
+
           { label: 'Experimental', kind: vscode.QuickPickItemKind.Separator },
           quickItem('$(checklist) Run PR Checklist', 'Security + Docs + Size checks', 'preCr.runChecklist'),
           quickItem('$(shield) Security Scan', 'Scan changed files only', 'preCr.securityScanChanges'),
@@ -438,7 +438,7 @@ function registerQuickActions(context: vscode.ExtensionContext) {
           { label: 'Beta Workflow', kind: vscode.QuickPickItemKind.Separator },
           quickItem('$(tools) Fix Setup', 'Inspect repo config and coverage paths', 'preCr.fixSetup'),
           quickItem('$(dashboard) Open Dashboard', 'View coverage and setup status', 'preCr.showDashboard'),
-          
+
           { label: 'Experimental', kind: vscode.QuickPickItemKind.Separator },
           quickItem('$(history) Where Was I?', 'Resume from saved state', 'preCr.whereWasI'),
           quickItem('$(save) Save Snapshot', 'Save current editor state', 'preCr.captureContext'),
@@ -480,10 +480,10 @@ function watchBranchChanges(
       }
 
       // Wait for git extension to activate
-      const git = gitExtension.isActive 
+      const git = gitExtension.isActive
         ? gitExtension.exports.getAPI(1)
         : (await gitExtension.activate()).getAPI(1);
-      
+
       if (!git) {
         console.log('Git API not available');
         return;
@@ -528,7 +528,7 @@ function watchBranchChanges(
       // Check every 2 seconds
       const interval = setInterval(checkBranch, 2000);
       context.subscriptions.push({ dispose: () => clearInterval(interval) });
-      
+
     } catch (error) {
       console.log('Git integration not available:', error);
     }
@@ -544,35 +544,35 @@ function registerUtilityCommands(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('preCr.openSettings', () => {
       vscode.commands.executeCommand('workbench.action.openSettings', 'preCr');
     }),
-    
+
     // Show all Pre-CR commands
     vscode.commands.registerCommand('preCr.showAllCommands', async () => {
       const commands = await vscode.commands.getCommands(true);
       const preCrCommands = commands
         .filter(c => c.startsWith('preCr.'))
         .sort();
-      
+
       const items = preCrCommands.map(cmd => ({
         label: cmd.replace('preCr.', ''),
         description: cmd,
         command: cmd
       }));
-      
+
       const selected = await vscode.window.showQuickPick(items, {
         placeHolder: 'Select a Pre-CR command to run',
         matchOnDescription: true
       });
-      
+
       if (selected) {
         vscode.commands.executeCommand(selected.command);
       }
     }),
-    
+
     // Show output channel
     vscode.commands.registerCommand('preCr.showLogs', () => {
       outputChannel.show();
     }),
-    
+
     // Show getting started walkthrough
     vscode.commands.registerCommand('preCr.gettingStarted', () => {
       vscode.commands.executeCommand(
@@ -582,7 +582,7 @@ function registerUtilityCommands(context: vscode.ExtensionContext) {
       );
     })
   );
-  
+
   // Show getting started on first run
   const hasShownWalkthrough = context.globalState.get<boolean>('preCr.hasShownWalkthrough', false);
   if (!hasShownWalkthrough) {

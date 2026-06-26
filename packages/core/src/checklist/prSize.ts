@@ -1,6 +1,6 @@
 /**
  * PR Size Analyzer
- * 
+ *
  * Analyzes the size of changes and recommends whether to split.
  * Research shows PRs over 200 lines have significantly lower
  * review quality (70% lower defect detection rate).
@@ -66,22 +66,22 @@ export function analyzePRSize(
     ...DEFAULT_PR_SIZE_CONFIG,
     ...config
   };
-  
+
   // Calculate totals
   let linesAdded = 0;
   let linesRemoved = 0;
-  
+
   for (const change of changes) {
     linesAdded += change.additions;
     linesRemoved += change.deletions;
   }
-  
+
   const linesChanged = linesAdded + linesRemoved;
   const filesChanged = changes.length;
-  
+
   // Determine recommendation
   let recommendation: PRSizeResult['recommendation'];
-  
+
   if (linesChanged <= fullConfig.warnThreshold && filesChanged <= fullConfig.fileWarnThreshold) {
     recommendation = 'good';
   } else if (linesChanged <= fullConfig.errorThreshold) {
@@ -89,20 +89,20 @@ export function analyzePRSize(
   } else {
     recommendation = 'too-large';
   }
-  
+
   // Generate split suggestions if needed
   let suggestedSplitPoints: string[] | undefined;
-  
+
   if (recommendation !== 'good') {
     suggestedSplitPoints = generateSplitSuggestions(changes);
   }
-  
+
   logger.info('PR size analysis complete', {
     linesChanged,
     filesChanged,
     recommendation
   });
-  
+
   return {
     linesAdded,
     linesRemoved,
@@ -118,10 +118,10 @@ export function analyzePRSize(
  */
 function generateSplitSuggestions(changes: FileChange[]): string[] {
   const suggestions: string[] = [];
-  
+
   // Group by category
   const categories = categorizeChanges(changes);
-  
+
   // Suggest splitting tests
   if (categories.test.length > 0 && categories.logic.length > 0) {
     const testLines = categories.test.reduce((sum, c) => sum + c.additions + c.deletions, 0);
@@ -131,7 +131,7 @@ function generateSplitSuggestions(changes: FileChange[]): string[] {
       );
     }
   }
-  
+
   // Suggest splitting config/setup changes
   if (categories.config.length > 0) {
     const configLines = categories.config.reduce((sum, c) => sum + c.additions + c.deletions, 0);
@@ -141,7 +141,7 @@ function generateSplitSuggestions(changes: FileChange[]): string[] {
       );
     }
   }
-  
+
   // Suggest splitting documentation
   if (categories.docs.length > 0) {
     const docLines = categories.docs.reduce((sum, c) => sum + c.additions + c.deletions, 0);
@@ -151,11 +151,11 @@ function generateSplitSuggestions(changes: FileChange[]): string[] {
       );
     }
   }
-  
+
   // Suggest splitting by directory
   const directorySuggestions = suggestSplitByDirectory(categories.logic);
   suggestions.push(...directorySuggestions);
-  
+
   // Suggest splitting new files
   const newFiles = changes.filter(c => c.isNew);
   if (newFiles.length >= 3) {
@@ -166,22 +166,22 @@ function generateSplitSuggestions(changes: FileChange[]): string[] {
       );
     }
   }
-  
+
   // Suggest splitting refactoring
-  const refactorFiles = changes.filter(c => 
-    !c.isNew && 
-    !c.isDeleted && 
-    c.additions > 20 && 
+  const refactorFiles = changes.filter(c =>
+    !c.isNew &&
+    !c.isDeleted &&
+    c.additions > 20 &&
     c.deletions > 20 &&
     Math.abs(c.additions - c.deletions) < Math.min(c.additions, c.deletions) * 0.5
   );
-  
+
   if (refactorFiles.length >= 2) {
     suggestions.push(
       `Consider: Refactoring changes could be a separate PR (${refactorFiles.length} files with significant rewrites)`
     );
   }
-  
+
   return suggestions;
 }
 
@@ -196,12 +196,12 @@ function categorizeChanges(changes: FileChange[]): Record<string, FileChange[]> 
     style: [],
     logic: []
   };
-  
+
   for (const change of changes) {
     const category = categorizeFile(change.path);
     categories[category].push(change);
   }
-  
+
   return categories;
 }
 
@@ -210,7 +210,7 @@ function categorizeChanges(changes: FileChange[]): Record<string, FileChange[]> 
  */
 function categorizeFile(path: string): string {
   const lowerPath = path.toLowerCase();
-  
+
   // Test files
   if (
     lowerPath.includes('.test.') ||
@@ -221,7 +221,7 @@ function categorizeFile(path: string): string {
   ) {
     return 'test';
   }
-  
+
   // Config files
   if (
     lowerPath.endsWith('.json') ||
@@ -240,7 +240,7 @@ function categorizeFile(path: string): string {
   ) {
     return 'config';
   }
-  
+
   // Documentation
   if (
     lowerPath.endsWith('.md') ||
@@ -252,7 +252,7 @@ function categorizeFile(path: string): string {
   ) {
     return 'docs';
   }
-  
+
   // Style/CSS
   if (
     lowerPath.endsWith('.css') ||
@@ -263,7 +263,7 @@ function categorizeFile(path: string): string {
   ) {
     return 'style';
   }
-  
+
   // Everything else is logic
   return 'logic';
 }
@@ -273,20 +273,20 @@ function categorizeFile(path: string): string {
  */
 function suggestSplitByDirectory(logicFiles: FileChange[]): string[] {
   const suggestions: string[] = [];
-  
+
   // Group by top-level directory
   const byDirectory: Record<string, FileChange[]> = {};
-  
+
   for (const file of logicFiles) {
     const parts = file.path.split('/');
     const topDir = parts.length > 1 ? parts[0] : '(root)';
-    
+
     if (!byDirectory[topDir]) {
       byDirectory[topDir] = [];
     }
     byDirectory[topDir].push(file);
   }
-  
+
   // Find directories with significant changes
   const significantDirs = Object.entries(byDirectory)
     .filter(([_, files]) => {
@@ -298,7 +298,7 @@ function suggestSplitByDirectory(logicFiles: FileChange[]): string[] {
       const linesB = b[1].reduce((sum, f) => sum + f.additions + f.deletions, 0);
       return linesB - linesA;
     });
-  
+
   if (significantDirs.length >= 2) {
     for (const [dir, files] of significantDirs.slice(0, 3)) {
       const lines = files.reduce((sum, f) => sum + f.additions + f.deletions, 0);
@@ -307,7 +307,7 @@ function suggestSplitByDirectory(logicFiles: FileChange[]): string[] {
       );
     }
   }
-  
+
   return suggestions;
 }
 
@@ -316,20 +316,20 @@ function suggestSplitByDirectory(logicFiles: FileChange[]): string[] {
  */
 export function calculateFileComplexity(change: FileChange): number {
   let score = 0;
-  
+
   // Base score from lines
   score += change.additions * 1;
   score += change.deletions * 0.5; // Deletions are easier to review
-  
+
   // New files are harder to review
   if (change.isNew) {
     score *= 1.2;
   }
-  
+
   // Refactoring (high adds and deletes) is harder
   if (change.additions > 20 && change.deletions > 20) {
     score *= 1.3;
   }
-  
+
   return Math.round(score);
 }

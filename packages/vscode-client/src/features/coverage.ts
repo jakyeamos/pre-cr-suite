@@ -1,6 +1,6 @@
 /**
  * Coverage Feature Module
- * 
+ *
  * Handles:
  * - Loading coverage files
  * - Displaying line decorations
@@ -161,7 +161,7 @@ async function loadCoverage(client: LanguageClient) {
  */
 function toggleCoverageOverlay(client: LanguageClient) {
   const coverage = state.get('coverage');
-  
+
   if (!coverage.isLoaded) {
     notify.showInfo('No coverage data loaded. Load coverage first.');
     return;
@@ -202,7 +202,7 @@ function clearCoverage() {
     lastLoadedFile: null
   });
   vscode.commands.executeCommand('setContext', 'preCr.hasCoverage', false);
-  
+
   // Clear status bar
   statusBar.clearCoverage();
 
@@ -348,7 +348,7 @@ async function showFileCoverage(client: LanguageClient) {
       uri: editor.document.uri.toString()
     }, 'File coverage');
     const coverage = result?.coverage;
-    
+
     if (!coverage) {
       const action = await notify.showWarning(
         'No coverage data for this file. Load coverage first?',
@@ -390,7 +390,7 @@ async function showFileCoverage(client: LanguageClient) {
  */
 async function checkChangesCoverage(client: LanguageClient) {
   const changedFiles = await git.getChangedFiles();
-  
+
   if (changedFiles.length === 0) {
     notify.showInfo('No changed files detected');
     return;
@@ -500,7 +500,7 @@ function getChangesCoverageHtml(
   overallRate: number
 ): string {
   const rateClass = overallRate >= 80 ? 'good' : overallRate >= 50 ? 'warning' : 'bad';
-  
+
   const filesHtml = results.map(r => {
     const fileClass = r.coverage === null ? 'unknown' : r.coverage >= 80 ? 'good' : r.coverage >= 50 ? 'warning' : 'bad';
     return `
@@ -614,7 +614,7 @@ class CoverageTreeItem extends vscode.TreeItem {
   ) {
     super(label, collapsibleState);
     this.description = detail;
-    
+
     // Set icon based on percentage
     if (percentage >= 80) {
       this.iconPath = new vscode.ThemeIcon('pass', new vscode.ThemeColor('testing.iconPassed'));

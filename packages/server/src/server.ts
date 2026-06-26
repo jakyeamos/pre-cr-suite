@@ -2,9 +2,9 @@
 
 /**
  * Pre-CR Suite Language Server
- * 
+ *
  * LSP server providing coverage visualization across all editors.
- * 
+ *
  * Communication: stdio (default), TCP, or WebSocket
  * Protocol: JSON-RPC 2.0 (LSP 3.17)
  */
@@ -183,15 +183,15 @@ class LSPLogger implements Logger {
   debug(message: string, data?: Record<string, unknown>): void {
     connection.console.log(`[DEBUG] ${message} ${data ? JSON.stringify(data) : ''}`);
   }
-  
+
   info(message: string, data?: Record<string, unknown>): void {
     connection.console.info(`[INFO] ${message} ${data ? JSON.stringify(data) : ''}`);
   }
-  
+
   warn(message: string, data?: Record<string, unknown>): void {
     connection.console.warn(`[WARN] ${message} ${data ? JSON.stringify(data) : ''}`);
   }
-  
+
   error(message: string, error?: unknown, data?: Record<string, unknown>): void {
     connection.console.error(`[ERROR] ${message} ${error ? String(error) : ''} ${data ? JSON.stringify(data) : ''}`);
   }
@@ -206,7 +206,7 @@ setLogger(new LSPLogger());
 
 connection.onInitialize((params: InitializeParams): InitializeResult => {
   const capabilities = params.capabilities;
-  
+
   // Check client capabilities
   hasConfigurationCapability = !!(
     capabilities.workspace && !!capabilities.workspace.configuration
@@ -214,21 +214,21 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   hasWorkspaceFolderCapability = !!(
     capabilities.workspace && !!capabilities.workspace.workspaceFolders
   );
-  
+
   // Get workspace root
   if (params.workspaceFolders && params.workspaceFolders.length > 0) {
     workspaceRoot = URI.parse(params.workspaceFolders[0].uri).fsPath;
   } else if (params.rootUri) {
     workspaceRoot = URI.parse(params.rootUri).fsPath;
   }
-  
+
   connection.console.info(`Pre-CR Server initializing. Workspace: ${workspaceRoot}`);
-  
+
   // Load initial coverage
   if (workspaceRoot) {
     coverageController.loadCoverage();
   }
-  
+
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
@@ -252,13 +252,13 @@ connection.onInitialized(() => {
       undefined
     );
   }
-  
+
   if (hasWorkspaceFolderCapability) {
     connection.workspace.onDidChangeWorkspaceFolders((_event) => {
       connection.console.info('Workspace folder change detected');
     });
   }
-  
+
   connection.console.info('Pre-CR Server initialized');
 });
 
@@ -274,10 +274,10 @@ connection.onDidChangeConfiguration((change) => {
       (change.settings?.preCr as ServerSettings) || defaultSettings
     );
   }
-  
+
   // Reload coverage with new settings
   coverageController.loadCoverage();
-  
+
   // Re-validate all open documents
   documents.all().forEach((document) => {
     coverageController.validateTextDocument(document);
@@ -333,11 +333,11 @@ connection.onRequest(
     if (!workspaceRoot) {
       return { result: null, error: 'No workspace root' };
     }
-    
+
     if (!globalSettings.checklist.enabled) {
       return { result: null, error: 'Checklist is disabled' };
     }
-    
+
     try {
       // Build checklist config from settings
       const config: Partial<ChecklistConfig> = {
@@ -351,24 +351,24 @@ connection.onRequest(
           minNewCodeCoverage: globalSettings.checklist.testCoverage.minNewCodeCoverage
         }
       };
-      
+
       // Gather file contents for security scanning
       const files: FileContent[] = [];
       const sourceFiles: SourceFile[] = [];
-      
+
       for (const change of params.changes) {
         if (change.isDeleted) continue;
-        
+
         const filePath = path.join(workspaceRoot, change.path);
-        
+
         try {
           if (fs.existsSync(filePath)) {
             const content = fs.readFileSync(filePath, 'utf-8');
             files.push({ path: change.path, content });
-            sourceFiles.push({ 
-              path: change.path, 
-              content, 
-              isNew: change.isNew 
+            sourceFiles.push({
+              path: change.path,
+              content,
+              isNew: change.isNew
             });
           }
         } catch (err) {
@@ -376,7 +376,7 @@ connection.onRequest(
           connection.console.warn(`Could not read file: ${filePath}`);
         }
       }
-      
+
       // Load base coverage if provided
       let baseCoverage: WorkspaceCoverage | undefined;
       if (params.baseCoveragePath) {
@@ -390,7 +390,7 @@ connection.onRequest(
           }
         }
       }
-      
+
       // Build input
       const input: ChecklistInput = {
         changes: params.changes,
@@ -399,10 +399,10 @@ connection.onRequest(
         headCoverage: coverage ?? undefined,
         baseCoverage
       };
-      
+
       // Run checklist
       const result = runChecklist(input, config);
-      
+
       return { result };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -426,7 +426,7 @@ connection.onRequest(
   }> => {
     const { scanSecurity } = await import('@pre-cr/core');
     const result = scanSecurity(params.files);
-    
+
     return {
       hasIssues: result.findings.length > 0,
       findings: result.findings.map(f => ({
@@ -451,9 +451,9 @@ connection.onRequest(
       path: f.path,
       content: f.content
     }));
-    
+
     const result = analyzeDocCoverage(sourceFiles);
-    
+
     return {
       coverage: result.coveragePercent,
       undocumented: result.undocumented.map(u => ({
@@ -489,12 +489,12 @@ connection.onRequest(
       if (!document) {
         return { result: null, error: 'Document not found' };
       }
-      
+
       const content = document.getText();
       const config = params.config || DEFAULT_DOC_GEN_CONFIG;
-      
+
       const result = generateDocs(content, config);
-      
+
       return { result };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -521,11 +521,11 @@ connection.onRequest(
       if (!document) {
         return { doc: null, error: 'Document not found' };
       }
-      
+
       const content = document.getText();
       const items = extractItems(content);
       const targetLine = params.position.line + 1; // Convert 0-based to 1-based
-      
+
       // Find the item at or after cursor position
       const allItems = [
         ...items.functions.map(f => ({ type: 'function' as const, item: f, line: f.line })),
@@ -533,17 +533,17 @@ connection.onRequest(
         ...items.interfaces.map(i => ({ type: 'interface' as const, item: i, line: i.line })),
         ...items.types.map(t => ({ type: 'type' as const, item: t, line: t.line }))
       ].sort((a, b) => a.line - b.line);
-      
+
       // Find nearest item at or after cursor
       const nearest = allItems.find(item => item.line >= targetLine);
-      
+
       if (!nearest) {
         return { doc: null, error: 'No documentable item found at cursor' };
       }
-      
+
       const config: DocGenConfig = { ...DEFAULT_DOC_GEN_CONFIG, ...params.config };
       let doc: GeneratedDoc;
-      
+
       switch (nearest.type) {
         case 'function':
           doc = generateFunctionDoc(nearest.item, config);
@@ -558,7 +558,7 @@ connection.onRequest(
           doc = generateTypeDoc(nearest.item, config);
           break;
       }
-      
+
       return { doc };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -584,23 +584,23 @@ connection.onRequest(
       if (!document) {
         return { prompt: null, error: 'Document not found' };
       }
-      
+
       const content = document.getText();
       const items = extractItems(content);
       const targetLine = params.position.line + 1;
-      
+
       // Find function at cursor
-      const fn = items.functions.find(f => 
+      const fn = items.functions.find(f =>
         f.line === targetLine || f.line === targetLine + 1
       );
-      
+
       if (!fn) {
         return { prompt: null, error: 'No function found at cursor' };
       }
-      
+
       const prompt = generateAIPrompt(fn);
-      
-      return { 
+
+      return {
         prompt: {
           system: prompt.system,
           user: prompt.user
@@ -625,10 +625,10 @@ connection.onRequest(
       if (!document) {
         return { items: null, error: 'Document not found' };
       }
-      
+
       const content = document.getText();
       const items = extractItems(content);
-      
+
       return { items };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -644,7 +644,7 @@ connection.onRequest(
 // Check documentation health for a single file
 connection.onRequest(
   '$/preCr/checkFileHealth',
-  async (params: { 
+  async (params: {
     textDocument: { uri: string };
     config?: Partial<HealthMonitorConfig>;
   }): Promise<{
@@ -656,13 +656,13 @@ connection.onRequest(
       if (!document) {
         return { report: null, error: 'Document not found' };
       }
-      
+
       const filePath = URI.parse(params.textDocument.uri).fsPath;
       const content = document.getText();
-      
+
       const config = { ...DEFAULT_HEALTH_CONFIG, ...params.config };
       const report = checkFileHealth({ path: filePath, content }, config);
-      
+
       return { report };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -686,7 +686,7 @@ connection.onRequest(
   }> => {
     try {
       const sourceFiles: SourceFile[] = [];
-      
+
       for (const fileRef of params.files) {
         const document = documents.get(fileRef.uri);
         if (document) {
@@ -697,14 +697,14 @@ connection.onRequest(
           });
         }
       }
-      
+
       if (sourceFiles.length === 0) {
         return { report: null, error: 'No files found' };
       }
-      
+
       const config = { ...DEFAULT_HEALTH_CONFIG, ...params.config };
       const report = checkWorkspaceHealth(sourceFiles, config);
-      
+
       return { report };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -742,12 +742,12 @@ connection.onRequest(
       if (!document) {
         return { issues: [], error: 'README not found' };
       }
-      
+
       const content = document.getText();
       const existingFiles = new Set(params.existingFiles);
-      
+
       const issues = checkReadmeHealth(content, existingFiles, params.packageJson);
-      
+
       return {
         issues: issues.map(i => ({
           type: i.type,
@@ -787,11 +787,11 @@ connection.onRequest(
     try {
       // Optionally load file contents for complexity analysis
       const fileContents = new Map<string, string>();
-      
+
       if (workspaceRoot) {
         for (const change of params.changes) {
           if (change.isDeleted) continue;
-          
+
           const filePath = path.join(workspaceRoot, change.path);
           try {
             if (fs.existsSync(filePath)) {
@@ -802,13 +802,13 @@ connection.onRequest(
           }
         }
       }
-      
+
       const estimate = estimateReviewTime(
         params.changes,
         fileContents.size > 0 ? fileContents : undefined,
         params.reviewers
       );
-      
+
       return { estimate };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -831,7 +831,7 @@ connection.onRequest(
 // Record test results for flaky detection
 connection.onRequest(
   '$/preCr/recordTestResults',
-  async (params: { 
+  async (params: {
     results: TestRunResult[];
     format?: 'raw' | 'jest' | 'vitest';
     rawOutput?: unknown;
@@ -843,18 +843,18 @@ connection.onRequest(
       if (!flakyDetective) {
         flakyDetective = new FlakyTestDetective();
       }
-      
+
       let results: TestRunResult[] = params.results;
-      
+
       // Parse from test runner output if provided
       if (params.format === 'jest' && params.rawOutput) {
         results = parseJestResults(params.rawOutput as Parameters<typeof parseJestResults>[0]);
       } else if (params.format === 'vitest' && params.rawOutput) {
         results = parseVitestResults(params.rawOutput as Parameters<typeof parseVitestResults>[0]);
       }
-      
+
       flakyDetective.recordResults(results);
-      
+
       return { recorded: results.length };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -874,7 +874,7 @@ connection.onRequest(
       if (!flakyDetective) {
         return { report: null, error: 'Flaky detective not initialized' };
       }
-      
+
       const report = flakyDetective.generateReport();
       return { report };
     } catch (err) {
@@ -902,9 +902,9 @@ connection.onRequest(
       if (!flakyDetective) {
         return { tests: [], error: 'Flaky detective not initialized' };
       }
-      
+
       const flakyTests = flakyDetective.getFlakyTests();
-      
+
       return {
         tests: flakyTests.map(t => ({
           testId: t.testId,
@@ -933,7 +933,7 @@ connection.onRequest(
       if (!flakyDetective) {
         return { success: false, error: 'Flaky detective not initialized' };
       }
-      
+
       flakyDetective.quarantine(params.testId);
       return { success: true };
     } catch (err) {
@@ -954,7 +954,7 @@ connection.onRequest(
       if (!flakyDetective) {
         return { history: [], error: 'Flaky detective not initialized' };
       }
-      
+
       return { history: flakyDetective.exportHistory() };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -974,7 +974,7 @@ connection.onRequest(
       if (!flakyDetective) {
         flakyDetective = new FlakyTestDetective();
       }
-      
+
       flakyDetective.importHistory(params.history as Parameters<typeof flakyDetective.importHistory>[0]);
       return { imported: params.history.length };
     } catch (err) {
@@ -1041,7 +1041,7 @@ connection.onRequest(
       if (!contextManager) {
         contextManager = new ContextManager();
       }
-      
+
       const snapshot = contextManager.captureContext({
         branch: params.branch,
         description: params.description,
@@ -1060,7 +1060,7 @@ connection.onRequest(
           sidebar: { visible: true }
         }
       });
-      
+
       return {
         snapshot: {
           id: snapshot.id,
@@ -1086,7 +1086,7 @@ connection.onRequest(
       if (!contextManager) {
         return { snapshot: null, error: 'Context manager not initialized' };
       }
-      
+
       const snapshot = contextManager.getLatestSnapshot(params.branch);
       return { snapshot: snapshot || null };
     } catch (err) {
@@ -1125,7 +1125,7 @@ connection.onRequest(
       if (!contextManager) {
         contextManager = new ContextManager();
       }
-      
+
       const result = contextManager.onBranchSwitch(
         params.fromBranch,
         params.toBranch,
@@ -1147,7 +1147,7 @@ connection.onRequest(
           }
         }
       );
-      
+
       return {
         captured: result.captured ? {
           id: result.captured.id,
@@ -1173,12 +1173,12 @@ connection.onRequest(
       if (!contextManager) {
         return { summary: null, error: 'Context manager not initialized' };
       }
-      
+
       const snapshot = contextManager.getLatestSnapshot(params.branch);
       if (!snapshot) {
         return { summary: null, error: 'No snapshot found for branch' };
       }
-      
+
       const summary = contextManager.generateSummary(snapshot);
       return { summary };
     } catch (err) {
@@ -1205,15 +1205,15 @@ connection.onRequest(
       if (!contextManager) {
         return { snapshots: [], error: 'Context manager not initialized' };
       }
-      
+
       let allSnapshots: ContextSnapshot[] = [];
-      
+
       if (params.branch) {
         allSnapshots = contextManager.getSnapshots(params.branch);
       } else {
         allSnapshots = contextManager.exportSnapshots();
       }
-      
+
       return {
         snapshots: allSnapshots.map(s => ({
           id: s.id,
@@ -1241,7 +1241,7 @@ connection.onRequest(
       if (!contextManager) {
         return { success: false, error: 'Context manager not initialized' };
       }
-      
+
       const deleted = contextManager.deleteSnapshot(params.id);
       return { success: deleted };
     } catch (err) {
@@ -1262,7 +1262,7 @@ connection.onRequest(
       if (!contextManager) {
         return { snapshots: [], error: 'Context manager not initialized' };
       }
-      
+
       return { snapshots: contextManager.exportSnapshots() };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -1282,7 +1282,7 @@ connection.onRequest(
       if (!contextManager) {
         contextManager = new ContextManager();
       }
-      
+
       const imported = contextManager.importSnapshots(params.snapshots);
       return { imported };
     } catch (err) {
@@ -1307,10 +1307,10 @@ connection.onRequest(
       if (!contextManager) {
         return { stats: null, error: 'Context manager not initialized' };
       }
-      
+
       const stats = contextManager.getStats();
       const branches = contextManager.getBranches();
-      
+
       return {
         stats: {
           totalSnapshots: stats.totalSnapshots,
@@ -1358,13 +1358,13 @@ connection.onRequest(
       if (!debugManager) {
         debugManager = new DebugSessionManager();
       }
-      
+
       const session = debugManager.startSession(
         params.name,
         params.debugType,
         params.launchConfig
       );
-      
+
       return {
         session: {
           id: session.id,
@@ -1390,14 +1390,14 @@ connection.onRequest(
       if (!debugManager) {
         return { session: null, error: 'Debug manager not initialized' };
       }
-      
+
       const session = debugManager.endSession(params.outcome);
       if (!session) {
         return { session: null, error: 'No active session' };
       }
-      
+
       const duration = (session.endTime?.getTime() || Date.now()) - session.startTime.getTime();
-      
+
       return {
         session: {
           id: session.id,
@@ -1442,7 +1442,7 @@ connection.onRequest(
       if (!debugManager) {
         return { hitId: null, error: 'Debug manager not initialized' };
       }
-      
+
       const hit = debugManager.recordBreakpointHit(params);
       return { hitId: hit?.id || null };
     } catch (err) {
@@ -1473,7 +1473,7 @@ connection.onRequest(
       if (!debugManager) {
         return { recorded: false, error: 'Debug manager not initialized' };
       }
-      
+
       debugManager.recordException(params);
       return { recorded: true };
     } catch (err) {
@@ -1495,7 +1495,7 @@ connection.onRequest(
     if (!debugManager) {
       return { recorded: false };
     }
-    
+
     debugManager.recordStep(params.type, params.location);
     return { recorded: true };
   }
@@ -1512,7 +1512,7 @@ connection.onRequest(
       if (!debugManager) {
         return { analysis: null, error: 'Debug manager not initialized' };
       }
-      
+
       const analysis = debugManager.analyzeSession(params.sessionId);
       return { analysis };
     } catch (err) {
@@ -1537,7 +1537,7 @@ connection.onRequest(
       if (!debugManager) {
         return { scenario: null, error: 'Debug manager not initialized' };
       }
-      
+
       const scenario = debugManager.createScenario(params.sessionId);
       return { scenario };
     } catch (err) {
@@ -1567,9 +1567,9 @@ connection.onRequest(
       if (!debugManager) {
         return { sessions: [], error: 'Debug manager not initialized' };
       }
-      
+
       const sessions = debugManager.getAllSessions();
-      
+
       return {
         sessions: sessions.map(s => ({
           id: s.id,
@@ -1600,7 +1600,7 @@ connection.onRequest(
       if (!debugManager) {
         return { session: null, error: 'Debug manager not initialized' };
       }
-      
+
       const session = debugManager.getSession(params.sessionId);
       return { session: session || null };
     } catch (err) {
@@ -1621,7 +1621,7 @@ connection.onRequest(
       if (!debugManager) {
         return { success: false, error: 'Debug manager not initialized' };
       }
-      
+
       const deleted = debugManager.deleteSession(params.sessionId);
       return { success: deleted };
     } catch (err) {
@@ -1642,7 +1642,7 @@ connection.onRequest(
       if (!debugManager) {
         return { data: null, error: 'Debug manager not initialized' };
       }
-      
+
       const data = debugManager.exportSession(params.sessionId);
       return { data };
     } catch (err) {
@@ -1663,7 +1663,7 @@ connection.onRequest(
       if (!debugManager) {
         debugManager = new DebugSessionManager();
       }
-      
+
       const sessionId = debugManager.importSession(params.data);
       return { sessionId };
     } catch (err) {

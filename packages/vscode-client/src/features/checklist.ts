@@ -1,6 +1,6 @@
 /**
  * Checklist Feature Module
- * 
+ *
  * Handles:
  * - Running PR checklists
  * - Security scanning
@@ -108,7 +108,7 @@ function navigateIssue(direction: 'next' | 'prev') {
   }
 
   const currentLine = editor.selection.active.line;
-  
+
   // Sort diagnostics by line number
   const sorted = [...diagnostics].sort((a, b) => a.range.start.line - b.range.start.line);
 
@@ -134,7 +134,7 @@ function navigateIssue(direction: 'next' | 'prev') {
     const position = new vscode.Position(target.range.start.line, 0);
     editor.selection = new vscode.Selection(position, position);
     editor.revealRange(target.range, vscode.TextEditorRevealType.InCenter);
-    
+
     // Show the diagnostic message
     notify.showInfo(`[${(diagnostics.indexOf(target) + 1)}/${diagnostics.length}] ${target.message}`);
   }
@@ -249,7 +249,7 @@ async function runChecklist(client: LanguageClient, mode: 'changes' | 'workspace
       mode === 'workspace' ? 'Scanning Workspace...' : 'Running PR Checklist...',
       async (progress) => {
         progress.report({ message: `Analyzing ${files.length} files...` });
-        
+
         const result = await client.sendRequest('$/preCr/runChecklist', {
           changes: files,
           config: vscode.workspace.getConfiguration('preCr.checklist'),
@@ -314,9 +314,9 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
 
       if (findings.length === 0) {
         if (!silent) {
-          const scopeDesc = mode === 'workspace' 
-            ? `${files.length} files` 
-            : mode === 'changes' 
+          const scopeDesc = mode === 'workspace'
+            ? `${files.length} files`
+            : mode === 'changes'
             ? `${files.length} changed file(s)`
             : 'this file';
           notify.showSuccess(`No security issues found in ${scopeDesc}`);
@@ -327,14 +327,14 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
 
       // Group findings by file
       const diagnosticsMap = new Map<string, vscode.Diagnostic[]>();
-      
+
       for (const f of findings) {
         const fileUri = vscode.Uri.joinPath(
           vscode.workspace.workspaceFolders![0].uri,
           f.file
         );
         const uriString = fileUri.toString();
-        
+
         if (!diagnosticsMap.has(uriString)) {
           diagnosticsMap.set(uriString, []);
         }
@@ -377,8 +377,8 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
       await doScan();
     } else {
       await notify.showProgress(
-        mode === 'workspace' 
-          ? 'Scanning Workspace for Security Issues...' 
+        mode === 'workspace'
+          ? 'Scanning Workspace for Security Issues...'
           : mode === 'changes'
           ? 'Scanning Changed Files for Security Issues...'
           : 'Security Scan...',
@@ -400,15 +400,15 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
 async function getWorkspaceFiles(): Promise<any[]> {
   const config = vscode.workspace.getConfiguration('preCr.security');
   const excludePatterns = config.get<string[]>('excludePatterns') || [];
-  
+
   // Find all code files
   const pattern = '**/*.{ts,tsx,js,jsx,py,go,rs,java,rb,php}';
   const excludePattern = `{${excludePatterns.join(',')},**/node_modules/**,**/dist/**,**/build/**,.git/**}`;
-  
+
   const files = await vscode.workspace.findFiles(pattern, excludePattern, 500);
-  
+
   const results: any[] = [];
-  
+
   for (const file of files) {
     try {
       const doc = await vscode.workspace.openTextDocument(file);
@@ -425,7 +425,7 @@ async function getWorkspaceFiles(): Promise<any[]> {
       // Skip files that can't be read
     }
   }
-  
+
   return results;
 }
 
@@ -510,7 +510,7 @@ function getChecklistHtml(webviewInstance: vscode.Webview, result: any, mode: 'c
 class ChecklistTreeProvider implements vscode.TreeDataProvider<ChecklistTreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<ChecklistTreeItem | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
-  
+
   private lastResult: any = null;
 
   constructor(private client: LanguageClient) {}
@@ -561,7 +561,7 @@ class ChecklistTreeItem extends vscode.TreeItem {
   ) {
     super(label, collapsibleState);
     this.description = detail;
-    
+
     switch (status) {
       case 'pass':
         this.iconPath = new vscode.ThemeIcon('pass', new vscode.ThemeColor('testing.iconPassed'));

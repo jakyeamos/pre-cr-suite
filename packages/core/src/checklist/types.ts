@@ -1,6 +1,6 @@
 /**
  * PR Checklist Types
- * 
+ *
  * Types for the Smart PR Checklist feature that analyzes
  * code changes before submission.
  */
@@ -228,7 +228,7 @@ export const DEFAULT_BREAKING_CHANGE_CONFIG: BreakingChangeConfig = {
   checkTypeChanges: true
 };
 
-export type BreakingChangeKind = 
+export type BreakingChangeKind =
   | 'removed-export'
   | 'changed-signature'
   | 'changed-return-type'

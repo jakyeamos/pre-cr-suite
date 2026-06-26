@@ -1,6 +1,6 @@
 /**
  * Review Time Estimator Types
- * 
+ *
  * Types for estimating PR review time and suggesting reviewers.
  */
 

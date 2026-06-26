@@ -16,15 +16,15 @@ export function add(a: number, b: number): number {
 }
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports.length).toBe(1);
       expect(exports[0].name).toBe('add');
       expect(exports[0].kind).toBe('function');
       expect(exports[0].hasDoc).toBe(false);
     });
-    
+
     it('parses exported async functions', () => {
       const file: SourceFile = {
         path: 'src/api.ts',
@@ -34,14 +34,14 @@ export async function fetchUser(id: string) {
 }
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports.length).toBe(1);
       expect(exports[0].name).toBe('fetchUser');
       expect(exports[0].kind).toBe('function');
     });
-    
+
     it('parses exported arrow functions', () => {
       const file: SourceFile = {
         path: 'src/utils.ts',
@@ -49,14 +49,14 @@ export async function fetchUser(id: string) {
 export const multiply = (a: number, b: number) => a * b;
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports.length).toBe(1);
       expect(exports[0].name).toBe('multiply');
       expect(exports[0].kind).toBe('function');
     });
-    
+
     it('parses exported classes', () => {
       const file: SourceFile = {
         path: 'src/models.ts',
@@ -66,14 +66,14 @@ export class User {
 }
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports.length).toBe(1);
       expect(exports[0].name).toBe('User');
       expect(exports[0].kind).toBe('class');
     });
-    
+
     it('parses exported interfaces', () => {
       const file: SourceFile = {
         path: 'src/types.ts',
@@ -84,14 +84,14 @@ export interface UserData {
 }
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports.length).toBe(1);
       expect(exports[0].name).toBe('UserData');
       expect(exports[0].kind).toBe('interface');
     });
-    
+
     it('parses exported types', () => {
       const file: SourceFile = {
         path: 'src/types.ts',
@@ -99,14 +99,14 @@ export interface UserData {
 export type UserId = string;
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports.length).toBe(1);
       expect(exports[0].name).toBe('UserId');
       expect(exports[0].kind).toBe('type');
     });
-    
+
     it('detects JSDoc documentation', () => {
       const file: SourceFile = {
         path: 'src/utils.ts',
@@ -119,12 +119,12 @@ export function add(a: number, b: number): number {
 }
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports[0].hasDoc).toBe(true);
     });
-    
+
     it('detects single-line JSDoc', () => {
       const file: SourceFile = {
         path: 'src/utils.ts',
@@ -135,12 +135,12 @@ export function add(a: number, b: number): number {
 }
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports[0].hasDoc).toBe(true);
     });
-    
+
     it('handles multiple exports', () => {
       const file: SourceFile = {
         path: 'src/utils.ts',
@@ -158,14 +158,14 @@ export function subtract(a: number, b: number): number {
 export class Calculator {}
         `.trim()
       };
-      
+
       const exports = parseExports(file);
-      
+
       expect(exports.length).toBe(3);
       expect(exports.filter(e => e.hasDoc).length).toBe(2);
     });
   });
-  
+
   describe('analyzeDocCoverage', () => {
     it('calculates coverage percentage', () => {
       const files: SourceFile[] = [{
@@ -177,14 +177,14 @@ export function add() {}
 export function subtract() {}
         `.trim()
       }];
-      
+
       const result = analyzeDocCoverage(files);
-      
+
       expect(result.totalExports).toBe(2);
       expect(result.documentedExports).toBe(1);
       expect(result.coveragePercent).toBe(50);
     });
-    
+
     it('identifies undocumented exports', () => {
       const files: SourceFile[] = [{
         path: 'src/utils.ts',
@@ -193,14 +193,14 @@ export function add() {}
 export function subtract() {}
         `.trim()
       }];
-      
+
       const result = analyzeDocCoverage(files);
-      
+
       expect(result.undocumented.length).toBe(2);
       expect(result.undocumented[0].name).toBe('add');
       expect(result.undocumented[1].name).toBe('subtract');
     });
-    
+
     it('identifies new undocumented exports', () => {
       const files: SourceFile[] = [{
         path: 'src/utils.ts',
@@ -210,13 +210,13 @@ export function multiply() {}
         `.trim(),
         isNew: true
       }];
-      
+
       const result = analyzeDocCoverage(files);
-      
+
       expect(result.newUndocumented.length).toBe(2);
       expect(result.newUndocumented[0].isNew).toBe(true);
     });
-    
+
     it('respects config for which exports to check', () => {
       const files: SourceFile[] = [{
         path: 'src/types.ts',
@@ -225,13 +225,13 @@ export type UserId = string;
 export interface User {}
         `.trim()
       }];
-      
+
       // Default: types not required
       const result1 = analyzeDocCoverage(files);
       expect(result1.totalExports).toBe(1); // Only interface
-      
+
       // With types required
-      const result2 = analyzeDocCoverage(files, undefined, { 
+      const result2 = analyzeDocCoverage(files, undefined, {
         requireExportedTypes: true,
         requireExportedFunctions: true,
         requireExportedClasses: true,
@@ -240,7 +240,7 @@ export interface User {}
       });
       expect(result2.totalExports).toBe(2); // Both
     });
-    
+
     it('returns 100% for files with no exports', () => {
       const files: SourceFile[] = [{
         path: 'src/internal.ts',
@@ -249,13 +249,13 @@ function privateFunction() {}
 const privateVar = 1;
         `.trim()
       }];
-      
+
       const result = analyzeDocCoverage(files);
-      
+
       expect(result.coveragePercent).toBe(100);
     });
   });
-  
+
   describe('checkDocHealth', () => {
     it('detects documented params not in signature', () => {
       const file: SourceFile = {
@@ -271,12 +271,12 @@ export function add(a: number, b: number): number {
 }
         `.trim()
       };
-      
+
       const issues = checkDocHealth(file);
-      
+
       expect(issues.some(i => i.type === 'stale' && i.message.includes('c'))).toBe(true);
     });
-    
+
     it('detects params without documentation', () => {
       const file: SourceFile = {
         path: 'src/utils.ts',
@@ -290,9 +290,9 @@ export function add(a: number, b: number): number {
 }
         `.trim()
       };
-      
+
       const issues = checkDocHealth(file);
-      
+
       expect(issues.some(i => i.type === 'missing-param' && i.message.includes('b'))).toBe(true);
     });
   });

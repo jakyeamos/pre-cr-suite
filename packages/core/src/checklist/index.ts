@@ -1,6 +1,6 @@
 /**
  * Checklist Module
- * 
+ *
  * Pre-submission checks for PRs:
  * - PR size analysis
  * - Security scanning
@@ -19,10 +19,10 @@ export type { FileChange, ChangeHunk, SplitSuggestion } from './prSize';
 export { scanSecurity, mightContainSecrets, DEFAULT_SECURITY_CONFIG } from './security';
 export type { FileContent } from './security';
 
-export { 
-  analyzeDocCoverage, 
-  parseExports, 
-  checkDocHealth 
+export {
+  analyzeDocCoverage,
+  parseExports,
+  checkDocHealth
 } from './docCoverage';
 export type { SourceFile, ParsedExport, DocHealthIssue } from './docCoverage';
 

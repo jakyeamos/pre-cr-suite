@@ -1,6 +1,6 @@
 /**
  * Security Scanner
- * 
+ *
  * Detects potential security issues in code:
  * - Hardcoded secrets (API keys, passwords, tokens)
  * - SQL injection vulnerabilities
@@ -234,9 +234,9 @@ const IGNORE_PATTERNS = {
  */
 function shouldIgnoreLine(lines: string[], lineIndex: number, patternId: string): boolean {
   const currentLine = lines[lineIndex];
-  
+
   // Check for inline ignore comment on current line
-  const inlineMatch = currentLine.match(IGNORE_PATTERNS.inline) || 
+  const inlineMatch = currentLine.match(IGNORE_PATTERNS.inline) ||
                       currentLine.match(IGNORE_PATTERNS.inlineBlock);
   if (inlineMatch) {
     const specifiedPattern = inlineMatch[1];
@@ -245,7 +245,7 @@ function shouldIgnoreLine(lines: string[], lineIndex: number, patternId: string)
       return true;
     }
   }
-  
+
   // Check for ignore-next-line on previous line
   if (lineIndex > 0) {
     const prevLine = lines[lineIndex - 1];
@@ -257,7 +257,7 @@ function shouldIgnoreLine(lines: string[], lineIndex: number, patternId: string)
       }
     }
   }
-  
+
   return false;
 }
 
@@ -270,12 +270,12 @@ function shouldIgnoreLine(lines: string[], lineIndex: number, patternId: string)
  */
 function shouldExcludeFile(filePath: string, excludePatterns: string[]): boolean {
   const normalizedPath = filePath.replace(/\\/g, '/');
-  
+
   // Quick checks for common exclusions
   if (normalizedPath.includes('node_modules/')) return true;
   if (normalizedPath.includes('__tests__/')) return true;
   if (normalizedPath.includes('__mocks__/')) return true;
-  
+
   for (const pattern of excludePatterns) {
     // Simple glob matching
     const regexPattern = pattern
@@ -284,13 +284,13 @@ function shouldExcludeFile(filePath: string, excludePatterns: string[]): boolean
       .replace(/\*/g, '[^/]*')
       .replace(/{{GLOBSTAR}}/g, '.*')
       .replace(/\?/g, '.');
-    
+
     const regex = new RegExp(`^${regexPattern}$|/${regexPattern}$|^${regexPattern}/|/${regexPattern}/`);
     if (regex.test(normalizedPath)) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -299,12 +299,12 @@ function shouldExcludeFile(filePath: string, excludePatterns: string[]): boolean
  */
 function isFalsePositive(line: string, patternId: string): boolean {
   const trimmed = line.trim();
-  
+
   // Skip comments
   if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
     return true;
   }
-  
+
   // Skip example/placeholder values
   const placeholders = [
     'your-api-key',
@@ -322,25 +322,25 @@ function isFalsePositive(line: string, patternId: string): boolean {
     'config.',
     'process.env['
   ];
-  
+
   const lowerLine = line.toLowerCase();
   for (const placeholder of placeholders) {
     if (lowerLine.includes(placeholder.toLowerCase())) {
       return true;
     }
   }
-  
+
   // Skip test files patterns
   if (patternId.startsWith('sql-') || patternId.startsWith('xss-')) {
     // These are less likely to be false positives
     return false;
   }
-  
+
   // Skip if it's reading from environment
   if (/process\.env\.[A-Z_]+/.test(line)) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -365,42 +365,42 @@ export function scanSecurity(
     ...DEFAULT_SECURITY_CONFIG,
     ...config
   };
-  
+
   const findings: SecurityFinding[] = [];
   let scannedFiles = 0;
   let skippedFiles = 0;
-  
+
   for (const file of files) {
     // Check exclusions
     if (shouldExcludeFile(file.path, fullConfig.excludePatterns)) {
       skippedFiles++;
       continue;
     }
-    
+
     scannedFiles++;
     const lines = file.content.split('\n');
-    
+
     // Check each pattern
     for (const pattern of fullConfig.additionalPatterns) {
       // Reset regex state
       pattern.pattern.lastIndex = 0;
-      
+
       for (let lineNum = 0; lineNum < lines.length; lineNum++) {
         const line = lines[lineNum];
         pattern.pattern.lastIndex = 0;
-        
+
         let match;
         while ((match = pattern.pattern.exec(line)) !== null) {
           // Skip if ignored via comment
           if (shouldIgnoreLine(lines, lineNum, pattern.id)) {
             continue;
           }
-          
+
           // Skip false positives
           if (isFalsePositive(line, pattern.id)) {
             continue;
           }
-          
+
           const finding: SecurityFinding = {
             type: categorizePattern(pattern.id),
             pattern: pattern.id,
@@ -410,14 +410,14 @@ export function scanSecurity(
             snippet: truncateSnippet(line, match.index, match[0].length),
             message: pattern.message
           };
-          
+
           // Avoid duplicate findings on same line for same pattern
           const isDuplicate = findings.some(
-            f => f.file === finding.file && 
-                 f.line === finding.line && 
+            f => f.file === finding.file &&
+                 f.line === finding.line &&
                  f.pattern === finding.pattern
           );
-          
+
           if (!isDuplicate) {
             findings.push(finding);
           }
@@ -425,13 +425,13 @@ export function scanSecurity(
       }
     }
   }
-  
+
   logger.info('Security scan complete', {
     scannedFiles,
     skippedFiles,
     findingsCount: findings.length
   });
-  
+
   return {
     findings,
     scannedFiles,
@@ -456,23 +456,23 @@ function categorizePattern(patternId: string): SecurityFinding['type'] {
 function truncateSnippet(line: string, matchIndex: number, matchLength: number): string {
   const maxLength = 100;
   const contextChars = 20;
-  
+
   if (line.length <= maxLength) {
     return line.trim();
   }
-  
+
   const start = Math.max(0, matchIndex - contextChars);
   const end = Math.min(line.length, matchIndex + matchLength + contextChars);
-  
+
   let snippet = line.substring(start, end).trim();
-  
+
   if (start > 0) {
     snippet = '...' + snippet;
   }
   if (end < line.length) {
     snippet = snippet + '...';
   }
-  
+
   return snippet;
 }
 
@@ -491,6 +491,6 @@ export function mightContainSecrets(content: string): boolean {
     /sk_test/,
     /AKIA/
   ];
-  
+
   return quickPatterns.some(p => p.test(content));
 }

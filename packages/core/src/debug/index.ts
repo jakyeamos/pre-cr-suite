@@ -1,6 +1,6 @@
 /**
  * Debug Module
- * 
+ *
  * Debug session capture and analysis:
  * - Record breakpoint hits
  * - Track variable states

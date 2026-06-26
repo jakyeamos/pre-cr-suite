@@ -1,6 +1,6 @@
 /**
  * Security Utility Tests
- * 
+ *
  * Tests for path sanitization and security functions
  */
 

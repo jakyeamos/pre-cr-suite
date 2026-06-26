@@ -1,6 +1,6 @@
 /**
  * LSP Server Integration Tests
- * 
+ *
  * Tests that the core modules can be imported and basic functionality works.
  */
 
@@ -9,16 +9,16 @@ import {
   // Checklist
   scanSecurity,
   analyzePRSize,
-  
+
   // Review
   FlakyTestDetective,
-  
+
   // Context
   ContextManager,
-  
+
   // Debug
   DebugSessionManager,
-  
+
   // Parsers
   parseLcovContent,
   parseIstanbulContent,
@@ -31,7 +31,7 @@ describe('Core Module Integration', () => {
         path: 'test.js',
         content: `eval(userInput);`
       }]);
-      
+
       expect(result).toHaveProperty('findings');
       expect(result).toHaveProperty('scannedFiles');
       expect(Array.isArray(result.findings)).toBe(true);
@@ -44,7 +44,7 @@ describe('Core Module Integration', () => {
         { path: 'src/a.ts', additions: 100, deletions: 50, isNew: false, isDeleted: false, isRenamed: false },
         { path: 'src/b.ts', additions: 200, deletions: 0, isNew: true, isDeleted: false, isRenamed: false },
       ]);
-      
+
       expect(result.linesChanged).toBe(350);
       expect(result.filesChanged).toBe(2);
       expect(result.recommendation).toBeDefined();
@@ -54,7 +54,7 @@ describe('Core Module Integration', () => {
   describe('Flaky Test Detective', () => {
     it('should track test results', () => {
       const detective = new FlakyTestDetective();
-      
+
       detective.recordResult({
         testId: 'test-1',
         name: 'should work',
@@ -63,7 +63,7 @@ describe('Core Module Integration', () => {
         duration: 100,
         timestamp: new Date()
       });
-      
+
       const flakyTests = detective.getFlakyTests();
       expect(Array.isArray(flakyTests)).toBe(true);
     });
@@ -79,14 +79,14 @@ describe('Core Module Integration', () => {
   describe('Debug Session Manager', () => {
     it('should manage debug sessions', () => {
       const manager = new DebugSessionManager();
-      
+
       manager.startSession('Debug Test', 'node');
-      
+
       const activeSession = manager.getActiveSession();
       expect(activeSession).toBeDefined();
-      
+
       manager.endSession();
-      
+
       const sessions = manager.getAllSessions();
       expect(sessions.length).toBe(1);
     });
@@ -103,9 +103,9 @@ LF:3
 LH:2
 end_of_record
       `;
-      
+
       const result = parseLcovContent(lcovContent);
-      
+
       expect(result.success).toBe(true);
       expect(result.data?.files.size).toBe(1);
     });
@@ -124,9 +124,9 @@ end_of_record
           b: {}
         }
       });
-      
+
       const result = parseIstanbulContent(istanbulContent);
-      
+
       expect(result.success).toBe(true);
       expect(result.data?.files.size).toBe(1);
     });

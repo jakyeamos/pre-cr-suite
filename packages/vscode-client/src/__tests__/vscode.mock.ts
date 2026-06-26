@@ -1,6 +1,6 @@
 /**
  * VS Code Mock for Unit Testing
- * 
+ *
  * Provides mock implementations of VS Code APIs for testing
  * extension code without a running VS Code instance.
  */
@@ -10,11 +10,11 @@ import { vi } from 'vitest';
 // Mock Disposable
 export class Disposable {
   private callback: () => void;
-  
+
   constructor(callback: () => void = () => {}) {
     this.callback = callback;
   }
-  
+
   dispose() {
     this.callback();
   }
@@ -23,16 +23,16 @@ export class Disposable {
 // Mock EventEmitter
 export class EventEmitter<T> {
   private listeners: Set<(e: T) => void> = new Set();
-  
+
   event = (listener: (e: T) => void): Disposable => {
     this.listeners.add(listener);
     return new Disposable(() => this.listeners.delete(listener));
   };
-  
+
   fire(data: T) {
     this.listeners.forEach(l => l(data));
   }
-  
+
   dispose() {
     this.listeners.clear();
   }
@@ -46,7 +46,7 @@ export class Uri {
   readonly query: string;
   readonly fragment: string;
   readonly fsPath: string;
-  
+
   private constructor(
     scheme: string,
     authority: string,
@@ -61,24 +61,24 @@ export class Uri {
     this.fragment = fragment;
     this.fsPath = path;
   }
-  
+
   static file(path: string): Uri {
     return new Uri('file', '', path, '', '');
   }
-  
+
   static parse(value: string): Uri {
     return new Uri('file', '', value, '', '');
   }
-  
+
   static joinPath(base: Uri, ...pathSegments: string[]): Uri {
     const joined = [base.path, ...pathSegments].join('/');
     return new Uri(base.scheme, base.authority, joined, '', '');
   }
-  
+
   toString(): string {
     return `${this.scheme}://${this.path}`;
   }
-  
+
   with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): Uri {
     return new Uri(
       change.scheme ?? this.scheme,
@@ -94,7 +94,7 @@ export class Uri {
 export class Range {
   readonly start: Position;
   readonly end: Position;
-  
+
   constructor(startLine: number, startChar: number, endLine: number, endChar: number);
   constructor(start: Position, end: Position);
   constructor(
@@ -117,7 +117,7 @@ export class Range {
 export class Position {
   readonly line: number;
   readonly character: number;
-  
+
   constructor(line: number, character: number) {
     this.line = line;
     this.character = character;
@@ -169,7 +169,7 @@ export interface ExtensionContext {
 export function createMockExtensionContext(): ExtensionContext {
   const globalStore = new Map<string, any>();
   const workspaceStore = new Map<string, any>();
-  
+
   return {
     subscriptions: [],
     globalState: {
@@ -322,7 +322,7 @@ export class Diagnostic {
   severity: DiagnosticSeverity;
   source?: string;
   code?: string | number;
-  
+
   constructor(range: Range, message: string, severity: DiagnosticSeverity = DiagnosticSeverity.Error) {
     this.range = range;
     this.message = message;

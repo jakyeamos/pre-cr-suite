@@ -1,6 +1,6 @@
 /**
  * Review Time Estimator
- * 
+ *
  * Estimates how long a PR will take to review based on:
  * - Lines changed
  * - File complexity
@@ -29,7 +29,7 @@ export enum ComplexityLevel {
 /**
  * Category of file change
  */
-export type ChangeCategory = 
+export type ChangeCategory =
   | 'logic'      // Core business logic
   | 'test'       // Test files
   | 'config'     // Configuration files
@@ -153,9 +153,9 @@ export function analyzeFileComplexity(
   // Quick heuristics for complexity
   const lines = content.split('\n');
   const lineCount = lines.length;
-  
+
   let complexityScore = 0;
-  
+
   // Nesting depth
   let maxNesting = 0;
   let currentNesting = 0;
@@ -168,39 +168,39 @@ export function analyzeFileComplexity(
   if (maxNesting > 5) complexityScore += 3;
   else if (maxNesting > 3) complexityScore += 2;
   else if (maxNesting > 2) complexityScore += 1;
-  
+
   // Cyclomatic complexity indicators
   const conditionals = (content.match(/\b(if|else|switch|case|\?|&&|\|\|)\b/g) || []).length;
   const conditionalsPerLine = conditionals / Math.max(lineCount, 1);
   if (conditionalsPerLine > 0.15) complexityScore += 3;
   else if (conditionalsPerLine > 0.1) complexityScore += 2;
   else if (conditionalsPerLine > 0.05) complexityScore += 1;
-  
+
   // Loop complexity
   const loops = (content.match(/\b(for|while|do)\b/g) || []).length;
   if (loops > 5) complexityScore += 2;
   else if (loops > 2) complexityScore += 1;
-  
+
   // Callback/Promise chains
   const callbacks = (content.match(/\.(then|catch|finally)\s*\(/g) || []).length;
   const asyncAwait = (content.match(/\b(async|await)\b/g) || []).length;
   if (callbacks > 5 || asyncAwait > 10) complexityScore += 2;
   else if (callbacks > 2 || asyncAwait > 5) complexityScore += 1;
-  
+
   // Type complexity (for TypeScript)
   const generics = (content.match(/<[^>]+>/g) || []).length;
   if (generics > 20) complexityScore += 2;
   else if (generics > 10) complexityScore += 1;
-  
+
   // Regex complexity
   const regexes = (content.match(/\/[^/]+\/[gimsuvy]*/g) || []).length;
   if (regexes > 5) complexityScore += 2;
   else if (regexes > 2) complexityScore += 1;
-  
+
   // File size factor
   if (lineCount > 500) complexityScore += 2;
   else if (lineCount > 200) complexityScore += 1;
-  
+
   // Map score to level
   if (complexityScore >= 8) return ComplexityLevel.VeryHigh;
   if (complexityScore >= 5) return ComplexityLevel.High;
@@ -213,7 +213,7 @@ export function analyzeFileComplexity(
  */
 export function categorizeFile(filePath: string): ChangeCategory {
   const lowerPath = filePath.toLowerCase();
-  
+
   // Test files
   if (
     lowerPath.includes('.test.') ||
@@ -224,7 +224,7 @@ export function categorizeFile(filePath: string): ChangeCategory {
   ) {
     return 'test';
   }
-  
+
   // Generated files
   if (
     lowerPath.includes('.generated.') ||
@@ -237,7 +237,7 @@ export function categorizeFile(filePath: string): ChangeCategory {
   ) {
     return 'generated';
   }
-  
+
   // Config files
   if (
     lowerPath.endsWith('.json') ||
@@ -253,7 +253,7 @@ export function categorizeFile(filePath: string): ChangeCategory {
   ) {
     return 'config';
   }
-  
+
   // Documentation
   if (
     lowerPath.endsWith('.md') ||
@@ -264,7 +264,7 @@ export function categorizeFile(filePath: string): ChangeCategory {
   ) {
     return 'docs';
   }
-  
+
   // Style files
   if (
     lowerPath.endsWith('.css') ||
@@ -275,7 +275,7 @@ export function categorizeFile(filePath: string): ChangeCategory {
   ) {
     return 'style';
   }
-  
+
   // Type definitions
   if (
     lowerPath.endsWith('.d.ts') ||
@@ -284,7 +284,7 @@ export function categorizeFile(filePath: string): ChangeCategory {
   ) {
     return 'types';
   }
-  
+
   // Default to logic
   return 'logic';
 }
@@ -304,38 +304,38 @@ export function estimateReviewTime(
 ): ReviewTimeEstimate {
   const logger = getLogger();
   const fullConfig: ReviewTimeConfig = { ...DEFAULT_REVIEW_TIME_CONFIG, ...config };
-  
+
   const fileBreakdown: FileMetrics[] = [];
   const warnings: string[] = [];
   let totalMinutes = 0;
-  
+
   for (const change of changes) {
     if (change.isDeleted) continue;
-    
+
     const category = categorizeFile(change.path);
     const linesChanged = change.additions + change.deletions;
-    
+
     // Get complexity from content if available
     let complexity = ComplexityLevel.Medium;
     if (fileContents?.has(change.path)) {
       complexity = analyzeFileComplexity(fileContents.get(change.path)!, change.path);
     }
-    
+
     // Calculate time for this file
     const baseTime = (linesChanged / 100) * fullConfig.baseMinutesPer100Lines;
     const complexityMultiplier = fullConfig.complexityMultipliers[complexity];
     const categoryMultiplier = fullConfig.categoryMultipliers[category];
-    
+
     let fileMinutes = baseTime * complexityMultiplier * categoryMultiplier;
     fileMinutes += fullConfig.minutesPerFile; // Context switching overhead
     fileMinutes = Math.max(1, fileMinutes); // At least 1 minute per file
-    
+
     const factors: string[] = [];
     if (complexityMultiplier > 1) factors.push(`High complexity (${complexity})`);
     if (categoryMultiplier < 1) factors.push(`${category} file (faster review)`);
     if (categoryMultiplier > 1) factors.push(`${category} file (careful review needed)`);
     if (linesChanged > 200) factors.push('Large file change');
-    
+
     fileBreakdown.push({
       path: change.path,
       category,
@@ -344,31 +344,31 @@ export function estimateReviewTime(
       estimatedMinutes: Math.round(fileMinutes),
       factors
     });
-    
+
     totalMinutes += fileMinutes;
   }
-  
+
   // Apply minimum
   totalMinutes = Math.max(fullConfig.minimumMinutes, totalMinutes);
-  
+
   // Round to nice numbers
   totalMinutes = roundToNiceNumber(totalMinutes);
-  
+
   // Generate warnings
   if (totalMinutes > fullConfig.maxReasonableMinutes) {
     warnings.push(`Review time exceeds ${fullConfig.maxReasonableMinutes} minutes - consider splitting PR`);
   }
-  
+
   const logicFiles = fileBreakdown.filter(f => f.category === 'logic');
   if (logicFiles.length > 10) {
     warnings.push('Many logic files changed - ensure thorough review');
   }
-  
+
   const veryHighComplexity = fileBreakdown.filter(f => f.complexity === ComplexityLevel.VeryHigh);
   if (veryHighComplexity.length > 0) {
     warnings.push(`${veryHighComplexity.length} file(s) have very high complexity`);
   }
-  
+
   // Calculate confidence
   let confidence: ReviewTimeEstimate['confidence'] = 'medium';
   if (fileContents && fileContents.size === changes.length) {
@@ -376,22 +376,22 @@ export function estimateReviewTime(
   } else if (!fileContents || fileContents.size === 0) {
     confidence = 'low'; // No content analysis
   }
-  
+
   // Get suggested reviewers
-  const suggestedReviewers = reviewers 
+  const suggestedReviewers = reviewers
     ? suggestReviewers(changes, reviewers)
     : [];
-  
+
   // Format the time
   const formatted = formatTime(totalMinutes);
   const titlePrefix = `[~${formatted} review]`;
-  
+
   logger.info('Review time estimate complete', {
     totalMinutes,
     fileCount: changes.length,
     confidence
   });
-  
+
   return {
     totalMinutes: Math.round(totalMinutes),
     formatted,
@@ -443,12 +443,12 @@ function suggestReviewers(
   reviewers: ReviewerInfo[]
 ): SuggestedReviewer[] {
   const suggestions: SuggestedReviewer[] = [];
-  
+
   for (const reviewer of reviewers) {
     let familiarityScore = 0;
     const familiarFiles: string[] = [];
     const reasons: string[] = [];
-    
+
     for (const change of changes) {
       // Check owned paths
       if (reviewer.ownedPaths) {
@@ -462,7 +462,7 @@ function suggestReviewers(
           }
         }
       }
-      
+
       // Check recent files
       if (reviewer.recentFiles) {
         if (reviewer.recentFiles.includes(change.path)) {
@@ -474,10 +474,10 @@ function suggestReviewers(
             reasons.push('Recently worked on these files');
           }
         }
-        
+
         // Check same directory
         const changeDir = change.path.split('/').slice(0, -1).join('/');
-        const hasRecentInDir = reviewer.recentFiles.some(f => 
+        const hasRecentInDir = reviewer.recentFiles.some(f =>
           f.startsWith(changeDir + '/')
         );
         if (hasRecentInDir) {
@@ -488,10 +488,10 @@ function suggestReviewers(
         }
       }
     }
-    
+
     // Cap at 100
     familiarityScore = Math.min(100, familiarityScore);
-    
+
     if (familiarityScore > 0) {
       suggestions.push({
         id: reviewer.id,
@@ -501,7 +501,7 @@ function suggestReviewers(
       });
     }
   }
-  
+
   // Sort by familiarity score
   return suggestions.sort((a, b) => b.familiarityScore - a.familiarityScore);
 }
@@ -537,22 +537,22 @@ export function calculateEstimateAccuracy(
       suggestions: ['No tracking data available']
     };
   }
-  
+
   let totalError = 0;
   let totalErrorPercent = 0;
   let underestimates = 0;
-  
+
   for (const data of trackingData) {
     const error = data.actualMinutes - data.estimatedMinutes;
     totalError += Math.abs(error);
     totalErrorPercent += Math.abs(error) / Math.max(data.actualMinutes, 1) * 100;
     if (error > 0) underestimates++;
   }
-  
+
   const averageError = totalError / trackingData.length;
   const averageErrorPercent = totalErrorPercent / trackingData.length;
   const underestimateRate = underestimates / trackingData.length;
-  
+
   const suggestions: string[] = [];
   if (underestimateRate > 0.6) {
     suggestions.push('Estimates tend to be too low - consider increasing base time');
@@ -563,7 +563,7 @@ export function calculateEstimateAccuracy(
   if (averageErrorPercent > 50) {
     suggestions.push('High variance in estimates - consider more factors');
   }
-  
+
   return {
     averageError: Math.round(averageError),
     averageErrorPercent: Math.round(averageErrorPercent),

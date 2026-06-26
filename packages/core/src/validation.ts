@@ -1,6 +1,6 @@
 /**
  * Validation utilities for coverage file processing
- * 
+ *
  * Security considerations:
  * - Path traversal attacks
  * - Symlink attacks
@@ -60,10 +60,10 @@ export function validateCoverageFile(
 
   // Check for path traversal
   if (!resolvedPath.startsWith(workspaceRoot)) {
-    logger.warn('Path traversal attempt detected', { 
-      requested: filePath, 
+    logger.warn('Path traversal attempt detected', {
+      requested: filePath,
       resolved: resolvedPath,
-      workspace: workspaceRoot 
+      workspace: workspaceRoot
     });
     return {
       valid: false,
@@ -104,9 +104,9 @@ export function validateCoverageFile(
     try {
       const realPath = fs.realpathSync(resolvedPath);
       if (!realPath.startsWith(workspaceRoot)) {
-        logger.warn('Symlink points outside workspace', { 
-          symlink: resolvedPath, 
-          target: realPath 
+        logger.warn('Symlink points outside workspace', {
+          symlink: resolvedPath,
+          target: realPath
         });
         return {
           valid: false,
@@ -124,10 +124,10 @@ export function validateCoverageFile(
   // Check file size
   const fileSize = stats.size;
   if (fileSize > LIMITS.MAX_FILE_SIZE_BYTES) {
-    logger.warn('File too large', { 
-      path: resolvedPath, 
-      size: fileSize, 
-      limit: LIMITS.MAX_FILE_SIZE_BYTES 
+    logger.warn('File too large', {
+      path: resolvedPath,
+      size: fileSize,
+      limit: LIMITS.MAX_FILE_SIZE_BYTES
     });
     return {
       valid: false,
@@ -157,7 +157,7 @@ export function validateSourcePath(
 ): { valid: boolean; resolvedPath?: string; error?: string } {
   // Normalize the path
   const normalized = path.normalize(sourcePath);
-  
+
   // Resolve relative paths
   const resolved = path.isAbsolute(normalized)
     ? normalized

@@ -1,6 +1,6 @@
 /**
  * Git Utilities
- * 
+ *
  * Centralized git operations using VS Code Git extension API
  * with command-line fallback
  */
@@ -28,7 +28,7 @@ export interface ChangedFile {
  */
 export function sanitizePath(filePath: string): string {
   if (!filePath) return '';
-  
+
   return filePath
     // Remove null bytes
     .replace(/\0/g, '')
@@ -49,19 +49,19 @@ export function sanitizePath(filePath: string): string {
  * Returns null if path escapes workspace
  */
 export function validatePathInWorkspace(
-  filePath: string, 
+  filePath: string,
   workspaceRoot: string
 ): string | null {
   const sanitized = sanitizePath(filePath);
   const resolved = path.resolve(workspaceRoot, sanitized);
   const normalizedRoot = path.normalize(workspaceRoot);
-  
+
   // Ensure resolved path starts with workspace root
   if (!resolved.startsWith(normalizedRoot)) {
     console.warn('Pre-CR: Path traversal attempt blocked:', filePath);
     return null;
   }
-  
+
   return resolved;
 }
 
@@ -84,11 +84,11 @@ async function getGitAPI(): Promise<any | null> {
   try {
     const gitExtension = vscode.extensions.getExtension('vscode.git');
     if (!gitExtension) return null;
-    
-    const git = gitExtension.isActive 
+
+    const git = gitExtension.isActive
       ? gitExtension.exports.getAPI(1)
       : (await gitExtension.activate()).getAPI(1);
-    
+
     return git;
   } catch (error) {
     console.debug('Pre-CR: Operation failed:', error);
@@ -130,21 +130,21 @@ export async function getChangedFiles(): Promise<ChangedFile[]> {
   if (git && git.repositories.length > 0) {
     const repo = git.repositories[0];
     const files = new Map<string, ChangedFile>();
-    
+
     // Process both staged and working tree changes
     for (const change of [...repo.state.indexChanges, ...repo.state.workingTreeChanges]) {
       const filePath = vscode.workspace.asRelativePath(change.uri);
-      
+
       // Map Git status codes to our status enum
       let status: ChangedFile['status'] = 'modified';
       // GitStatus: INDEX_ADDED = 1, MODIFIED = 5, DELETED = 6, INDEX_ADDED = 7
       if (change.status === 1 || change.status === 7) status = 'added';
       else if (change.status === 6) status = 'deleted';
       else if (change.status === 3) status = 'renamed';
-      
+
       files.set(filePath, { path: filePath, status });
     }
-    
+
     return Array.from(files.values());
   }
 
@@ -170,7 +170,7 @@ export async function getChangedFiles(): Promise<ChangedFile[]> {
       for (const line of output.split('\n').filter(Boolean)) {
         const [status, ...pathParts] = line.split('\t');
         const filePath = pathParts.join('\t'); // Handle paths with tabs
-        
+
         if (!filePath) continue;
 
         let fileStatus: ChangedFile['status'] = 'modified';
@@ -195,7 +195,7 @@ export async function getChangedFiles(): Promise<ChangedFile[]> {
 /**
  * Get changed files with their content
  */
-export async function getChangedFilesWithContent(): Promise<(ChangedFile & { 
+export async function getChangedFilesWithContent(): Promise<(ChangedFile & {
   content: string;
   additions?: number;
   deletions?: number;
@@ -204,7 +204,7 @@ export async function getChangedFilesWithContent(): Promise<(ChangedFile & {
 })[]> {
   const files = await getChangedFiles();
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-  
+
   if (!workspaceRoot) return files.map(f => ({ ...f, content: '' }));
 
   const result: (ChangedFile & { content: string; isNew?: boolean; isDeleted?: boolean })[] = [];
@@ -239,11 +239,11 @@ export async function getChangedFilesWithContent(): Promise<(ChangedFile & {
 export async function getModifiedFiles(): Promise<string[]> {
   const git = await getGitAPI();
   if (git && git.repositories.length > 0) {
-    return git.repositories[0].state.workingTreeChanges.map((c: any) => 
+    return git.repositories[0].state.workingTreeChanges.map((c: any) =>
       vscode.workspace.asRelativePath(c.uri)
     );
   }
-  
+
   // Fallback
   const files = await getChangedFiles();
   return files.filter(f => f.status === 'modified').map(f => f.path);
@@ -255,11 +255,11 @@ export async function getModifiedFiles(): Promise<string[]> {
 export async function getStagedFiles(): Promise<string[]> {
   const git = await getGitAPI();
   if (git && git.repositories.length > 0) {
-    return git.repositories[0].state.indexChanges.map((c: any) => 
+    return git.repositories[0].state.indexChanges.map((c: any) =>
       vscode.workspace.asRelativePath(c.uri)
     );
   }
-  
+
   // No good CLI fallback for this without parsing git status --porcelain
   return [];
 }
@@ -272,7 +272,7 @@ export async function getHeadCommit(): Promise<string> {
   if (git && git.repositories.length > 0) {
     return git.repositories[0].state.HEAD?.commit || '';
   }
-  
+
   // Fallback to command line
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!workspaceRoot) return '';
@@ -358,7 +358,7 @@ export function watchBranchChanges(
   if (workspaceRoot) {
     const gitHeadPattern = new vscode.RelativePattern(workspaceRoot, '.git/HEAD');
     const watcher = vscode.workspace.createFileSystemWatcher(gitHeadPattern);
-    
+
     watcher.onDidChange(() => checkBranch());
     context.subscriptions.push(watcher);
   }

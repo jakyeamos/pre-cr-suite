@@ -1,8 +1,8 @@
 /**
  * LCOV Parser
- * 
+ *
  * Parses lcov.info format coverage files.
- * 
+ *
  * LCOV Format Reference:
  * - TN:<test name>           - Test name (optional)
  * - SF:<source file>         - Source file path
@@ -44,7 +44,7 @@ export function parseLcovFile(
   workspaceRoot?: string
 ): ParseResult<WorkspaceCoverage> {
   const logger = getLogger();
-  
+
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
     return parseLcovContent(content, workspaceRoot);
@@ -88,18 +88,18 @@ export function parseLcovContent(
   for (const line of lines) {
     lineNum++;
     const trimmed = line.trim();
-    
+
     if (!trimmed) continue;
 
     // Source file
     if (trimmed.startsWith('SF:')) {
       currentFile = trimmed.slice(3);
-      
+
       // Resolve relative paths
       if (workspaceRoot && !path.isAbsolute(currentFile)) {
         currentFile = path.resolve(workspaceRoot, currentFile);
       }
-      
+
       // Normalize path separators
       currentFile = path.normalize(currentFile);
       continue;
@@ -170,7 +170,7 @@ export function parseLcovContent(
       if (parts.length >= 2) {
         const count = parseInt(parts[0], 10);
         const fnName = parts.slice(1).join(',');
-        
+
         // Find the line number for this function
         let fnLine = 0;
         for (const [line, name] of functionDefs) {
@@ -179,7 +179,7 @@ export function parseLcovContent(
             break;
           }
         }
-        
+
         currentFunctions.push({
           name: fnName,
           lineNumber: fnLine,
@@ -195,7 +195,7 @@ export function parseLcovContent(
       if (parts.length >= 2) {
         const lineNumber = parseInt(parts[0], 10);
         const count = parseInt(parts[1], 10);
-        
+
         currentLines.set(lineNumber, {
           lineNumber,
           status: count > 0 ? LineCoverageStatus.Covered : LineCoverageStatus.Uncovered,
@@ -212,15 +212,15 @@ export function parseLcovContent(
         const lineNumber = parts[0];
         const branchId = parseInt(parts[2], 10);
         const takenStr = parts[3];
-        
+
         // '-' means branch was never taken
         const taken = takenStr === '-' ? 0 : parseInt(takenStr, 10);
-        
+
         const lineKey = lineNumber;
         if (!currentBranches.has(lineKey)) {
           currentBranches.set(lineKey, []);
         }
-        
+
         currentBranches.get(lineKey)!.push({
           branchId,
           taken
@@ -238,7 +238,7 @@ export function parseLcovContent(
   // Handle file without end_of_record
   if (currentFile && currentLines.size > 0) {
     warnings.push('File record not properly terminated with end_of_record');
-    
+
     const summary = calculateFileSummary(currentLines, currentFunctions, currentBranches);
     files.set(currentFile, {
       filePath: currentFile,
@@ -288,7 +288,7 @@ function calculateFileSummary(
   for (const line of lines.values()) {
     if (line.status !== LineCoverageStatus.NotExecutable) {
       totalLines++;
-      if (line.status === LineCoverageStatus.Covered || 
+      if (line.status === LineCoverageStatus.Covered ||
           line.status === LineCoverageStatus.Partial) {
         coveredLines++;
       }

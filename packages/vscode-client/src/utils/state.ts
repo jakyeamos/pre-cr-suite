@@ -1,6 +1,6 @@
 /**
  * Centralized State Management
- * 
+ *
  * Single source of truth for extension state, enabling:
  * - Consistent state access across modules
  * - State change subscriptions
@@ -105,7 +105,7 @@ class StateManager {
    */
   init(context: vscode.ExtensionContext) {
     this.extensionContext = context;
-    
+
     // Restore persisted state
     const persisted = context.globalState.get<Partial<ExtensionState>>('preCr.state');
     if (persisted) {
@@ -217,7 +217,7 @@ class StateManager {
    */
   subscribeAll(listener: (state: ExtensionState) => void): vscode.Disposable {
     const disposables: vscode.Disposable[] = [];
-    
+
     for (const key of Object.keys(this.state) as StateKey[]) {
       disposables.push(
         this.subscribe(key, () => listener(this.state))
@@ -235,7 +235,7 @@ class StateManager {
   reset() {
     const oldState = { ...this.state };
     this.state = { ...initialState };
-    
+
     for (const key of Object.keys(this.state) as StateKey[]) {
       this.notifyListeners(key, this.state[key], oldState[key]);
     }
@@ -325,11 +325,11 @@ export function getBranchStatus(): { branch: string | null; hasSnapshot: boolean
  */
 export function formatElapsedTime(startTime: Date | null): string {
   if (!startTime) return '0s';
-  
+
   const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
-  
+
   if (minutes > 0) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }

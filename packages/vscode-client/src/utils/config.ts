@@ -1,6 +1,6 @@
 /**
  * Configuration Utilities
- * 
+ *
  * Type-safe configuration access with validation and defaults
  */
 
@@ -20,9 +20,9 @@ interface ConfigEntry {
 const CONFIG_SCHEMA: Record<string, ConfigEntry> = {
   // Coverage settings
   'coverage.autoLoad': { type: 'boolean', default: true },
-  'coverage.searchPaths': { 
-    type: 'array', 
-    default: ['coverage/lcov.info', 'coverage/coverage-final.json'] 
+  'coverage.searchPaths': {
+    type: 'array',
+    default: ['coverage/lcov.info', 'coverage/coverage-final.json']
   },
   'coverage.decorations.covered': { type: 'string', default: 'rgba(0, 255, 0, 0.1)' },
   'coverage.decorations.uncovered': { type: 'string', default: 'rgba(255, 0, 0, 0.1)' },
@@ -42,10 +42,10 @@ const CONFIG_SCHEMA: Record<string, ConfigEntry> = {
   'checklist.maxFileSize': { type: 'number', default: 500, min: 50, max: 2000 },
 
   // Documentation settings
-  'docs.style': { 
-    type: 'string', 
-    default: 'jsdoc', 
-    enum: ['jsdoc', 'tsdoc', 'google', 'numpy'] 
+  'docs.style': {
+    type: 'string',
+    default: 'jsdoc',
+    enum: ['jsdoc', 'tsdoc', 'google', 'numpy']
   },
   'docs.includeExamples': { type: 'boolean', default: true },
   'docs.filter.skipTrivialGettersSetters': { type: 'boolean', default: true },
@@ -81,7 +81,7 @@ export function getConfig<T = unknown>(key: string): T {
   if (!schema) {
     throw new Error(`Unknown config key: ${key}`);
   }
-  
+
   const config = vscode.workspace.getConfiguration('preCr');
   let value = config.get(key, schema.default);
 

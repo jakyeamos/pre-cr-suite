@@ -1,9 +1,9 @@
 /**
  * Consolidated Status Bar Manager
- * 
+ *
  * Shows a single smart status bar item that displays the most relevant info
  * but ALWAYS links to the quick actions menu (except during recording).
- * 
+ *
  * Display priority:
  * - Recording: ● REC 0:45 (links to stop)
  * - Coverage + Issues: Pre-CR ⚠3 | 78%
@@ -11,7 +11,7 @@
  * - Issues only: Pre-CR ⚠ 3
  * - Snapshot: Pre-CR ✓ (branch saved)
  * - Normal: Pre-CR ✓
- * 
+ *
  * Now powered by centralized state management.
  */
 
@@ -30,15 +30,15 @@ export function initStatusBar(context: vscode.ExtensionContext): vscode.StatusBa
   );
   statusBarItem.name = 'Pre-CR Suite';
   context.subscriptions.push(statusBarItem);
-  
+
   // Subscribe to all state changes
   context.subscriptions.push(
     state.subscribeAll(() => updateDisplay())
   );
-  
+
   updateDisplay();
   statusBarItem.show();
-  
+
   return statusBarItem;
 }
 
@@ -119,7 +119,7 @@ export function clearSnapshot() {
 
 /**
  * Update the status bar display based on current state
- * 
+ *
  * Key change: Always link to quick actions menu (except during recording)
  * so users can always access all features.
  */
@@ -144,7 +144,7 @@ function updateDisplay() {
   // Build status text with all relevant info
   const parts: string[] = [];
   const tooltipParts: string[] = ['Pre-CR Suite - Click for quick actions'];
-  
+
   // Coverage info
   if (s.coverage.isLoaded && s.coverage.percent !== null) {
     const percent = s.coverage.percent;
@@ -152,13 +152,13 @@ function updateDisplay() {
     parts.push(`${icon} ${percent.toFixed(0)}%`);
     tooltipParts.push(`Coverage: ${percent.toFixed(1)}% (${s.coverage.fileCount} files)`);
   }
-  
+
   // Security issues
   if (s.security.issueCount > 0) {
     parts.push(`$(warning) ${s.security.issueCount}`);
     tooltipParts.push(`${s.security.issueCount} security issue${s.security.issueCount !== 1 ? 's' : ''} found`);
   }
-  
+
   // Snapshot indicator
   if (s.context.hasSnapshot && s.context.currentBranch) {
     tooltipParts.push(`Context saved for "${s.context.currentBranch}"`);
@@ -172,7 +172,7 @@ function updateDisplay() {
   } else {
     statusBarItem.text = '$(check) Pre-CR';
   }
-  
+
   // Set colors based on most urgent status
   if (s.security.issueCount > 0) {
     statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
@@ -184,7 +184,7 @@ function updateDisplay() {
     statusBarItem.backgroundColor = undefined;
     statusBarItem.color = undefined;
   }
-  
+
   statusBarItem.tooltip = tooltipParts.join('\n');
   // ALWAYS link to quick actions menu so users can access all features
   statusBarItem.command = 'preCr.showQuickActions';

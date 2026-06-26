@@ -1,6 +1,6 @@
 /**
  * Debug Session Capture
- * 
+ *
  * Captures and analyzes debugging sessions:
  * - Records variable states at breakpoints
  * - Tracks execution path
@@ -261,11 +261,11 @@ export class DebugSessionManager {
   private sessions: Map<string, DebugSession> = new Map();
   private activeSession: DebugSession | null = null;
   private config: DebugCaptureConfig;
-  
+
   constructor(config: Partial<DebugCaptureConfig> = {}) {
     this.config = { ...DEFAULT_DEBUG_CAPTURE_CONFIG, ...config };
   }
-  
+
   /**
    * Start a new debug session
    */
@@ -275,7 +275,7 @@ export class DebugSessionManager {
     launchConfig?: Record<string, unknown>
   ): DebugSession {
     const logger = getLogger();
-    
+
     const session: DebugSession = {
       id: generateSessionId(),
       name,
@@ -288,66 +288,66 @@ export class DebugSessionManager {
       watchHistory: new Map(),
       consoleOutput: []
     };
-    
+
     this.activeSession = session;
     this.sessions.set(session.id, session);
-    
+
     logger.info('Debug session started', {
       id: session.id,
       name,
       debugType
     });
-    
+
     return session;
   }
-  
+
   /**
    * End current session
    */
   endSession(outcome?: DebugSession['outcome']): DebugSession | null {
     const logger = getLogger();
-    
+
     if (!this.activeSession) {
       return null;
     }
-    
+
     this.activeSession.endTime = new Date();
     this.activeSession.outcome = outcome || 'unknown';
-    
+
     const session = this.activeSession;
     const endTime = session.endTime!; // We just set it above
     this.activeSession = null;
-    
+
     logger.info('Debug session ended', {
       id: session.id,
       duration: endTime.getTime() - session.startTime.getTime(),
       breakpointHits: session.breakpointHits.length,
       exceptions: session.exceptions.length
     });
-    
+
     return session;
   }
-  
+
   /**
    * Record a breakpoint hit
    */
   recordBreakpointHit(hit: Omit<BreakpointHit, 'id' | 'timestamp'>): BreakpointHit | null {
     if (!this.activeSession) return null;
-    
+
     // Check limit
     if (this.activeSession.breakpointHits.length >= this.config.maxBreakpointHits) {
       // Remove oldest
       this.activeSession.breakpointHits.shift();
     }
-    
+
     const fullHit: BreakpointHit = {
       ...hit,
       id: generateHitId(),
       timestamp: new Date()
     };
-    
+
     this.activeSession.breakpointHits.push(fullHit);
-    
+
     // Add to execution path
     this.activeSession.executionPath.push({
       type: 'breakpoint',
@@ -355,10 +355,10 @@ export class DebugSessionManager {
       timestamp: fullHit.timestamp,
       data: fullHit
     });
-    
+
     return fullHit;
   }
-  
+
   /**
    * Record an exception
    */
@@ -367,10 +367,10 @@ export class DebugSessionManager {
       ...exception,
       timestamp: new Date()
     };
-    
+
     if (this.activeSession) {
       this.activeSession.exceptions.push(fullException);
-      
+
       this.activeSession.executionPath.push({
         type: 'exception',
         location: exception.stackTrace[0] ? {
@@ -381,10 +381,10 @@ export class DebugSessionManager {
         data: fullException
       });
     }
-    
+
     return fullException;
   }
-  
+
   /**
    * Record a step
    */
@@ -393,13 +393,13 @@ export class DebugSessionManager {
     location: ExecutionStep['location']
   ): void {
     if (!this.activeSession) return;
-    
+
     const lastStep = this.activeSession.executionPath[
       this.activeSession.executionPath.length - 1
     ];
-    
+
     const now = new Date();
-    
+
     this.activeSession.executionPath.push({
       type,
       location,
@@ -407,18 +407,18 @@ export class DebugSessionManager {
       duration: lastStep ? now.getTime() - lastStep.timestamp.getTime() : undefined
     });
   }
-  
+
   /**
    * Record watch expression value
    */
   recordWatchValue(expression: string, value: string): void {
     if (!this.activeSession) return;
-    
+
     const history = this.activeSession.watchHistory.get(expression) || [];
     history.push({ timestamp: new Date(), value });
     this.activeSession.watchHistory.set(expression, history);
   }
-  
+
   /**
    * Record console output
    */
@@ -427,68 +427,68 @@ export class DebugSessionManager {
     message: string
   ): void {
     if (!this.activeSession || !this.config.captureConsole) return;
-    
+
     this.activeSession.consoleOutput.push({
       timestamp: new Date(),
       type,
       message: message.substring(0, this.config.maxStringLength)
     });
   }
-  
+
   /**
    * Get active session
    */
   getActiveSession(): DebugSession | null {
     return this.activeSession;
   }
-  
+
   /**
    * Get session by ID
    */
   getSession(id: string): DebugSession | undefined {
     return this.sessions.get(id);
   }
-  
+
   /**
    * Get all sessions
    */
   getAllSessions(): DebugSession[] {
     return Array.from(this.sessions.values());
   }
-  
+
   /**
    * Delete a session
    */
   deleteSession(id: string): boolean {
     return this.sessions.delete(id);
   }
-  
+
   /**
    * Analyze a session
    */
   analyzeSession(sessionId: string): SessionAnalysis | null {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
-    
+
     const logger = getLogger();
-    
+
     // Calculate duration
     const endTime = session.endTime || new Date();
     const duration = endTime.getTime() - session.startTime.getTime();
-    
+
     // Find unique files
     const filesVisited = new Set<string>();
     for (const hit of session.breakpointHits) {
       filesVisited.add(hit.location.file);
     }
-    
+
     // Find hot spots
     const hitCounts = new Map<string, number>();
     for (const hit of session.breakpointHits) {
       const key = `${hit.location.file}:${hit.location.line}`;
       hitCounts.set(key, (hitCounts.get(key) || 0) + 1);
     }
-    
+
     const hotSpots = Array.from(hitCounts.entries())
       .map(([key, count]) => {
         const [file, lineStr] = key.split(':');
@@ -496,16 +496,16 @@ export class DebugSessionManager {
       })
       .sort((a, b) => b.hitCount - a.hitCount)
       .slice(0, 10);
-    
+
     // Detect patterns
     const patterns = this.config.enablePatternDetection
       ? this.detectPatterns(session)
       : [];
-    
+
     // Find volatile variables
     const variableChanges = new Map<string, number>();
     let prevVariables = new Map<string, string>();
-    
+
     for (const hit of session.breakpointHits) {
       for (const scope of hit.scopes) {
         for (const variable of scope.variables) {
@@ -520,12 +520,12 @@ export class DebugSessionManager {
         }
       }
     }
-    
+
     const volatileVariables = Array.from(variableChanges.entries())
       .map(([name, changeCount]) => ({ name, changeCount }))
       .sort((a, b) => b.changeCount - a.changeCount)
       .slice(0, 10);
-    
+
     // Exception summary
     const exceptionCounts = new Map<string, { count: number; message: string }>();
     for (const ex of session.exceptions) {
@@ -536,13 +536,13 @@ export class DebugSessionManager {
         exceptionCounts.set(ex.type, { count: 1, message: ex.message });
       }
     }
-    
+
     const exceptionSummary = Array.from(exceptionCounts.entries())
       .map(([type, data]) => ({ type, ...data }));
-    
+
     // Generate recommendations
     const recommendations = this.generateRecommendations(session, patterns, hotSpots);
-    
+
     const analysis: SessionAnalysis = {
       sessionId,
       duration,
@@ -554,16 +554,16 @@ export class DebugSessionManager {
       exceptionSummary,
       recommendations
     };
-    
+
     logger.info('Session analysis complete', {
       sessionId,
       patternsFound: patterns.length,
       hotSpotCount: hotSpots.length
     });
-    
+
     return analysis;
   }
-  
+
   /**
    * Create a reproducible scenario from a session
    */
@@ -574,7 +574,7 @@ export class DebugSessionManager {
   } | null {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
-    
+
     // Extract unique breakpoint locations
     const breakpointMap = new Map<string, { file: string; line: number; condition?: string }>();
     for (const hit of session.breakpointHits) {
@@ -587,10 +587,10 @@ export class DebugSessionManager {
         });
       }
     }
-    
+
     // Get watch expressions
     const watchExpressions = Array.from(session.watchHistory.keys());
-    
+
     // Generate description
     let description = `Debug scenario from session "${session.name}"`;
     if (session.exceptions.length > 0) {
@@ -598,58 +598,58 @@ export class DebugSessionManager {
         session.exceptions.map(e => e.type).join(', ')
       }`;
     }
-    
+
     return {
       breakpoints: Array.from(breakpointMap.values()),
       watchExpressions,
       description
     };
   }
-  
+
   /**
    * Export session to JSON
    */
   exportSession(sessionId: string): object | null {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
-    
+
     return {
       ...session,
       watchHistory: Array.from(session.watchHistory.entries())
     };
   }
-  
+
   /**
    * Import session from JSON
    */
   importSession(data: object): string | null {
     try {
       const session = data as DebugSession & { watchHistory: Array<[string, Array<{ timestamp: Date; value: string }>]> };
-      
+
       // Restore Map
       const watchHistory = new Map(session.watchHistory);
-      
+
       const restored: DebugSession = {
         ...session,
         startTime: new Date(session.startTime),
         endTime: session.endTime ? new Date(session.endTime) : undefined,
         watchHistory
       };
-      
+
       this.sessions.set(restored.id, restored);
       return restored.id;
     } catch {
       return null;
     }
   }
-  
+
   /**
    * Prune old sessions
    */
   pruneOldSessions(): number {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - this.config.retentionDays);
-    
+
     let pruned = 0;
     for (const [id, session] of this.sessions) {
       if (session.startTime < cutoff) {
@@ -657,17 +657,17 @@ export class DebugSessionManager {
         pruned++;
       }
     }
-    
+
     return pruned;
   }
-  
+
   // ============================================================================
   // Private Methods
   // ============================================================================
-  
+
   private detectPatterns(session: DebugSession): DebugPattern[] {
     const patterns: DebugPattern[] = [];
-    
+
     // Detect null reference patterns
     for (const ex of session.exceptions) {
       if (ex.type.toLowerCase().includes('null') ||
@@ -686,14 +686,14 @@ export class DebugSessionManager {
         });
       }
     }
-    
+
     // Detect repeated exceptions
     const exceptionCounts = new Map<string, number>();
     for (const ex of session.exceptions) {
       const key = `${ex.type}:${ex.stackTrace[0]?.file}:${ex.stackTrace[0]?.line}`;
       exceptionCounts.set(key, (exceptionCounts.get(key) || 0) + 1);
     }
-    
+
     for (const [key, count] of exceptionCounts) {
       if (count >= 3) {
         const [type, file, lineStr] = key.split(':');
@@ -706,14 +706,14 @@ export class DebugSessionManager {
         });
       }
     }
-    
+
     // Detect hot paths (potential infinite loops)
     const hitCounts = new Map<string, number>();
     for (const hit of session.breakpointHits) {
       const key = `${hit.location.file}:${hit.location.line}`;
       hitCounts.set(key, (hitCounts.get(key) || 0) + 1);
     }
-    
+
     for (const [key, count] of hitCounts) {
       if (count >= 100) {
         const [file, lineStr] = key.split(':');
@@ -721,14 +721,14 @@ export class DebugSessionManager {
           type: 'hot-path',
           confidence: count >= 500 ? 'high' : 'medium',
           description: `Line hit ${count} times - possible infinite loop or hot path`,
-          suggestion: count >= 500 
+          suggestion: count >= 500
             ? 'Check loop termination conditions'
             : 'Consider optimizing this frequently executed code',
           locations: [{ file, line: parseInt(lineStr, 10) }]
         });
       }
     }
-    
+
     // Detect off-by-one errors
     for (const ex of session.exceptions) {
       if (ex.message.toLowerCase().includes('index') ||
@@ -746,45 +746,45 @@ export class DebugSessionManager {
         });
       }
     }
-    
+
     return patterns;
   }
-  
+
   private generateRecommendations(
     session: DebugSession,
     patterns: DebugPattern[],
     hotSpots: Array<{ file: string; line: number; hitCount: number }>
   ): string[] {
     const recommendations: string[] = [];
-    
+
     if (session.exceptions.length > 10) {
       recommendations.push('High exception count - consider adding more error handling');
     }
-    
+
     if (hotSpots.length > 0 && hotSpots[0].hitCount > 100) {
       recommendations.push(`Investigate hot spot at ${hotSpots[0].file}:${hotSpots[0].line}`);
     }
-    
+
     const nullPatterns = patterns.filter(p => p.type === 'null-reference');
     if (nullPatterns.length > 0) {
       recommendations.push('Add defensive null checks to prevent null reference errors');
     }
-    
+
     const hasInfiniteLoop = patterns.some(
       p => p.type === 'hot-path' && p.confidence === 'high'
     );
     if (hasInfiniteLoop) {
       recommendations.push('Review loop conditions - possible infinite loop detected');
     }
-    
+
     if (session.executionPath.length > 1000) {
       recommendations.push('Long execution path - consider breaking into smaller units');
     }
-    
+
     if (recommendations.length === 0) {
       recommendations.push('No significant issues detected in this debug session');
     }
-    
+
     return recommendations;
   }
 }
@@ -821,18 +821,18 @@ export function flattenVariables(
   currentDepth: number = 0
 ): Array<{ path: string; value: string; type: string }> {
   const result: Array<{ path: string; value: string; type: string }> = [];
-  
+
   if (currentDepth >= maxDepth) return result;
-  
+
   for (const variable of variables) {
     const path = prefix ? `${prefix}.${variable.name}` : variable.name;
-    
+
     result.push({
       path,
       value: variable.value,
       type: variable.type
     });
-    
+
     if (variable.children) {
       result.push(...flattenVariables(
         variable.children,
@@ -842,6 +842,6 @@ export function flattenVariables(
       ));
     }
   }
-  
+
   return result;
 }

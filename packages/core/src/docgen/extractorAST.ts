@@ -1,12 +1,12 @@
 /**
  * AST-Based Signature Extractor
- * 
+ *
  * Uses TypeScript compiler API for accurate parsing of:
  * - Functions, arrow functions, methods
  * - Classes, interfaces, type aliases
  * - React components (function and class-based)
  * - Getters, setters, object methods
- * 
+ *
  * Includes smart filtering to skip trivial items.
  */
 
@@ -58,13 +58,13 @@ const DEFAULT_CONFIG: ExtractorConfig = {
  * Extract all documentable items from source code using TypeScript AST
  */
 export function extractItemsAST(
-  source: string, 
+  source: string,
   filePath: string = 'file.ts',
   config: Partial<ExtractorConfig> = {}
 ): ExtractedItems {
   const logger = getLogger();
   const cfg = { ...DEFAULT_CONFIG, ...config };
-  
+
   const result: ExtractedItems = {
     functions: [],
     classes: [],
@@ -90,7 +90,7 @@ export function extractItemsAST(
         result.functions.push(fn);
       }
     }
-    
+
     // Arrow function / function expression assigned to variable
     else if (ts.isVariableStatement(node)) {
       for (const decl of node.declarationList.declarations) {
@@ -104,7 +104,7 @@ export function extractItemsAST(
         }
       }
     }
-    
+
     // Class declaration
     else if (ts.isClassDeclaration(node) && node.name) {
       const cls = extractClass(node, sourceFile, cfg);
@@ -112,7 +112,7 @@ export function extractItemsAST(
         result.classes.push(cls);
       }
     }
-    
+
     // Interface declaration
     else if (ts.isInterfaceDeclaration(node)) {
       const iface = extractInterface(node, sourceFile, cfg);
@@ -120,7 +120,7 @@ export function extractItemsAST(
         result.interfaces.push(iface);
       }
     }
-    
+
     // Type alias declaration
     else if (ts.isTypeAliasDeclaration(node)) {
       const type = extractTypeAlias(node, sourceFile, cfg);
@@ -199,7 +199,7 @@ function extractArrowOrExpression(
   const func = decl.initializer as ts.ArrowFunction | ts.FunctionExpression;
   const name = decl.name.text;
   const lineNum = sourceFile.getLineAndCharacterOfPosition(decl.getStart()).line + 1;
-  
+
   // Get JSDoc from variable statement parent
   const varStatement = decl.parent?.parent;
   const existingDoc = varStatement ? getJSDocComment(varStatement as ts.Node, sourceFile) : undefined;
@@ -514,7 +514,7 @@ function extractParams(
 ): ExtractedParam[] {
   return parameters.map(param => {
     let name: string;
-    
+
     if (ts.isIdentifier(param.name)) {
       name = param.name.text;
     } else if (ts.isObjectBindingPattern(param.name)) {
@@ -623,7 +623,7 @@ function isTrivialFunction(fn: ExtractedFunction): boolean {
 
 function isTrivialGetter(node: ts.MethodDeclaration): boolean {
   const name = ts.isIdentifier(node.name) ? node.name.text : '';
-  
+
   // Check if it's a getX() pattern
   if (!name.match(/^get[A-Z]/)) return false;
 
@@ -644,7 +644,7 @@ function isTrivialGetter(node: ts.MethodDeclaration): boolean {
 
 function isTrivialSetter(node: ts.MethodDeclaration): boolean {
   const name = ts.isIdentifier(node.name) ? node.name.text : '';
-  
+
   // Check if it's a setX() pattern
   if (!name.match(/^set[A-Z]/)) return false;
 
@@ -676,7 +676,7 @@ function isReactComponent(
   name?: string
 ): boolean {
   const funcName = name || (ts.isFunctionDeclaration(node) && node.name ? node.name.text : '');
-  
+
   // Check if name starts with uppercase (React convention)
   if (!funcName || !funcName.match(/^[A-Z]/)) return false;
 
@@ -711,8 +711,8 @@ function isReactComponent(
 function containsJSXReturn(block: ts.Block): boolean {
   for (const stmt of block.statements) {
     if (ts.isReturnStatement(stmt) && stmt.expression) {
-      if (ts.isJsxElement(stmt.expression) || 
-          ts.isJsxFragment(stmt.expression) || 
+      if (ts.isJsxElement(stmt.expression) ||
+          ts.isJsxFragment(stmt.expression) ||
           ts.isJsxSelfClosingElement(stmt.expression) ||
           ts.isParenthesizedExpression(stmt.expression)) {
         return true;
@@ -826,7 +826,7 @@ function buildSignatureFromNode(node: ts.FunctionDeclaration, sourceFile: ts.Sou
   const params = node.parameters.map(p => p.getText(sourceFile)).join(', ');
   const returnType = node.type?.getText(sourceFile);
   const asyncKw = hasModifier(node, ts.SyntaxKind.AsyncKeyword) ? 'async ' : '';
-  
+
   let sig = `${asyncKw}${name}(${params})`;
   if (returnType) sig += `: ${returnType}`;
   return sig;

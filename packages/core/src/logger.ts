@@ -1,6 +1,6 @@
 /**
  * Simple logger interface for core package
- * 
+ *
  * This can be implemented by any logging system (console, VS Code output channel,
  * LSP connection, etc.)
  */

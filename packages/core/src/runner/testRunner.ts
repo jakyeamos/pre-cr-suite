@@ -1,6 +1,6 @@
 /**
  * Test Runner Module
- * 
+ *
  * Automatically detects test frameworks, runs tests with coverage,
  * and returns parsed coverage data.
  */
@@ -152,10 +152,10 @@ export async function detectTestFramework(workspaceRoot: string): Promise<Framew
   const pyprojectPath = path.join(workspaceRoot, 'pyproject.toml');
   const setupPyPath = path.join(workspaceRoot, 'setup.py');
   const requirementsPath = path.join(workspaceRoot, 'requirements.txt');
-  
+
   if (fs.existsSync(pyprojectPath) || fs.existsSync(setupPyPath) || fs.existsSync(requirementsPath)) {
     // Check if pytest is available
-    const configFile = fs.existsSync(pyprojectPath) ? pyprojectPath : 
+    const configFile = fs.existsSync(pyprojectPath) ? pyprojectPath :
                        fs.existsSync(setupPyPath) ? setupPyPath : requirementsPath;
     return {
       framework: { name: 'pytest', ...FRAMEWORKS.pytest },
@@ -209,7 +209,7 @@ export async function runTestsWithCoverage(
 
   return new Promise((resolve) => {
     const args = [...framework.args];
-    
+
     // Add test file pattern if specified
     if (options?.testFilePattern) {
       if (framework.name === 'jest' || framework.name === 'vitest') {
@@ -255,7 +255,7 @@ export async function runTestsWithCoverage(
       clearTimeout(timeoutId);
       const duration = Date.now() - startTime;
       const exitCode = code ?? 0;
-      
+
       // Check if coverage file was generated
       const coveragePath = path.join(workspaceRoot, framework.coverageOutputPath);
       const coverageExists = fs.existsSync(coveragePath);
@@ -320,19 +320,19 @@ export function getCustomTestCommand(workspaceRoot: string): TestFramework | nul
 export function convertGoCoverageToLcov(goCoveragePath: string): string {
   const content = fs.readFileSync(goCoveragePath, 'utf-8');
   const lines = content.split('\n');
-  
+
   let lcov = '';
   let currentFile = '';
-  
+
   for (const line of lines) {
     if (line.startsWith('mode:')) continue;
     if (!line.trim()) continue;
-    
+
     // Format: file:startLine.startCol,endLine.endCol statements count
     const match = line.match(/^(.+):(\d+)\.\d+,(\d+)\.\d+\s+(\d+)\s+(\d+)$/);
     if (match) {
       const [, file, startLine, endLine, , count] = match;
-      
+
       if (file !== currentFile) {
         if (currentFile) {
           lcov += 'end_of_record\n';
@@ -340,21 +340,21 @@ export function convertGoCoverageToLcov(goCoveragePath: string): string {
         currentFile = file;
         lcov += `SF:${file}\n`;
       }
-      
+
       // Add line data for each line in range
       const start = parseInt(startLine, 10);
       const end = parseInt(endLine, 10);
       const hits = parseInt(count, 10);
-      
+
       for (let i = start; i <= end; i++) {
         lcov += `DA:${i},${hits}\n`;
       }
     }
   }
-  
+
   if (currentFile) {
     lcov += 'end_of_record\n';
   }
-  
+
   return lcov;
 }

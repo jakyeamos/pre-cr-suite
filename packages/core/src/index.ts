@@ -1,6 +1,6 @@
 /**
  * @pre-cr/core
- * 
+ *
  * Core parsing and validation logic for Pre-CR Suite.
  * No editor dependencies - pure TypeScript.
  */

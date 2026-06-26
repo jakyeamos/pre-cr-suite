@@ -1,6 +1,6 @@
 /**
  * Error Messages Tests
- * 
+ *
  * Tests for error message definitions
  */
 
@@ -143,8 +143,8 @@ describe('Message Structure', () => {
   });
 
   it('messages with actions should have command', () => {
-    const actionMessages = ['gitNotFound', 'noWorkspace', 'noCoverageData', 
-                           'noCoverageFiles', 'serverNotResponding', 
+    const actionMessages = ['gitNotFound', 'noWorkspace', 'noCoverageData',
+                           'noCoverageFiles', 'serverNotResponding',
                            'noSnapshot', 'noDebugSessions'];
 
     for (const key of actionMessages) {

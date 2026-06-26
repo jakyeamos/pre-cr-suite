@@ -1,6 +1,6 @@
 /**
  * Context Module
- * 
+ *
  * Context snapshot and restore functionality:
  * - Capture editor state
  * - Restore on branch switch
