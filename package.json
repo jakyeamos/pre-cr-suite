@@ -25,7 +25,13 @@
     "secret:scan": "node scripts/secret-scan.mjs",
     "dependency:security": "pnpm audit --audit-level high",
     "clean": "pnpm -r run clean && rm -rf node_modules",
-    "dev": "turbo run dev --parallel"
+    "dev": "turbo run dev --parallel",
+    "format:check": "node scripts/aios-adoption-gates.mjs format",
+    "validation": "node scripts/aios-adoption-gates.mjs validation",
+    "dead-code": "node scripts/aios-adoption-gates.mjs dead-code",
+    "complexity:check": "node scripts/aios-adoption-gates.mjs complexity",
+    "pre-pr": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && node scripts/aios-adoption-gates.mjs validation",
+    "thermo-nuclear-simplification": "node scripts/aios-adoption-gates.mjs thermo"
   },
   "devDependencies": {
     "eslint-plugin-anti-slop": "file:/Users/jakyeamos/projects/eslint-plugin-anti-slop",
