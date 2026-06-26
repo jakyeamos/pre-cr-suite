@@ -1,12 +1,12 @@
 ---
 schemaVersion: 1
-healthScore: 86
+healthScore: 88
 statusLabel: adopted_but_blocked
-summary: "AIOS adoption docs and server simplification gates are current, but final runtime certification is blocked by test fixture hook isolation and anti-slop adapter compatibility."
-nextStep: "Resolve the full Turbo test harness interaction with the global AIOS commit hook, then rerun final adoption certification."
+summary: "AIOS adoption docs and server simplification gates are current, and Anti-Slop is now globally required by default, but final runtime certification is still blocked by local package-manager/test harness issues."
+nextStep: "Resolve the Pre-CR repo's pinned pnpm/runtime mismatch in headless gates, then rerun final adoption certification."
 blockers:
   - "Full `pnpm test` fails under Turbo because temporary fixture commits invoke the user global AIOS commit hook; the affected `src/beta/precheck.test.ts` passes directly with isolated Git config."
-  - "`pnpm test:headless-beta` reaches the Pre-CR run with isolated Git config but blocks on optional anti-slop adapter `ESLINT_INVALID_OPTIONS`."
+  - "`pre-cr run --json` in this Codex shell reaches the staged diff but the configured test command invokes pnpm 11 instead of the repo-pinned pnpm 9.15.0, causing a noninteractive install/config mismatch before quality adapters run."
 lastUpdated: "2026-06-26"
 quality:
   lint: warning
@@ -58,3 +58,4 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-26: `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass with pnpm 9.15.0; full `pnpm test` is blocked by temporary fixture commits invoking the user global AIOS commit hook under Turbo, while the affected `src/beta/precheck.test.ts` passes directly with isolated Git config.
 - 2026-06-26: AIOS adoption doc quality for `phase29-pre-cr-suite-lsp-post-remediation-001` passes with 66 document pairs, 0 blockers, 0 warnings, and 0 absent gates; final status is adopted_but_blocked pending runtime smoke/test blockers.
 - 2026-06-26: Non-UI exception accepted for final certification: this is a developer-tool/LSP repo, so no browser or visual proof is applicable.
+- 2026-06-26: Anti-Slop is now the required default Pre-CR quality adapter. `corepack pnpm --filter @pre-cr/core test` passes with 215 tests, and `corepack pnpm --filter @pre-cr/core build` refreshes the local compiled runtime. `pre-cr run --json` confirms the loaded config has `qualityAdapters[0].required: true`, but still returns warning-only because the configured test command uses pnpm 11 in the Codex shell before quality adapters run.
