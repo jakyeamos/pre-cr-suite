@@ -1,15 +1,17 @@
 ---
 schemaVersion: 1
 healthScore: 86
-statusLabel: healthy
-summary: "The headless Pre-CR CLI supports branch-aware JSON/audit behavior, emits executable-path progress to stderr, and has a clean dependency security gate."
+statusLabel: adopted_but_blocked
+summary: "AIOS adoption docs and server simplification gates are current, but final runtime certification is blocked by test fixture hook isolation and anti-slop adapter compatibility."
 nextStep: "Resolve the full Turbo test harness interaction with the global AIOS commit hook, then rerun final adoption certification."
-blockers: []
+blockers:
+  - "Full `pnpm test` fails under Turbo because temporary fixture commits invoke the user global AIOS commit hook; the affected `src/beta/precheck.test.ts` passes directly with isolated Git config."
+  - "`pnpm test:headless-beta` reaches the Pre-CR run with isolated Git config but blocks on optional anti-slop adapter `ESLINT_INVALID_OPTIONS`."
 lastUpdated: "2026-06-26"
 quality:
   lint: warning
   types: pass
-  tests: pass
+  tests: warning
   format: pass
   deadCode: unknown
   structure: pass
@@ -54,3 +56,5 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-26: `node scripts/aios-adoption-gates.mjs format` and `git diff --check` pass after Phase 04 format remediation.
 - 2026-06-26: `node scripts/aios-adoption-gates.mjs complexity` and `node scripts/aios-adoption-gates.mjs thermo` pass after reducing `packages/server/src/server.ts` from 1684 to 228 lines.
 - 2026-06-26: `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass with pnpm 9.15.0; full `pnpm test` is blocked by temporary fixture commits invoking the user global AIOS commit hook under Turbo, while the affected `src/beta/precheck.test.ts` passes directly with isolated Git config.
+- 2026-06-26: AIOS adoption doc quality for `phase29-pre-cr-suite-lsp-post-remediation-001` passes with 66 document pairs, 0 blockers, 0 warnings, and 0 absent gates; final status is adopted_but_blocked pending runtime smoke/test blockers.
+- 2026-06-26: Non-UI exception accepted for final certification: this is a developer-tool/LSP repo, so no browser or visual proof is applicable.

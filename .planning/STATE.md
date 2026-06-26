@@ -61,5 +61,8 @@ Resume file: None
 - Phase 04 added: AIOS Format Gate Backfill.
 - Phase 05 added: AIOS Server Simplification Gates, clustering complexity and thermo because both failures share `packages/server/src/server.ts`.
 - Phase 06 added: AIOS Final Certification Gate.
-- Current adoption-pilot next action: execute Phase 04, then 05 -> 06.
+- Phase 04 completed: formatter gate now passes.
+- Phase 05 completed as a clustered phase: complexity and thermo gates both passed after splitting `packages/server/src/server.ts` into request modules.
+- Phase 06 completed with final status `adopted_but_blocked`: adoption docs pass, no-UI exception accepted, but full runtime certification is blocked by test fixture hook isolation and anti-slop adapter compatibility.
 - Source artifact pack: `AIOS-backfill/gate-adoption/phase29-pre-cr-suite-lsp-pilot-final-doc-pass-001`.
+- Post-remediation artifact pack: `AIOS-backfill/gate-adoption/phase29-pre-cr-suite-lsp-post-remediation-001`.
