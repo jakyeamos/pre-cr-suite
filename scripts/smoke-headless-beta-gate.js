@@ -31,6 +31,7 @@ try {
   runGit(['init']);
   runGit(['config', 'user.email', 'smoke@example.com']);
   runGit(['config', 'user.name', 'Smoke Test']);
+  runGit(['config', 'core.hooksPath', '/dev/null']);
   runGit(['add', '.']);
   runGit(['commit', '-m', 'fixture baseline']);
   fs.appendFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'module.exports.changed = true;\n');

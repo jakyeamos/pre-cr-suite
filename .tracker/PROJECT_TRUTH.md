@@ -1,17 +1,15 @@
 ---
 schemaVersion: 1
-healthScore: 88
-statusLabel: adopted_but_blocked
-summary: "AIOS adoption docs and server simplification gates are current, and Anti-Slop is now globally required by default, but final runtime certification is still blocked by local package-manager/test harness issues."
-nextStep: "Resolve the Pre-CR repo's pinned pnpm/runtime mismatch in headless gates, then rerun final adoption certification."
-blockers:
-  - "Full `pnpm test` fails under Turbo because temporary fixture commits invoke the user global AIOS commit hook; the affected `src/beta/precheck.test.ts` passes directly with isolated Git config."
-  - "`pre-cr run --json` in this Codex shell reaches the staged diff but the configured test command invokes pnpm 11 instead of the repo-pinned pnpm 9.15.0, causing a noninteractive install/config mismatch before quality adapters run."
-lastUpdated: "2026-06-26"
+healthScore: 96
+statusLabel: adopted_runtime_certified
+summary: "AIOS adoption docs, server simplification gates, pinned pnpm runtime behavior, and fixture test harness isolation are current; final runtime smoke and Turbo tests now pass in this Codex shell."
+nextStep: "Continue release-hardening from the public beta roadmap, with lint warning cleanup and parity drift prevention as ongoing maintenance."
+blockers: []
+lastUpdated: "2026-06-30"
 quality:
   lint: warning
   types: pass
-  tests: warning
+  tests: pass
   format: pass
   deadCode: unknown
   structure: pass
@@ -46,6 +44,7 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-25: Cleared the dependency security audit by moving the Vitest/Vite/esbuild toolchain to patched versions and pinning patched transitive VSCE audit dependencies.
 - 2026-06-26: Cleared the AIOS formatter adoption gate with a mechanical whitespace normalization pass.
 - 2026-06-26: Split the LSP server request handlers out of `packages/server/src/server.ts`, clearing the AIOS complexity and thermo-nuclear simplification gates.
+- 2026-06-30: Cleared the two runtime certification blockers by routing configured pnpm commands through Corepack when `packageManager` pins pnpm, running Turbo behind a pinned pnpm shim, and isolating temporary fixture Git commits from user-global hooks.
 
 ## Quality Ladder Notes
 
@@ -59,3 +58,7 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-26: AIOS adoption doc quality for `phase29-pre-cr-suite-lsp-post-remediation-001` passes with 66 document pairs, 0 blockers, 0 warnings, and 0 absent gates; final status is adopted_but_blocked pending runtime smoke/test blockers.
 - 2026-06-26: Non-UI exception accepted for final certification: this is a developer-tool/LSP repo, so no browser or visual proof is applicable.
 - 2026-06-26: Anti-Slop is now the required default Pre-CR quality adapter. `corepack pnpm --filter @pre-cr/core test` passes with 215 tests, and `corepack pnpm --filter @pre-cr/core build` refreshes the local compiled runtime. `pre-cr run --json` confirms the loaded config has `qualityAdapters[0].required: true`, but still returns warning-only because the configured test command uses pnpm 11 in the Codex shell before quality adapters run.
+- 2026-06-30: Focused regression coverage passes: `corepack pnpm --filter @pre-cr/core test -- src/beta/command.test.ts src/beta/precheck.test.ts` reports 8 passing tests, including Corepack routing for pinned pnpm and hook-isolated precheck fixture commits.
+- 2026-06-30: Runtime gates pass from the ambient Codex shell where `pnpm --version` is 11.7.0: `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm test:headless-beta` all complete successfully while project scripts and headless Pre-CR commands execute through the repo-pinned pnpm 9.15.0 path.
+- 2026-06-30: `pnpm lint` passes with existing warnings only: 40 warnings in `@pre-cr/core`, 67 warnings in `pre-cr-suite`, and no lint errors.
+- 2026-06-30: Direct `node packages/server/dist/cli.js run --json --workspace /Users/jakyeamos/projects/pre-cr-suite-lsp` confirms the loaded headless framework command resolves to `corepack pnpm --filter pre-cr-suite test -- --coverage`; with no staged changes at the time of that check, it returned the expected no-changes warning-only result.

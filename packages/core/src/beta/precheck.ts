@@ -25,7 +25,7 @@ import {
 } from '../runner/testRunner';
 import { collectGitChangedFiles, isGitRepository } from './git';
 import { inferCoverageFormat, loadProjectConfig, resolveProjectPath } from './config';
-import { parseCommandString } from './command';
+import { parseCommandString, resolveWorkspaceCommand } from './command';
 
 interface LoadedCoverage {
   coverage: WorkspaceCoverage | null;
@@ -188,9 +188,10 @@ async function runQualityAdapter(
     };
   }
 
+  const resolved = resolveWorkspaceCommand(context.workspaceRoot, parsed);
   const startTime = Date.now();
   return new Promise((resolve) => {
-    const child = spawn(parsed.command, parsed.args, {
+    const child = spawn(resolved.command, resolved.args, {
       cwd: context.workspaceRoot,
       env: { ...process.env, FORCE_COLOR: '0' }
     });
@@ -253,9 +254,10 @@ async function runCoverageAdapter(
     };
   }
 
+  const resolved = resolveWorkspaceCommand(workspaceRoot, parsed);
   const startTime = Date.now();
   return new Promise((resolve) => {
-    const child = spawn(parsed.command, parsed.args, {
+    const child = spawn(resolved.command, resolved.args, {
       cwd: workspaceRoot,
       env: { ...process.env, FORCE_COLOR: '0' }
     });

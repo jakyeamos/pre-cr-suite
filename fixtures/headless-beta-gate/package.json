@@ -1,0 +1,8 @@
+{
+  "name": "pre-cr-headless-beta-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/test-ok.js"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "testCommand": "node scripts/test-ok.js",
+  "testCommand": "pnpm test",
   "coverageAdapters": [
     {
       "name": "fixture-lcov",
@@ -9,6 +9,7 @@
       "coverageFormat": "lcov"
     }
   ],
+  "qualityAdapters": [],
   "surfaces": {
     "covered": ["src/**"],
     "ignored": [],

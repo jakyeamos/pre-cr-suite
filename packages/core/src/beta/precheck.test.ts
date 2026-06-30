@@ -15,6 +15,7 @@ function createGitWorkspace(): string {
   execFileSync('git', ['init'], { cwd: workspaceRoot });
   execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: workspaceRoot });
   execFileSync('git', ['config', 'user.name', 'Test User'], { cwd: workspaceRoot });
+  execFileSync('git', ['config', 'core.hooksPath', '/dev/null'], { cwd: workspaceRoot });
   return workspaceRoot;
 }
 

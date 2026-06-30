@@ -645,14 +645,14 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run build",
-    "build": "pnpm run build:extension && pnpm run build:server-bundle",
+    "vscode:prepublish": "corepack pnpm run build",
+    "build": "corepack pnpm run build:extension && corepack pnpm run build:server-bundle",
     "build:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify --sourcemap",
     "build:server-bundle": "esbuild ../server/src/server.ts --bundle --outfile=dist/server.js --format=cjs --platform=node --sourcemap",
-    "build:dev": "pnpm run build:extension:dev && pnpm run build:server-bundle:dev",
+    "build:dev": "corepack pnpm run build:extension:dev && corepack pnpm run build:server-bundle:dev",
     "build:extension:dev": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
     "build:server-bundle:dev": "esbuild ../server/src/server.ts --bundle --outfile=dist/server.js --format=cjs --platform=node",
-    "watch": "pnpm run build:extension:dev -- --watch",
+    "watch": "corepack pnpm run build:extension:dev -- --watch",
     "lint": "eslint src --ext ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

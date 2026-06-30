@@ -1,6 +1,13 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 export interface ParsedCommand {
   command: string;
   args: string[];
+}
+
+export interface WorkspacePackageMetadata {
+  packageManager?: unknown;
 }
 
 export function parseCommandString(commandLine: string): ParsedCommand | null {
@@ -62,4 +69,48 @@ export function parseCommandString(commandLine: string): ParsedCommand | null {
     command: tokens[0],
     args: tokens.slice(1)
   };
+}
+
+export function resolveWorkspaceCommand(
+  workspaceRoot: string,
+  parsed: ParsedCommand,
+  packageMetadata: WorkspacePackageMetadata = readWorkspacePackageMetadata(workspaceRoot)
+): ParsedCommand {
+  if (parsed.command !== 'pnpm') {
+    return parsed;
+  }
+
+  if (typeof packageMetadata.packageManager !== 'string') {
+    return parsed;
+  }
+
+  if (!packageMetadata.packageManager.startsWith('pnpm@')) {
+    return parsed;
+  }
+
+  return {
+    command: 'corepack',
+    args: ['pnpm', ...parsed.args]
+  };
+}
+
+function readWorkspacePackageMetadata(workspaceRoot: string): WorkspacePackageMetadata {
+  const packageJsonPath = path.join(workspaceRoot, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as unknown;
+    if (typeof parsed !== 'object' || parsed === null) {
+      return {};
+    }
+
+    const metadata = parsed as Record<string, unknown>;
+    return {
+      packageManager: metadata.packageManager
+    };
+  } catch {
+    return {};
+  }
 }

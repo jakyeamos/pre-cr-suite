@@ -10,7 +10,7 @@ import * as path from 'path';
 import { spawn } from 'child_process';
 
 import { loadProjectConfig, inferCoverageFormat } from '../beta/config';
-import { parseCommandString } from '../beta/command';
+import { parseCommandString, resolveWorkspaceCommand } from '../beta/command';
 
 export interface TestFramework {
   name: string;
@@ -300,6 +300,8 @@ export function getCustomTestCommand(workspaceRoot: string): TestFramework | nul
     return null;
   }
 
+  const resolved = resolveWorkspaceCommand(workspaceRoot, parsed);
+
   const firstCoveragePath = loadedConfig.config.coveragePaths[0] ?? 'coverage/lcov.info';
   const coverageFormat = loadedConfig.config.coverageFormat === 'auto'
     ? inferCoverageFormat(firstCoveragePath)
@@ -307,8 +309,8 @@ export function getCustomTestCommand(workspaceRoot: string): TestFramework | nul
 
   return {
     name: 'custom',
-    command: parsed.command,
-    args: parsed.args,
+    command: resolved.command,
+    args: resolved.args,
     coverageOutputPath: firstCoveragePath,
     coverageFormat
   };
