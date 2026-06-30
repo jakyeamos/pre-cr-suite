@@ -38,6 +38,7 @@ The main risk is parity drift between clients while experimental features contin
 
 ## Recent Documentation Updates
 
+- 2026-06-30: Removed the stale generated-index skip entry from the AIOS adoption gate scanner; `node --check scripts/aios-adoption-gates.mjs` passes.
 - 2026-05-18: Added or expanded README coverage for project and subproject roots so workspace documentation inventory is complete.
 - 2026-06-23: Added branch-aware headless CLI audit emission for blocked, warning-only, or iteration-forcing Pre-CR runs, with focused CLI test and server typecheck passing.
 - 2026-06-25: Added stderr progress output for direct `pre-cr run --json` executable runs, including start, heartbeat, and finish lines while preserving clean JSON stdout.

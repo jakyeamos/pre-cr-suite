@@ -10,7 +10,6 @@ const skipDirs = new Set([
   ".expo",
   ".git",
   ".github",
-  ".gitnexus",
   ".next",
   ".planning",
   ".turbo",
