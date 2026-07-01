@@ -1,9 +1,9 @@
 ---
 schemaVersion: 1
 healthScore: 76
-nextStep: "Run gsd-plan-complete-phase 1 to turn the beta contract into executable planning, then execute the clean-clone release gates."
+nextStep: "Run clean-clone release gates and capture editor/CLI demo evidence for the public beta."
 blockers: []
-lastUpdated: "2026-04-10"
+lastUpdated: "2026-07-01"
 tags:
   - lsp
   - vscode
@@ -23,3 +23,7 @@ The README and `docs/ROADMAP.md` both describe the public beta scope: `Run Pre-C
 ## Risks
 
 The main risk is parity drift between clients while experimental features continue to live in-repo. The product should stay disciplined around the beta workflow until those release gates are routinely passing.
+
+## Recent Documentation Updates
+
+- 2026-07-01: Added a recruiter-facing README snapshot and a structured "Why This Matters" section covering problem, audience, build scope, technical decisions, run commands, and next improvements. `git diff --check` passed for the documentation change.
