@@ -35,7 +35,7 @@ Pre-CR Suite is being narrowed into a public beta around one strong workflow:
 
 The public beta is ready when:
 
-1. `pnpm build`, `pnpm lint`, `pnpm test`, `pnpm test:headless-beta`, `pnpm typecheck`, and `pnpm package` pass from a clean clone.
+1. `pnpm build`, `pnpm lint`, `pnpm test`, `pnpm test:headless-beta`, `pnpm test:beta-parity`, `pnpm typecheck`, and `pnpm package` pass from a clean clone.
 2. VS Code packages with the bundled server artifact.
 3. Neovim and VS Code produce matching results from the same `.pre-cr.json`.
 4. Docs match the actual install and run flow.

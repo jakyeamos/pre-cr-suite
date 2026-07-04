@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "testCommand": "pnpm test",
+  "coverageAdapters": [
+    {
+      "name": "fixture-lcov",
+      "command": "node scripts/emit-lcov.js",
+      "coveragePath": "build/fixture.lcov",
+      "coverageFormat": "lcov"
+    }
+  ],
+  "qualityAdapters": [],
+  "surfaces": {
+    "covered": ["src/**"],
+    "ignored": ["docs/**"],
+    "unsupported": ["legacy/**"]
+  },
+  "threshold": 100
+}

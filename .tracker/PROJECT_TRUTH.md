@@ -2,8 +2,8 @@
 schemaVersion: 1
 healthScore: 96
 statusLabel: adopted_runtime_certified
-summary: "AIOS adoption docs, published package guidance, server simplification gates, pinned pnpm runtime behavior, and fixture test harness isolation are current; final runtime smoke and Turbo tests now pass in this Codex shell."
-nextStep: "Continue release-hardening from the public beta roadmap, with lint warning cleanup and parity drift prevention as ongoing maintenance."
+summary: "AIOS adoption docs, published package guidance, server simplification gates, pinned pnpm runtime behavior, fixture test harness isolation, and cross-client beta parity verification are current; final runtime smoke and Turbo tests now pass in this Codex shell."
+nextStep: "Continue release-hardening from the public beta roadmap, with lint warning cleanup and the new beta parity gate as ongoing drift prevention."
 blockers: []
 lastUpdated: "2026-07-04"
 quality:
@@ -65,6 +65,7 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-30: `pnpm lint` passes with existing warnings only: 40 warnings in `@pre-cr/core`, 67 warnings in `pre-cr-suite`, and no lint errors.
 - 2026-06-30: Direct `node packages/server/dist/cli.js run --json --workspace /Users/jakyeamos/projects/pre-cr-suite-lsp` confirms the loaded headless framework command resolves to `corepack pnpm --filter pre-cr-suite test -- --coverage`; with no staged changes at the time of that check, it returned the expected no-changes warning-only result.
 - 2026-07-04: `pnpm lint`, `pnpm typecheck`, and `pnpm test` passed after the README package-install documentation update; lint still reports only the existing TypeScript support warning banner from `@typescript-eslint/typescript-estree`.
+- 2026-07-04: Added `fixtures/cross-client-beta-parity` and `pnpm test:beta-parity` to verify the public beta workflow across the VS Code bundled server artifact and the published `@pre-cr/server`/Neovim-style server entrypoint from the same `.pre-cr.json`. `pnpm test:beta-parity` and `pnpm test:headless-beta` pass.
 
 ## QR Remediation Planning
 

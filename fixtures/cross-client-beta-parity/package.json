@@ -1,0 +1,8 @@
+{
+  "name": "pre-cr-cross-client-beta-parity-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/test-ok.js"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

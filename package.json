@@ -20,6 +20,7 @@
     "typecheck": "node scripts/run-turbo-with-pinned-pnpm.mjs run typecheck",
     "test": "node scripts/run-turbo-with-pinned-pnpm.mjs run test",
     "test:headless-beta": "corepack pnpm run build:core && corepack pnpm run build:server && node scripts/smoke-headless-beta-gate.js",
+    "test:beta-parity": "corepack pnpm run build:core && corepack pnpm run build:server && corepack pnpm run build:vscode && node scripts/smoke-cross-client-beta-parity.js",
     "lint": "node scripts/run-turbo-with-pinned-pnpm.mjs run lint",
     "package": "corepack pnpm run build && corepack pnpm --filter pre-cr-suite package",
     "secret:scan": "node scripts/secret-scan.mjs",
