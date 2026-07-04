@@ -205,6 +205,27 @@ require_cmd() {
   fi
 }
 
+inspect_package_tarball() {
+  local package_dir="$1" package_name="$2" tmp_dir tarball
+  tmp_dir="$(mktemp -d)"
+  say "$ corepack pnpm --dir $package_dir pack --pack-destination $tmp_dir"
+  corepack pnpm --dir "$package_dir" pack --pack-destination "$tmp_dir"
+  tarball="$(find "$tmp_dir" -maxdepth 1 -name '*.tgz' -type f | head -n 1)"
+  if [[ -z "$tarball" ]]; then
+    warn "could not find packed tarball for $package_name"
+    rm -rf "$tmp_dir"
+    exit 1
+  fi
+  say "Inspecting $package_name tarball contents:"
+  tar -tzf "$tarball" | sed 's#^package/##'
+  if ! tar -tzf "$tarball" | grep -q '^package/LICENSE$'; then
+    warn "$package_name tarball is missing LICENSE"
+    rm -rf "$tmp_dir"
+    exit 1
+  fi
+  rm -rf "$tmp_dir"
+}
+
 require_exact_publish_confirmation() {
   local key="$1" expected="$2" prompt="$3"
   ask "$key" "$prompt"
@@ -234,6 +255,8 @@ require_cmd npm
 require_cmd pnpm
 require_cmd node
 require_cmd git
+require_cmd corepack
+require_cmd tar
 run_cmd npm whoami
 run_cmd node -e "const pkgs=['packages/core/package.json','packages/server/package.json','packages/vscode-client/package.json']; for (const f of pkgs) { const p=require('./'+f); console.log(f, p.name, p.version); }"
 run_cmd git status --short
@@ -271,15 +294,16 @@ else
   say "Continuing with the completed release-prep verification already recorded for this flow."
 fi
 
-stage "NPM pack dry-runs" 3
-say "Already done after the command fix: both publishable package dry-runs succeeded with pnpm pack --filter ... --dry-run."
-if confirm "Rerun the two npm package dry-runs now?"; then
-  run_cmd pnpm pack --filter @pre-cr/core --dry-run
-  run_cmd pnpm pack --filter @pre-cr/server --dry-run
+stage "NPM pack inspection" 3
+say "Already done in this release-prep flow: both publishable package tarballs were inspected successfully."
+say "Project-pinned pnpm 9 does not support pack --dry-run, so this wizard packs to a temp directory, prints contents, verifies LICENSE, then deletes the temp tarball."
+if confirm "Rerun the two npm package pack inspections now?"; then
+  inspect_package_tarball "packages/core" "@pre-cr/core"
+  inspect_package_tarball "packages/server" "@pre-cr/server"
   say "Inspect the tarball contents above. They should include dist files, LICENSE, README, and package.json."
-  confirm "Do the dry-run package contents look right?" || exit 1
+  confirm "Do the package contents look right?" || exit 1
 else
-  say "Continuing with the completed dry-run inspections already recorded for this flow."
+  say "Continuing with the completed package inspections already recorded for this flow."
 fi
 
 stage "Publish @pre-cr/core" 2
@@ -290,7 +314,7 @@ else
   say "This is irreversible for version 0.1.0 once npm accepts it."
   say "If your account uses 2FA, npm/pnpm may prompt for an OTP."
   require_exact_publish_confirmation PUBLISH_CORE_CONFIRM "publish @pre-cr/core@0.1.0" "Type exactly 'publish @pre-cr/core@0.1.0' to publish core:"
-  run_cmd pnpm publish --filter @pre-cr/core --access public --no-git-checks
+  run_cmd corepack pnpm publish --filter @pre-cr/core --access public --no-git-checks
 fi
 
 stage "Publish @pre-cr/server" 2
@@ -306,7 +330,7 @@ else
   say "This is irreversible for version 0.1.0 once npm accepts it."
   say "If your account uses 2FA, npm/pnpm may prompt for an OTP."
   require_exact_publish_confirmation PUBLISH_SERVER_CONFIRM "publish @pre-cr/server@0.1.0" "Type exactly 'publish @pre-cr/server@0.1.0' to publish server:"
-  run_cmd pnpm publish --filter @pre-cr/server --access public --no-git-checks
+  run_cmd corepack pnpm publish --filter @pre-cr/server --access public --no-git-checks
 fi
 
 stage "Post-publish verification" 2

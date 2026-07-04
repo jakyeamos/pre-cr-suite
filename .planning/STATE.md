@@ -93,3 +93,4 @@ Resume file: None
 - Added an interactive `scripts/npm-pre-cr-publish-wizard.sh` for the agreed publish path: create/verify the `pre-cr` npm org, publish `@pre-cr/core`, publish `@pre-cr/server`, and skip npm publishing `pre-cr-suite`.
 - The wizard uses explicit human confirmation before irreversible publish steps and uses `--no-git-checks` so the intentionally ignored untracked `.quality-runner/` directory does not block publishing.
 - The wizard now resumes cleanly after completed preflight work: it skips browser org creation when `pre-cr` is already visible, treats the completed local gates and package dry-runs as acknowledged, and uses the supported `pnpm pack/publish --filter ...` command shape.
+- Package-local MIT license files were added for `@pre-cr/core` and `@pre-cr/server`; the wizard now uses project-pinned Corepack pnpm to pack into a temp directory, verify `LICENSE`, and inspect contents because pnpm 9 does not support `pack --dry-run`.
