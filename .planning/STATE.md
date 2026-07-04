@@ -66,3 +66,12 @@ Resume file: None
 - Phase 06 completed with final status `adopted_but_blocked`: adoption docs pass, no-UI exception accepted, but full runtime certification is blocked by test fixture hook isolation and anti-slop adapter compatibility.
 - Source artifact pack: `AIOS-backfill/gate-adoption/phase29-pre-cr-suite-lsp-pilot-final-doc-pass-001`.
 - Post-remediation artifact pack: `AIOS-backfill/gate-adoption/phase29-pre-cr-suite-lsp-post-remediation-001`.
+
+### Release Prep Update - 2026-07-04
+
+- Local npm/VSIX release prep completed without publishing, tagging, pushing, or changing remote state.
+- Scoped package metadata now declares public npm publish access for `@pre-cr/core` and `@pre-cr/server`.
+- Server publish output now excludes compiled tests; local tarball inspection confirmed `@pre-cr/server` packs runtime dist only and rewrites `@pre-cr/core` from `workspace:*` to `0.1.0`.
+- VS Code VSIX packaging now excludes coverage artifacts while retaining the bundled server artifact.
+- Verification passed: build, lint, typecheck, test, package, headless beta smoke, secret scan, validation, dependency audit, and npm pack inspection.
+- Remaining release risks: npm scope ownership must be confirmed before first publish, lint warnings remain in experimental surfaces, and VS Code marketplace publisher ownership is separate from npm package ownership.

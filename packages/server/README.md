@@ -2,6 +2,30 @@
 
 Language Server Protocol server and CLI package for Pre-CR Suite.
 
+## Install
+
+```bash
+pnpm add -g @pre-cr/server
+```
+
+This package exposes two commands:
+
+- `pre-cr-server` starts the LSP server for editor clients.
+- `pre-cr` runs the headless changed-line readiness gate.
+
+## Headless Gate
+
+```bash
+pre-cr run --workspace /path/to/repo
+pre-cr run --json --workspace /path/to/repo
+```
+
+The headless gate uses the same `.pre-cr.json` configuration and `@pre-cr/core` pipeline as the editor integrations.
+
+## Public Beta Surface
+
+The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, and the headless JSON gate. Broader checklist, docs, review, context, and debug methods are experimental.
+
 ## Scope
 
 This README documents the `server` subproject inside `pre-cr-suite-lsp/packages`.

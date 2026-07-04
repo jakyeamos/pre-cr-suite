@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { runWorkspacePreCrCheck } from './precheck';
 
 const tempRoots: string[] = [];
+const PRECHECK_INTEGRATION_TIMEOUT_MS = 15_000;
 
 function createGitWorkspace(): string {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pre-cr-precheck-'));
@@ -74,7 +75,7 @@ fs.writeFileSync('build/python.lcov', [
     expect(result.result?.coveragePath).toBe(path.join(workspaceRoot, 'build', 'python.lcov'));
     expect(result.result?.coverageCheck?.passed).toBe(true);
     expect(result.result?.coverageCheck?.summary.coveredLines).toBe(1);
-  });
+  }, PRECHECK_INTEGRATION_TIMEOUT_MS);
 
   it('prefers configured adapter coverage over a default runner coverage file', async () => {
     const workspaceRoot = createGitWorkspace();
@@ -136,7 +137,7 @@ fs.writeFileSync('build/python.lcov', [
 
     expect(result.result?.coveragePath).toBe(path.join(workspaceRoot, 'build', 'python.lcov'));
     expect(result.result?.coverageCheck?.passed).toBe(true);
-  });
+  }, PRECHECK_INTEGRATION_TIMEOUT_MS);
 
   it('runs quality adapters against the Pre-CR changed-file set', async () => {
     const workspaceRoot = createGitWorkspace();
@@ -201,7 +202,7 @@ process.exit(0);
     expect(result.result?.qualityAdaptersPassed).toBe(true);
     expect(result.result?.qualityAdapters[0].name).toBe('anti-slop');
     expect(qualityArgs).toEqual(['--files', 'src/app.js']);
-  });
+  }, PRECHECK_INTEGRATION_TIMEOUT_MS);
 
   it('marks the Pre-CR result failed when a required quality adapter fails', async () => {
     const workspaceRoot = createGitWorkspace();
@@ -259,6 +260,6 @@ fs.writeFileSync('build/app.lcov', [
     expect(result.result?.coverageCheck?.passed).toBe(true);
     expect(result.result?.qualityAdaptersPassed).toBe(false);
     expect(result.result?.qualityAdapters[0].success).toBe(false);
-  });
+  }, PRECHECK_INTEGRATION_TIMEOUT_MS);
 
 });

@@ -3,7 +3,7 @@
 -- ============================================================================
 --
 -- Installation:
--- 1. Install the Pre-CR server: npm install -g @pre-cr/server
+-- 1. Install the Pre-CR server: pnpm add -g @pre-cr/server
 -- 2. Copy this file to ~/.config/nvim/lua/pre-cr.lua
 -- 3. Add to your init.lua: require('pre-cr').setup()
 --

@@ -2,6 +2,18 @@
 
 Core parsing, validation, review, doc generation, logging, and runner logic for Pre-CR Suite.
 
+## Install
+
+```bash
+pnpm add @pre-cr/core
+```
+
+`@pre-cr/core` is the shared runtime library used by the server, editor clients, and headless gate. It is not a standalone command.
+
+## Public Beta Surface
+
+The beta-stable surface is the changed-line coverage and setup-health pipeline exported from `@pre-cr/core`. Checklist, docs, review, context, and debug helpers remain available for in-repo use, but they are experimental until their contracts are hardened.
+
 ## Scope
 
 This README documents the `core` subproject inside `pre-cr-suite-lsp/packages`.

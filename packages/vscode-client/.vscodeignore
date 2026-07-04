@@ -3,6 +3,7 @@
 .vscode/**
 src/**
 node_modules/**
+coverage/**
 tsconfig.json
 vitest.config.ts
 !dist/**
