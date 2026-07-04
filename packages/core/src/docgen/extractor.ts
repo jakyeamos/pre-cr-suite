@@ -108,7 +108,6 @@ function findDocComments(source: string): Map<number, string> {
   const lines = source.split('\n');
 
   let inComment = false;
-  let commentStart = -1;
   let commentLines: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -123,7 +122,6 @@ function findDocComments(source: string): Map<number, string> {
     // Start of multi-line
     if (line.startsWith('/**')) {
       inComment = true;
-      commentStart = i;
       commentLines = [line];
       continue;
     }
@@ -163,7 +161,7 @@ function extractFunctions(
   let match;
 
   while ((match = PATTERNS.functionDecl.exec(source)) !== null) {
-    const [fullMatch, indent, exportKw, asyncKw, generator, name, typeParams, params, returnType] = match;
+    const [fullMatch, , , asyncKw, generator, name, typeParams, params, returnType] = match;
     const lineNum = getLineNumber(source, match.index);
 
     const fn: ExtractedFunction = {
@@ -200,7 +198,7 @@ function extractArrowFunctions(
   let match;
 
   while ((match = PATTERNS.arrowFunction.exec(source)) !== null) {
-    const [fullMatch, indent, exportKw, varKw, name, asyncKw, params, returnType] = match;
+    const [, , , , name, asyncKw, params, returnType] = match;
     const lineNum = getLineNumber(source, match.index);
 
     const fn: ExtractedFunction = {
@@ -235,7 +233,7 @@ function extractClasses(
   let match;
 
   while ((match = PATTERNS.classDecl.exec(source)) !== null) {
-    const [fullMatch, indent, exportKw, abstractKw, name, typeParams, extendsClause, implementsClause] = match;
+    const [fullMatch, , , , name, typeParams, extendsClause, implementsClause] = match;
     const lineNum = getLineNumber(source, match.index);
     const classBody = extractBody(source, match.index + fullMatch.length - 1);
 
@@ -274,7 +272,7 @@ function extractMethods(classBody: string, className: string, classStartLine: nu
   PATTERNS.constructorDecl.lastIndex = 0;
   let match = PATTERNS.constructorDecl.exec(classBody);
   if (match) {
-    const [fullMatch, indent, access, params] = match;
+    const [, , , params] = match;
     const lineNum = classStartLine + getLineNumber(classBody, match.index);
 
     methods.push({
@@ -294,7 +292,7 @@ function extractMethods(classBody: string, className: string, classStartLine: nu
   // Extract methods
   PATTERNS.methodDecl.lastIndex = 0;
   while ((match = PATTERNS.methodDecl.exec(classBody)) !== null) {
-    const [fullMatch, indent, access, staticKw, asyncKw, name, typeParams, params, returnType] = match;
+    const [, , , , asyncKw, name, typeParams, params, returnType] = match;
 
     // Skip constructor (already handled)
     if (name === 'constructor') continue;
@@ -331,7 +329,7 @@ function extractProperties(classBody: string, classStartLine: number): Extracted
   let match;
 
   while ((match = PATTERNS.propertyDecl.exec(classBody)) !== null) {
-    const [fullMatch, indent, access, readonly, staticKw, name, optional, type, defaultValue] = match;
+    const [, , , readonly, staticKw, name, optional, type, defaultValue] = match;
     const relativeLineNum = getLineNumber(classBody, match.index);
 
     properties.push({
@@ -363,7 +361,7 @@ function extractInterfaces(
   let match;
 
   while ((match = PATTERNS.interfaceDecl.exec(source)) !== null) {
-    const [fullMatch, indent, exportKw, name, typeParams, extendsClause] = match;
+    const [fullMatch, , , name, typeParams, extendsClause] = match;
     const lineNum = getLineNumber(source, match.index);
     const body = extractBody(source, match.index + fullMatch.length - 1);
 
@@ -462,7 +460,7 @@ function extractTypes(
   let match;
 
   while ((match = PATTERNS.typeDecl.exec(source)) !== null) {
-    const [fullMatch, indent, exportKw, name, typeParams, definition] = match;
+    const [, , , name, typeParams, definition] = match;
     const lineNum = getLineNumber(source, match.index);
 
     types.push({

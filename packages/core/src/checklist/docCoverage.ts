@@ -83,21 +83,6 @@ const EXPORT_PATTERNS = {
 };
 
 /**
- * Patterns for detecting documentation comments
- * Reserved for future use with more sophisticated parsing
- */
-const _DOC_PATTERNS = {
-  // JSDoc style: /** ... */
-  jsdoc: /\/\*\*[\s\S]*?\*\//g,
-
-  // Single line: /** ... */
-  jsdocSingle: /\/\*\*[^*].*\*\//g,
-
-  // TSDoc is same as JSDoc
-  tsdoc: /\/\*\*[\s\S]*?\*\//g
-};
-
-/**
  * Parse exports from TypeScript/JavaScript source
  */
 export function parseExports(file: SourceFile): ParsedExport[] {
@@ -149,7 +134,6 @@ function findDocComments(content: string): Map<number, string> {
   const lines = content.split('\n');
 
   let inDoc = false;
-  let _docStart = -1;
   let docContent = '';
 
   for (let i = 0; i < lines.length; i++) {
@@ -164,7 +148,6 @@ function findDocComments(content: string): Map<number, string> {
     // Start of multi-line doc
     if (line.startsWith('/**')) {
       inDoc = true;
-      _docStart = i;
       docContent = line;
       continue;
     }

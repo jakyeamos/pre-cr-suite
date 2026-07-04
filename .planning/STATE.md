@@ -74,4 +74,10 @@ Resume file: None
 - Server publish output now excludes compiled tests; local tarball inspection confirmed `@pre-cr/server` packs runtime dist only and rewrites `@pre-cr/core` from `workspace:*` to `0.1.0`.
 - VS Code VSIX packaging now excludes coverage artifacts while retaining the bundled server artifact.
 - Verification passed: build, lint, typecheck, test, package, headless beta smoke, secret scan, validation, dependency audit, and npm pack inspection.
-- Remaining release risks: npm scope ownership must be confirmed before first publish, lint warnings remain in experimental surfaces, and VS Code marketplace publisher ownership is separate from npm package ownership.
+- Remaining release risks: npm scope ownership must be confirmed before first publish, and VS Code marketplace publisher ownership is separate from npm package ownership.
+
+### Release Lint Cleanup Update - 2026-07-04
+
+- Release-facing lint warnings were cleared across core and VS Code client surfaces without changing package names, versions, publish settings, tags, remotes, or registry state.
+- VS Code client request/response handling now uses local typed interfaces instead of `any` at LSP/editor feature boundaries.
+- Verification passed after cleanup: `pnpm lint`, `pnpm typecheck`, `pnpm build`, and `pnpm test`.

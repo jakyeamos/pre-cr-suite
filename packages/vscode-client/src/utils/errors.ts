@@ -100,7 +100,6 @@ export const messages = {
 };
 
 type MessageKey = keyof typeof messages;
-type MessageValue = typeof messages[MessageKey];
 
 /**
  * Show an error with optional action button

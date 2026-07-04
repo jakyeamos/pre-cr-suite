@@ -17,6 +17,51 @@ import * as webview from '../utils/webview';
 // Store diagnostics collection globally so code actions can access it
 let securityDiagnostics: vscode.DiagnosticCollection;
 
+interface ChecklistFile {
+  path: string;
+  content: string;
+  additions?: number;
+  deletions?: number;
+  isNew?: boolean;
+  isDeleted?: boolean;
+}
+
+interface ChecklistCheck {
+  name: string;
+  message: string;
+  status: string;
+}
+
+interface SecurityFinding {
+  file: string;
+  line: number;
+  severity: string;
+  message: string;
+  pattern: string;
+  type: string;
+}
+
+interface ChecklistResult {
+  checks?: ChecklistCheck[];
+  summary?: {
+    passed?: number;
+    failed?: number;
+    warnings?: number;
+  };
+  security?: {
+    findings?: SecurityFinding[];
+  };
+}
+
+interface ChecklistResponse {
+  result?: ChecklistResult;
+  error?: string;
+}
+
+interface SecurityScanResponse {
+  findings?: SecurityFinding[];
+}
+
 export function registerChecklistFeatures(
   context: vscode.ExtensionContext,
   client: LanguageClient
@@ -216,7 +261,7 @@ class SecurityIgnoreCodeActionProvider implements vscode.CodeActionProvider {
  * @param mode 'changes' = git changes only, 'workspace' = all files
  */
 async function runChecklist(client: LanguageClient, mode: 'changes' | 'workspace', silent = false) {
-  let files: any[];
+  let files: ChecklistFile[];
 
   if (mode === 'workspace') {
     files = await getWorkspaceFiles();
@@ -250,15 +295,15 @@ async function runChecklist(client: LanguageClient, mode: 'changes' | 'workspace
       async (progress) => {
         progress.report({ message: `Analyzing ${files.length} files...` });
 
-        const result = await client.sendRequest('$/preCr/runChecklist', {
+        const result = await client.sendRequest<ChecklistResponse>('$/preCr/runChecklist', {
           changes: files,
           config: vscode.workspace.getConfiguration('preCr.checklist'),
           mode
         });
 
-        const checklist = (result as any).result;
+        const checklist = result.result;
         if (!checklist) {
-          throw new Error((result as any).error || 'Unknown error');
+          throw new Error(result.error || 'Unknown error');
         }
 
         // Show results
@@ -276,7 +321,7 @@ async function runChecklist(client: LanguageClient, mode: 'changes' | 'workspace
  * @param mode 'file' = current file, 'workspace' = all files, 'changes' = git changes
  */
 async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' | 'changes', silent = false) {
-  let files: { path: string; content: string }[] = [];
+  let files: ChecklistFile[] = [];
 
   if (mode === 'file') {
     const editor = vscode.window.activeTextEditor;
@@ -309,8 +354,8 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
   try {
     // For silent mode, skip the progress indicator
     const doScan = async () => {
-      const result = await client.sendRequest('$/preCr/quickSecurityScan', { files });
-      const findings = (result as any).findings || [];
+      const result = await client.sendRequest<SecurityScanResponse>('$/preCr/quickSecurityScan', { files });
+      const findings = result.findings || [];
 
       if (findings.length === 0) {
         if (!silent) {
@@ -397,7 +442,7 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
 /**
  * Get all code files in workspace
  */
-async function getWorkspaceFiles(): Promise<any[]> {
+async function getWorkspaceFiles(): Promise<ChecklistFile[]> {
   const config = vscode.workspace.getConfiguration('preCr.security');
   const excludePatterns = config.get<string[]>('excludePatterns') || [];
 
@@ -407,7 +452,7 @@ async function getWorkspaceFiles(): Promise<any[]> {
 
   const files = await vscode.workspace.findFiles(pattern, excludePattern, 500);
 
-  const results: any[] = [];
+  const results: ChecklistFile[] = [];
 
   for (const file of files) {
     try {
@@ -432,7 +477,7 @@ async function getWorkspaceFiles(): Promise<any[]> {
 /**
  * Show checklist results in a panel
  */
-function showChecklistResults(result: any, mode: 'changes' | 'workspace') {
+function showChecklistResults(result: ChecklistResult, mode: 'changes' | 'workspace') {
   const panel = webview.createWebviewPanel(
     'preCrChecklist',
     mode === 'workspace' ? 'Workspace Audit Results' : 'PR Checklist Results',
@@ -445,7 +490,7 @@ function showChecklistResults(result: any, mode: 'changes' | 'workspace') {
 /**
  * Generate HTML for checklist results
  */
-function getChecklistHtml(webviewInstance: vscode.Webview, result: any, mode: 'changes' | 'workspace'): string {
+function getChecklistHtml(webviewInstance: vscode.Webview, result: ChecklistResult, mode: 'changes' | 'workspace'): string {
   const title = mode === 'workspace' ? 'Workspace Audit Results' : 'PR Checklist Results';
   const statusIcon = (status: string) => {
     switch (status) {
@@ -457,7 +502,8 @@ function getChecklistHtml(webviewInstance: vscode.Webview, result: any, mode: 'c
   };
 
   const checks = result.checks || [];
-  const checksHtml = checks.map((check: any) => `
+  const securityFindings = result.security?.findings || [];
+  const checksHtml = checks.map((check) => `
     <div class="check ${check.status}">
       <span class="icon">${statusIcon(check.status)}</span>
       <span class="name">${webview.escapeHtml(String(check.name))}</span>
@@ -490,9 +536,9 @@ function getChecklistHtml(webviewInstance: vscode.Webview, result: any, mode: 'c
       </div>
       <h2>Checks</h2>
       ${checksHtml}
-      ${result.security?.findings?.length > 0 ? `
+      ${securityFindings.length > 0 ? `
         <h2>Security Findings</h2>
-        ${result.security.findings.map((finding: any) => `
+        ${securityFindings.map((finding) => `
           <div class="check fail">
             <span class="icon">🔒</span>
             <span class="name">${webview.escapeHtml(String(finding.type))}</span>
@@ -511,11 +557,11 @@ class ChecklistTreeProvider implements vscode.TreeDataProvider<ChecklistTreeItem
   private _onDidChangeTreeData = new vscode.EventEmitter<ChecklistTreeItem | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private lastResult: any = null;
+  private lastResult: ChecklistResult | null = null;
 
   constructor(private client: LanguageClient) {}
 
-  refresh(result?: any): void {
+  refresh(result?: ChecklistResult): void {
     if (result) {
       this.lastResult = result;
     }
@@ -540,7 +586,7 @@ class ChecklistTreeProvider implements vscode.TreeDataProvider<ChecklistTreeItem
       }
 
       const checks = this.lastResult.checks || [];
-      return checks.map((check: any) => new ChecklistTreeItem(
+      return checks.map((check) => new ChecklistTreeItem(
         check.name,
         check.message,
         check.status,

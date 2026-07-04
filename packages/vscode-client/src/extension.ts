@@ -34,6 +34,10 @@ let client: LanguageClient;
 // Output channel for logs
 let outputChannel: vscode.OutputChannel;
 
+interface BranchSwitchResponse {
+  toRestore?: unknown;
+}
+
 /**
  * Log a message to the Pre-CR output channel
  */
@@ -503,11 +507,11 @@ function watchBranchChanges(
 
           if (previousBranch) {
             // Notify server of branch switch
-            client.sendRequest('$/preCr/onBranchSwitch', {
+            client.sendRequest<BranchSwitchResponse>('$/preCr/onBranchSwitch', {
               fromBranch: previousBranch,
               toBranch: branch,
               currentContext: getCurrentContext()
-            }).then((result: any) => {
+            }).then((result: BranchSwitchResponse) => {
               if (result.toRestore) {
                 // Ask user if they want to restore context
                 notify.showInfo(

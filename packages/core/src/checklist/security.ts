@@ -49,7 +49,7 @@ const SECRET_PATTERNS: SecurityPattern[] = [
   {
     id: 'generic-api-key',
     name: 'Generic API Key',
-    pattern: /(?:api[_-]?key|apikey)['"]?\s*[:=]\s*['"]?[A-Za-z0-9_\-]{20,}['"]?/gi,
+    pattern: /(?:api[_-]?key|apikey)['"]?\s*[:=]\s*['"]?[A-Za-z0-9_-]{20,}['"]?/gi,
     severity: CheckSeverity.Warning,
     message: 'Potential API key detected'
   },

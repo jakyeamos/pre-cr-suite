@@ -18,6 +18,39 @@ export interface ChangedFile {
   content?: string;
 }
 
+interface GitChange {
+  uri: vscode.Uri;
+  status: number;
+}
+
+interface GitRepositoryState {
+  HEAD?: {
+    name?: string;
+    commit?: string;
+  };
+  indexChanges: GitChange[];
+  workingTreeChanges: GitChange[];
+}
+
+interface GitRepository {
+  state: GitRepositoryState;
+}
+
+interface GitApi {
+  repositories: GitRepository[];
+}
+
+interface GitExtensionExports {
+  getAPI(version: number): GitApi;
+}
+
+function isGitExtensionExports(value: unknown): value is GitExtensionExports {
+  return typeof value === 'object'
+    && value !== null
+    && 'getAPI' in value
+    && typeof (value as { getAPI?: unknown }).getAPI === 'function';
+}
+
 // ============================================================================
 // Security: Path Sanitization
 // ============================================================================
@@ -80,14 +113,20 @@ export function escapeShellArg(arg: string): string {
 /**
  * Get the VS Code Git extension API
  */
-async function getGitAPI(): Promise<any | null> {
+async function getGitAPI(): Promise<GitApi | null> {
   try {
     const gitExtension = vscode.extensions.getExtension('vscode.git');
     if (!gitExtension) return null;
 
-    const git = gitExtension.isActive
-      ? gitExtension.exports.getAPI(1)
-      : (await gitExtension.activate()).getAPI(1);
+    const exports = gitExtension.isActive
+      ? gitExtension.exports
+      : await gitExtension.activate();
+
+    if (!isGitExtensionExports(exports)) {
+      return null;
+    }
+
+    const git = exports.getAPI(1);
 
     return git;
   } catch (error) {
@@ -239,7 +278,7 @@ export async function getChangedFilesWithContent(): Promise<(ChangedFile & {
 export async function getModifiedFiles(): Promise<string[]> {
   const git = await getGitAPI();
   if (git && git.repositories.length > 0) {
-    return git.repositories[0].state.workingTreeChanges.map((c: any) =>
+    return git.repositories[0].state.workingTreeChanges.map((c: GitChange) =>
       vscode.workspace.asRelativePath(c.uri)
     );
   }
@@ -255,7 +294,7 @@ export async function getModifiedFiles(): Promise<string[]> {
 export async function getStagedFiles(): Promise<string[]> {
   const git = await getGitAPI();
   if (git && git.repositories.length > 0) {
-    return git.repositories[0].state.indexChanges.map((c: any) =>
+    return git.repositories[0].state.indexChanges.map((c: GitChange) =>
       vscode.workspace.asRelativePath(c.uri)
     );
   }

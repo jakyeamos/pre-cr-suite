@@ -8,13 +8,11 @@
 import { getLogger } from '../logger';
 import {
   DocGenConfig,
-  DocStyle,
   ExtractedFunction,
   ExtractedClass,
   ExtractedInterface,
   ExtractedType,
   ExtractedParam,
-  ExtractedProperty,
   GeneratedDoc,
   DocGenResult,
   DocGenPrompt,
@@ -145,7 +143,6 @@ export function generateFunctionDoc(
   // Type parameters
   if (fn.typeParams) {
     for (const tp of fn.typeParams) {
-      const name = tp.split(' ')[0]; // Handle "T extends Foo"
       lines.push(` * @template ${tp}`);
     }
   }
@@ -244,7 +241,7 @@ export function generateClassDoc(
  */
 export function generateInterfaceDoc(
   iface: ExtractedInterface,
-  config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
+  _config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
 ): GeneratedDoc {
   const lines: string[] = ['/**'];
 
@@ -293,7 +290,7 @@ export function generateInterfaceDoc(
  */
 export function generateTypeDoc(
   type: ExtractedType,
-  config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
+  _config: DocGenConfig = DEFAULT_DOC_GEN_CONFIG
 ): GeneratedDoc {
   const lines: string[] = ['/**'];
 

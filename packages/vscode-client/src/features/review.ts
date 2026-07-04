@@ -12,6 +12,51 @@ import { LanguageClient } from 'vscode-languageclient/node';
 import * as notify from '../utils/notifications';
 import * as git from '../utils/git';
 
+interface ReviewFileBreakdown {
+  path: string;
+  category: string;
+  complexity: string;
+  linesChanged: number;
+  estimatedMinutes: number;
+}
+
+interface ReviewTimeEstimate {
+  formatted: string;
+  confidence: string;
+  titlePrefix: string;
+  fileBreakdown?: ReviewFileBreakdown[];
+  warnings?: string[];
+}
+
+interface ReviewTimeResponse {
+  estimate?: ReviewTimeEstimate;
+  error?: string;
+}
+
+interface FlakyTest {
+  name: string;
+  file: string;
+  flakinessScore: number;
+  totalRuns: number;
+  failures: number;
+}
+
+interface FlakyReport {
+  flakyCount: number;
+  healthScore: number;
+  totalTests: number;
+  flakyTests?: FlakyTest[];
+  recommendations?: string[];
+}
+
+interface FlakyReportResponse {
+  report?: FlakyReport;
+}
+
+interface FlakyTestsResponse {
+  tests?: FlakyTest[];
+}
+
 export function registerReviewFeatures(
   context: vscode.ExtensionContext,
   client: LanguageClient
@@ -63,13 +108,13 @@ async function estimateReviewTime(client: LanguageClient) {
   }
 
   try {
-    const result = await client.sendRequest('$/preCr/estimateReviewTime', {
+    const result = await client.sendRequest<ReviewTimeResponse>('$/preCr/estimateReviewTime', {
       changes
     });
 
-    const estimate = (result as any).estimate;
+    const estimate = result.estimate;
     if (!estimate) {
-      throw new Error((result as any).error);
+      throw new Error(result.error);
     }
 
     // Show result with option to copy title prefix
@@ -97,8 +142,8 @@ async function estimateReviewTime(client: LanguageClient) {
  */
 async function showFlakyTests(client: LanguageClient) {
   try {
-    const result = await client.sendRequest('$/preCr/getFlakyTestReport', {});
-    const report = (result as any).report;
+    const result = await client.sendRequest<FlakyReportResponse>('$/preCr/getFlakyTestReport', {});
+    const report = result.report;
 
     if (!report) {
       notify.showInfo('No flaky test data available. Run tests first.');
@@ -120,7 +165,7 @@ async function showFlakyTests(client: LanguageClient) {
 /**
  * Show review time details
  */
-function showReviewTimeDetails(estimate: any) {
+function showReviewTimeDetails(estimate: ReviewTimeEstimate) {
   const panel = vscode.window.createWebviewPanel(
     'preCrReviewTime',
     'Review Time Estimate',
@@ -128,7 +173,7 @@ function showReviewTimeDetails(estimate: any) {
     {}
   );
 
-  const filesHtml = (estimate.fileBreakdown || []).map((f: any) => `
+  const filesHtml = (estimate.fileBreakdown || []).map((f) => `
     <tr>
       <td>${f.path}</td>
       <td>${f.category}</td>
@@ -197,7 +242,7 @@ function showReviewTimeDetails(estimate: any) {
 /**
  * Show flaky test report
  */
-function showFlakyTestReport(report: any) {
+function showFlakyTestReport(report: FlakyReport) {
   const panel = vscode.window.createWebviewPanel(
     'preCrFlakyTests',
     'Flaky Tests Report',
@@ -205,7 +250,7 @@ function showFlakyTestReport(report: any) {
     {}
   );
 
-  const testsHtml = (report.flakyTests || []).map((t: any) => `
+  const testsHtml = (report.flakyTests || []).map((t) => `
     <div class="test">
       <div class="test-name">${t.name}</div>
       <div class="test-file">${t.file}</div>
@@ -216,6 +261,7 @@ function showFlakyTestReport(report: any) {
       </div>
     </div>
   `).join('');
+  const recommendations = report.recommendations || [];
 
   panel.webview.html = `<!DOCTYPE html>
 <html>
@@ -262,10 +308,10 @@ function showFlakyTestReport(report: any) {
   <h2>Flaky Tests</h2>
   ${testsHtml || '<p>No flaky tests detected</p>'}
 
-  ${report.recommendations?.length > 0 ? `
+  ${recommendations.length > 0 ? `
     <h2>Recommendations</h2>
     <ul>
-      ${report.recommendations.map((r: string) => `<li>${r}</li>`).join('')}
+      ${recommendations.map((r: string) => `<li>${r}</li>`).join('')}
     </ul>
   ` : ''}
 </body>
@@ -291,8 +337,8 @@ class FlakyTestsTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem>
 
   async getChildren(): Promise<vscode.TreeItem[]> {
     try {
-      const result = await this.client.sendRequest('$/preCr/getFlakyTests', {});
-      const tests = (result as any).tests || [];
+      const result = await this.client.sendRequest<FlakyTestsResponse>('$/preCr/getFlakyTests', {});
+      const tests = result.tests || [];
 
       if (tests.length === 0) {
         const item = new vscode.TreeItem('No flaky tests detected');
@@ -300,7 +346,7 @@ class FlakyTestsTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem>
         return [item];
       }
 
-      return tests.map((t: any) => {
+      return tests.map((t) => {
         const item = new vscode.TreeItem(t.name);
         item.description = `${(t.flakinessScore * 100).toFixed(0)}% flaky`;
         item.tooltip = `${t.file}\nRuns: ${t.totalRuns}, Failures: ${t.failures}`;

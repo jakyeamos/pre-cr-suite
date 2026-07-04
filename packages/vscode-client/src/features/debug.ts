@@ -19,6 +19,53 @@ let captureStartTime: number | undefined;
 let captureTimerInterval: NodeJS.Timeout | undefined;
 let breakpointHitCount = 0;
 
+interface DebugSessionRecord {
+  id: string;
+  name: string;
+  debugType: string;
+  startTime: string | number | Date;
+  breakpointHits: number;
+  exceptions: number;
+  duration?: number;
+  outcome?: string;
+}
+
+interface DebugPattern {
+  confidence: string;
+  type: string;
+  description: string;
+  suggestion: string;
+}
+
+interface DebugHotSpot {
+  file: string;
+  line: number;
+  hitCount: number;
+}
+
+interface DebugAnalysis {
+  duration: number;
+  breakpointHitCount: number;
+  filesVisited?: string[];
+  patterns?: DebugPattern[];
+  hotSpots?: DebugHotSpot[];
+  recommendations?: string[];
+}
+
+interface DebugSessionResponse {
+  session?: DebugSessionRecord;
+  error?: string;
+}
+
+interface DebugSessionListResponse {
+  sessions?: DebugSessionRecord[];
+}
+
+interface DebugAnalysisResponse {
+  analysis?: DebugAnalysis;
+  error?: string;
+}
+
 /** Check if currently capturing a debug session */
 export function isDebugCapturing(): boolean {
   return isCapturing;
@@ -98,13 +145,13 @@ async function startDebugCapture(client: LanguageClient) {
   const debugType = activeSession?.type || 'manual';
 
   try {
-    const result = await client.sendRequest('$/preCr/startDebugSession', {
+    const result = await client.sendRequest<DebugSessionResponse>('$/preCr/startDebugSession', {
       name: sessionName,
       debugType,
       launchConfig: activeSession?.configuration
     });
 
-    const session = (result as any).session;
+    const session = result.session;
     if (session) {
       isCapturing = true;
       captureStartTime = Date.now();
@@ -113,7 +160,7 @@ async function startDebugCapture(client: LanguageClient) {
       startCaptureTimer();
       notify.showSuccess(`Started capturing: ${sessionName}`);
     } else {
-      throw new Error((result as any).error);
+      throw new Error(result.error);
     }
 
   } catch (error) {
@@ -126,16 +173,17 @@ async function startDebugCapture(client: LanguageClient) {
  */
 async function stopDebugCapture(client: LanguageClient) {
   try {
-    const result = await client.sendRequest('$/preCr/endDebugSession', {
+    const result = await client.sendRequest<DebugSessionResponse>('$/preCr/endDebugSession', {
       outcome: 'success'
     });
 
-    const session = (result as any).session;
+    const session = result.session;
     stopCaptureTimer();
 
     if (session) {
+      const durationMs = session.duration || 0;
       const action = await notify.showInfo(
-        `Debug session captured (${Math.round(session.duration / 1000)}s)`,
+        `Debug session captured (${Math.round(durationMs / 1000)}s)`,
         undefined,
         'Analyze'
       );
@@ -213,7 +261,7 @@ function stopCaptureTimer() {
 async function analyzeDebugSession(client: LanguageClient) {
   // Get list of sessions
   const result = await client.sendRequest('$/preCr/listDebugSessions', {});
-  const sessions = (result as any).sessions || [];
+  const sessions = (result as DebugSessionListResponse).sessions || [];
 
   if (sessions.length === 0) {
     notify.showInfo('No debug sessions recorded');
@@ -221,7 +269,7 @@ async function analyzeDebugSession(client: LanguageClient) {
   }
 
   // Let user pick one
-  const items: (vscode.QuickPickItem & { sessionId: string })[] = sessions.map((s: any) => ({
+  const items: (vscode.QuickPickItem & { sessionId: string })[] = sessions.map((s) => ({
     label: s.name,
     description: s.debugType,
     detail: `${new Date(s.startTime).toLocaleString()} - ${s.breakpointHits} hits, ${s.exceptions} exceptions`,
@@ -242,11 +290,11 @@ async function analyzeDebugSession(client: LanguageClient) {
  */
 async function analyzeSession(client: LanguageClient, sessionId: string) {
   try {
-    const result = await client.sendRequest('$/preCr/analyzeDebugSession', { sessionId });
-    const analysis = (result as any).analysis;
+    const result = await client.sendRequest<DebugAnalysisResponse>('$/preCr/analyzeDebugSession', { sessionId });
+    const analysis = result.analysis;
 
     if (!analysis) {
-      throw new Error((result as any).error);
+      throw new Error(result.error);
     }
 
     showAnalysisReport(analysis);
@@ -269,7 +317,7 @@ function onDebugStart(client: LanguageClient, session: vscode.DebugSession) {
 /**
  * Handle debug session end
  */
-function onDebugEnd(client: LanguageClient, session: vscode.DebugSession) {
+function onDebugEnd(client: LanguageClient, _session: vscode.DebugSession) {
   if (isCapturing) {
     // Ask user if they want to stop capture
     notify.showInfo(
@@ -321,7 +369,7 @@ async function onDebugEvent(client: LanguageClient, event: vscode.DebugSessionCu
 /**
  * Show analysis report
  */
-function showAnalysisReport(analysis: any) {
+function showAnalysisReport(analysis: DebugAnalysis) {
   const panel = webview.createWebviewPanel(
     'preCrDebugAnalysis',
     'Debug Session Analysis',
@@ -329,7 +377,7 @@ function showAnalysisReport(analysis: any) {
   );
 
   // Build patterns HTML with escaping
-  const patternsHtml = (analysis.patterns || []).map((p: any) => `
+  const patternsHtml = (analysis.patterns || []).map((p) => `
     <div class="pattern ${webview.escapeHtml(p.confidence)}">
       <div class="pattern-type">${webview.escapeHtml(p.type)}</div>
       <div class="pattern-desc">${webview.escapeHtml(p.description)}</div>
@@ -338,7 +386,7 @@ function showAnalysisReport(analysis: any) {
   `).join('');
 
   // Build hot spots HTML with escaping
-  const hotSpotsHtml = (analysis.hotSpots || []).slice(0, 5).map((h: any) => `
+  const hotSpotsHtml = (analysis.hotSpots || []).slice(0, 5).map((h) => `
     <tr>
       <td>${webview.escapeHtml(h.file)}</td>
       <td>${h.line}</td>
@@ -350,6 +398,9 @@ function showAnalysisReport(analysis: any) {
   const recsHtml = (analysis.recommendations || []).map((r: string) => `
     <li>${webview.escapeHtml(r)}</li>
   `).join('');
+  const patterns = analysis.patterns || [];
+  const hotSpots = analysis.hotSpots || [];
+  const recommendations = analysis.recommendations || [];
 
   const additionalStyles = `
     .summary { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
@@ -400,12 +451,12 @@ function showAnalysisReport(analysis: any) {
       </div>
     </div>
 
-    ${analysis.patterns?.length > 0 ? `
+    ${patterns.length > 0 ? `
       <h2>Detected Patterns</h2>
       ${patternsHtml}
     ` : ''}
 
-    ${analysis.hotSpots?.length > 0 ? `
+    ${hotSpots.length > 0 ? `
       <h2>Hot Spots</h2>
       <table>
         <thead><tr><th>File</th><th>Line</th><th>Hits</th></tr></thead>
@@ -413,7 +464,7 @@ function showAnalysisReport(analysis: any) {
       </table>
     ` : ''}
 
-    ${analysis.recommendations?.length > 0 ? `
+    ${recommendations.length > 0 ? `
       <h2>Recommendations</h2>
       <ul>${recsHtml}</ul>
     ` : ''}
@@ -446,8 +497,8 @@ class DebugSessionsTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
   async getChildren(): Promise<vscode.TreeItem[]> {
     try {
-      const result = await this.client.sendRequest('$/preCr/listDebugSessions', {});
-      const sessions = (result as any).sessions || [];
+      const result = await this.client.sendRequest<DebugSessionListResponse>('$/preCr/listDebugSessions', {});
+      const sessions = result.sessions || [];
 
       if (sessions.length === 0) {
         const item = new vscode.TreeItem('No debug sessions recorded');
@@ -455,7 +506,7 @@ class DebugSessionsTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
         return [item];
       }
 
-      return sessions.map((s: any) => {
+      return sessions.map((s) => {
         const item = new vscode.TreeItem(s.name);
         item.description = `${s.breakpointHits} hits`;
         item.tooltip = `${s.debugType} - ${new Date(s.startTime).toLocaleString()}`;

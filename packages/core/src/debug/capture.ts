@@ -504,7 +504,7 @@ export class DebugSessionManager {
 
     // Find volatile variables
     const variableChanges = new Map<string, number>();
-    let prevVariables = new Map<string, string>();
+    const prevVariables = new Map<string, string>();
 
     for (const hit of session.breakpointHits) {
       for (const scope of hit.scopes) {

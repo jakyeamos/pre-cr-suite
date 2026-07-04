@@ -316,7 +316,7 @@ function extractClass(
 function extractConstructor(
   node: ts.ConstructorDeclaration,
   sourceFile: ts.SourceFile,
-  config: ExtractorConfig
+  _config: ExtractorConfig
 ): ExtractedFunction {
   const lineNum = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
   const existingDoc = getJSDocComment(node, sourceFile);
@@ -759,7 +759,7 @@ function calculateComplexity(node: ts.Node): number {
       case ts.SyntaxKind.CaseClause:
         complexity++;
         break;
-      case ts.SyntaxKind.BinaryExpression:
+      case ts.SyntaxKind.BinaryExpression: {
         const binExpr = n as ts.BinaryExpression;
         if (binExpr.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
             binExpr.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
@@ -767,6 +767,7 @@ function calculateComplexity(node: ts.Node): number {
           complexity++;
         }
         break;
+      }
     }
     ts.forEachChild(n, visit);
   };
@@ -816,7 +817,7 @@ function getVisibility(node: ts.Node): 'public' | 'private' | 'protected' {
   return 'public';
 }
 
-function inferReturnType(node: ts.FunctionLikeDeclaration): string | null {
+function inferReturnType(_node: ts.FunctionLikeDeclaration): string | null {
   // Could implement type inference here
   return null;
 }

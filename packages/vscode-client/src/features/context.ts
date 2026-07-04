@@ -13,13 +13,56 @@ import * as notify from '../utils/notifications';
 import * as statusBar from '../utils/statusBar';
 import * as git from '../utils/git';
 
+interface ContextSummary {
+  summary: string;
+  quickActions: string[];
+}
+
+interface ContextSummaryResponse {
+  summary?: ContextSummary;
+}
+
+interface CaptureContextResponse {
+  snapshot?: ContextSnapshot;
+  error?: string;
+}
+
+interface ListSnapshotsResponse {
+  snapshots?: ContextSnapshotSummary[];
+}
+
+interface LatestSnapshotResponse {
+  snapshot?: ContextSnapshot;
+}
+
+interface ContextSnapshotSummary {
+  branch: string;
+  description?: string;
+  filesCount: number;
+  timestamp: string | number | Date;
+}
+
+interface ContextSnapshotFile {
+  path: string;
+  cursor: {
+    line: number;
+    character: number;
+  };
+  isActive?: boolean;
+}
+
+interface ContextSnapshot {
+  branch: string;
+  files?: ContextSnapshotFile[];
+}
+
 export function registerContextFeatures(
   context: vscode.ExtensionContext,
   client: LanguageClient
 ) {
   context.subscriptions.push(
     vscode.commands.registerCommand('preCr.captureContext', () => captureContext(client)),
-    vscode.commands.registerCommand('preCr.restoreContext', (snapshot?: any) => restoreContext(client, snapshot)),
+    vscode.commands.registerCommand('preCr.restoreContext', (snapshot?: ContextSnapshot) => restoreContext(client, snapshot)),
     vscode.commands.registerCommand('preCr.whereWasI', () => whereWasI(client))
   );
 
@@ -56,8 +99,8 @@ async function initContextManager(client: LanguageClient) {
  */
 async function checkForExistingSnapshot(client: LanguageClient, branch: string) {
   try {
-    const result = await client.sendRequest('$/preCr/getContextSummary', { branch });
-    const summary = (result as any).summary;
+    const result = await client.sendRequest<ContextSummaryResponse>('$/preCr/getContextSummary', { branch });
+    const summary = result.summary;
 
     if (summary) {
       statusBar.setSnapshot(branch);
@@ -88,7 +131,7 @@ async function captureContext(client: LanguageClient) {
   try {
     const context = getCurrentEditorContext();
 
-    const result = await client.sendRequest('$/preCr/captureContext', {
+    const result = await client.sendRequest<CaptureContextResponse>('$/preCr/captureContext', {
       branch,
       description,
       files: context.files,
@@ -100,12 +143,12 @@ async function captureContext(client: LanguageClient) {
       }
     });
 
-    const snapshot = (result as any).snapshot;
+    const snapshot = result.snapshot;
     if (snapshot) {
       notify.showSuccess(`Context saved for "${branch}"`);
       statusBar.setSnapshot(branch);
     } else {
-      throw new Error((result as any).error);
+      throw new Error(result.error);
     }
 
   } catch (error) {
@@ -116,13 +159,13 @@ async function captureContext(client: LanguageClient) {
 /**
  * Restore a context snapshot
  */
-async function restoreContext(client: LanguageClient, snapshotToRestore?: any) {
+async function restoreContext(client: LanguageClient, snapshotToRestore?: ContextSnapshot) {
   let snapshot = snapshotToRestore;
 
   if (!snapshot) {
     // Get available snapshots
-    const result = await client.sendRequest('$/preCr/listSnapshots', {});
-    const snapshots = (result as any).snapshots || [];
+    const result = await client.sendRequest<ListSnapshotsResponse>('$/preCr/listSnapshots', {});
+    const snapshots = result.snapshots || [];
 
     if (snapshots.length === 0) {
       notify.showInfo('No saved contexts found');
@@ -130,7 +173,7 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: any) {
     }
 
     // Let user pick one
-    const items: (vscode.QuickPickItem & { snapshot: any })[] = snapshots.map((s: any) => ({
+    const items: (vscode.QuickPickItem & { snapshot: ContextSnapshotSummary })[] = snapshots.map((s) => ({
       label: s.branch,
       description: s.description || `${s.filesCount} files`,
       detail: new Date(s.timestamp).toLocaleString(),
@@ -144,10 +187,10 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: any) {
     if (!selected) return;
 
     // Get full snapshot
-    const fullResult = await client.sendRequest('$/preCr/getLatestSnapshot', {
+    const fullResult = await client.sendRequest<LatestSnapshotResponse>('$/preCr/getLatestSnapshot', {
       branch: selected.snapshot.branch
     });
-    snapshot = (fullResult as any).snapshot;
+    snapshot = fullResult.snapshot;
   }
 
   if (!snapshot) {
@@ -240,8 +283,8 @@ async function whereWasI(client: LanguageClient) {
   }
 
   try {
-    const result = await client.sendRequest('$/preCr/getContextSummary', { branch });
-    const summary = (result as any).summary;
+    const result = await client.sendRequest<ContextSummaryResponse>('$/preCr/getContextSummary', { branch });
+    const summary = result.summary;
 
     if (!summary) {
       // Offer to create a snapshot

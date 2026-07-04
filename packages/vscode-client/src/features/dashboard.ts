@@ -106,7 +106,7 @@ function showDashboard(context: vscode.ExtensionContext, client: LanguageClient)
 /**
  * Update dashboard content based on current state
  */
-function updateDashboardContent(client: LanguageClient) {
+function updateDashboardContent(_client: LanguageClient) {
   if (!dashboardPanel) return;
 
   const currentState = state.getState();

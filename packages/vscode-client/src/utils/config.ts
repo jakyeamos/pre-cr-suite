@@ -83,7 +83,7 @@ export function getConfig<T = unknown>(key: string): T {
   }
 
   const config = vscode.workspace.getConfiguration('preCr');
-  let value = config.get(key, schema.default);
+  const value = config.get(key, schema.default);
 
   // Type validation and clamping for numbers
   if (schema.type === 'number' && typeof value === 'number') {

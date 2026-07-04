@@ -12,6 +12,51 @@ import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import * as notify from '../utils/notifications';
 
+interface GeneratedDocItem {
+  name: string;
+  line: number;
+  content: string;
+}
+
+interface GenerateDocsPayload {
+  items: GeneratedDocItem[];
+}
+
+interface GenerateDocsResponse {
+  result?: GenerateDocsPayload;
+}
+
+interface GenerateDocAtCursorResponse {
+  doc?: GeneratedDocItem;
+}
+
+interface DocHealthIssue {
+  severity: string;
+  type: string;
+  message: string;
+  line: number;
+  file?: string;
+}
+
+interface DocHealthReport {
+  issues?: DocHealthIssue[];
+  total?: number;
+  documented?: number;
+}
+
+interface DocHealthResponse {
+  report?: DocHealthReport;
+  error?: string;
+}
+
+interface WorkspaceHealthReport {
+  total: number;
+  documented: number;
+  coveragePercent: number;
+  issues: DocHealthIssue[];
+  fileCount: number;
+}
+
 export function registerDocgenFeatures(
   context: vscode.ExtensionContext,
   client: LanguageClient
@@ -39,7 +84,7 @@ async function generateDocs(client: LanguageClient) {
   const config = vscode.workspace.getConfiguration('preCr.docs');
 
   try {
-    const result = await client.sendRequest('$/preCr/generateDocs', {
+    const result = await client.sendRequest<GenerateDocsResponse>('$/preCr/generateDocs', {
       uri,
       content,
       config: {
@@ -52,14 +97,14 @@ async function generateDocs(client: LanguageClient) {
       }
     });
 
-    const docs = (result as any).result;
+    const docs = result.result;
     if (!docs || docs.items.length === 0) {
       notify.showSuccess('All items already documented');
       return;
     }
 
     // Build list of item names for preview
-    const itemNames = docs.items.slice(0, 5).map((d: any) => d.name).join(', ');
+    const itemNames = docs.items.slice(0, 5).map((d) => d.name).join(', ');
     const moreText = docs.items.length > 5 ? ` and ${docs.items.length - 5} more` : '';
 
     // Show preview with option to apply
@@ -98,7 +143,7 @@ async function generateDocAtCursor(client: LanguageClient) {
   const config = vscode.workspace.getConfiguration('preCr.docs');
 
   try {
-    const result = await client.sendRequest('$/preCr/generateDocAtCursor', {
+    const result = await client.sendRequest<GenerateDocAtCursorResponse>('$/preCr/generateDocAtCursor', {
       uri,
       content,
       line: position.line,
@@ -109,7 +154,7 @@ async function generateDocAtCursor(client: LanguageClient) {
       }
     });
 
-    const doc = (result as any).doc;
+    const doc = result.doc;
     if (!doc) {
       notify.showInfo(
         'No documentable item at cursor. Move cursor to a function, class, method, or interface definition.'
@@ -142,14 +187,14 @@ async function checkDocHealth(client: LanguageClient, mode: 'file' | 'workspace'
         return;
       }
 
-      const result = await client.sendRequest('$/preCr/checkFileHealth', {
+      const result = await client.sendRequest<DocHealthResponse>('$/preCr/checkFileHealth', {
         uri: editor.document.uri.toString(),
         content: editor.document.getText()
       });
 
-      const report = (result as any).report;
+      const report = result.report;
       if (!report) {
-        throw new Error((result as any).error);
+        throw new Error(result.error);
       }
 
       showHealthReport(report, editor.document.fileName);
@@ -163,17 +208,17 @@ async function checkDocHealth(client: LanguageClient, mode: 'file' | 'workspace'
 
         let totalItems = 0;
         let documentedItems = 0;
-        const allIssues: any[] = [];
+        const allIssues: DocHealthIssue[] = [];
 
         for (const file of files) {
           try {
             const doc = await vscode.workspace.openTextDocument(file);
-            const result = await client.sendRequest('$/preCr/checkFileHealth', {
+            const result = await client.sendRequest<DocHealthResponse>('$/preCr/checkFileHealth', {
               uri: doc.uri.toString(),
               content: doc.getText()
             });
 
-            const report = (result as any).report;
+            const report = result.report;
             if (report) {
               totalItems += report.total || 0;
               documentedItems += report.documented || 0;
@@ -221,7 +266,7 @@ async function getCodeFiles(): Promise<vscode.Uri[]> {
 /**
  * Apply generated docs to editor
  */
-async function applyDocs(editor: vscode.TextEditor, items: any[]) {
+async function applyDocs(editor: vscode.TextEditor, items: GeneratedDocItem[]) {
   // Sort by line descending so we don't mess up line numbers
   const sorted = [...items].sort((a, b) => b.line - a.line);
 
@@ -238,7 +283,7 @@ async function applyDocs(editor: vscode.TextEditor, items: any[]) {
 /**
  * Show docs preview in webview
  */
-function showDocsPreview(items: any[]) {
+function showDocsPreview(items: GeneratedDocItem[]) {
   const panel = vscode.window.createWebviewPanel(
     'preCrDocsPreview',
     'Documentation Preview',
@@ -283,7 +328,7 @@ function showDocsPreview(items: any[]) {
 /**
  * Show health report for a file
  */
-function showHealthReport(report: any, fileName: string) {
+function showHealthReport(report: DocHealthReport, fileName: string) {
   const issues = report.issues || [];
 
   if (issues.length === 0) {
@@ -298,7 +343,7 @@ function showHealthReport(report: any, fileName: string) {
     {}
   );
 
-  const issuesHtml = issues.map((issue: any) => `
+  const issuesHtml = issues.map((issue) => `
     <div class="issue ${issue.severity}">
       <span class="type">${issue.type}</span>
       <span class="message">${issue.message}</span>
@@ -336,7 +381,7 @@ function showHealthReport(report: any, fileName: string) {
 /**
  * Show workspace health report
  */
-function showWorkspaceHealthReport(report: any) {
+function showWorkspaceHealthReport(report: WorkspaceHealthReport) {
   const panel = vscode.window.createWebviewPanel(
     'preCrDocHealthWorkspace',
     'Documentation Health - Workspace',
@@ -346,7 +391,7 @@ function showWorkspaceHealthReport(report: any) {
 
   const coverageClass = report.coveragePercent >= 80 ? 'good' : report.coveragePercent >= 50 ? 'warning' : 'bad';
 
-  const issuesHtml = (report.issues || []).slice(0, 50).map((issue: any) => `
+  const issuesHtml = (report.issues || []).slice(0, 50).map((issue) => `
     <div class="issue ${issue.severity}">
       <span class="file">${issue.file}:${issue.line}</span>
       <span class="type">${issue.type}</span>

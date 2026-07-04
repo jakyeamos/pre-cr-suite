@@ -16,7 +16,7 @@
  */
 
 import * as vscode from 'vscode';
-import { state, ExtensionState } from './state';
+import { state } from './state';
 
 let statusBarItem: vscode.StatusBarItem | undefined;
 

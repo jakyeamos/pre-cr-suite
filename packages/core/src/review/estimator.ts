@@ -148,7 +148,7 @@ export interface ReviewTimeEstimate {
  */
 export function analyzeFileComplexity(
   content: string,
-  filePath: string
+  _filePath: string
 ): ComplexityLevel {
   // Quick heuristics for complexity
   const lines = content.split('\n');

@@ -89,11 +89,12 @@ const initialState: ExtensionState = {
 // ============================================================================
 
 type StateListener<T> = (newValue: T, oldValue: T) => void;
+type UnknownStateListener = (newValue: unknown, oldValue: unknown) => void;
 type StateKey = keyof ExtensionState;
 
 class StateManager {
   private state: ExtensionState;
-  private listeners: Map<string, Set<StateListener<any>>> = new Map();
+  private listeners: Map<string, Set<UnknownStateListener>> = new Map();
   private extensionContext: vscode.ExtensionContext | null = null;
 
   constructor() {
@@ -203,11 +204,14 @@ class StateManager {
     if (!this.listeners.has(key)) {
       this.listeners.set(key, new Set());
     }
-    this.listeners.get(key)!.add(listener);
+    const wrappedListener: UnknownStateListener = (newValue, oldValue) => {
+      listener(newValue as ExtensionState[K], oldValue as ExtensionState[K]);
+    };
+    this.listeners.get(key)!.add(wrappedListener);
 
     return {
       dispose: () => {
-        this.listeners.get(key)?.delete(listener);
+        this.listeners.get(key)?.delete(wrappedListener);
       }
     };
   }

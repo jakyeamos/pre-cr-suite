@@ -9,7 +9,7 @@
  */
 
 import { getLogger } from '../logger';
-import { parseExports, SourceFile, ParsedExport, checkDocHealth, DocHealthIssue } from './docCoverage';
+import { parseExports, SourceFile, checkDocHealth } from './docCoverage';
 
 // ============================================================================
 // Types
