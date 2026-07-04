@@ -2,10 +2,10 @@
 schemaVersion: 1
 healthScore: 96
 statusLabel: adopted_runtime_certified
-summary: "AIOS adoption docs, server simplification gates, pinned pnpm runtime behavior, and fixture test harness isolation are current; final runtime smoke and Turbo tests now pass in this Codex shell."
+summary: "AIOS adoption docs, published package guidance, server simplification gates, pinned pnpm runtime behavior, and fixture test harness isolation are current; final runtime smoke and Turbo tests now pass in this Codex shell."
 nextStep: "Continue release-hardening from the public beta roadmap, with lint warning cleanup and parity drift prevention as ongoing maintenance."
 blockers: []
-lastUpdated: "2026-06-30"
+lastUpdated: "2026-07-04"
 quality:
   lint: warning
   types: pass
@@ -38,6 +38,7 @@ The main risk is parity drift between clients while experimental features contin
 
 ## Recent Documentation Updates
 
+- 2026-07-04: Clarified README quick start around the published `@pre-cr/core` and `@pre-cr/server` npm packages, with VS Code Marketplace installs still pending verification.
 - 2026-06-30: Removed the stale generated-index skip entry from the AIOS adoption gate scanner; `node --check scripts/aios-adoption-gates.mjs` passes.
 - 2026-05-18: Added or expanded README coverage for project and subproject roots so workspace documentation inventory is complete.
 - 2026-06-23: Added branch-aware headless CLI audit emission for blocked, warning-only, or iteration-forcing Pre-CR runs, with focused CLI test and server typecheck passing.
@@ -63,3 +64,4 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-30: Runtime gates pass from the ambient Codex shell where `pnpm --version` is 11.7.0: `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm test:headless-beta` all complete successfully while project scripts and headless Pre-CR commands execute through the repo-pinned pnpm 9.15.0 path.
 - 2026-06-30: `pnpm lint` passes with existing warnings only: 40 warnings in `@pre-cr/core`, 67 warnings in `pre-cr-suite`, and no lint errors.
 - 2026-06-30: Direct `node packages/server/dist/cli.js run --json --workspace /Users/jakyeamos/projects/pre-cr-suite-lsp` confirms the loaded headless framework command resolves to `corepack pnpm --filter pre-cr-suite test -- --coverage`; with no staged changes at the time of that check, it returned the expected no-changes warning-only result.
+- 2026-07-04: `pnpm lint`, `pnpm typecheck`, and `pnpm test` passed after the README package-install documentation update; lint still reports only the existing TypeScript support warning banner from `@typescript-eslint/typescript-estree`.
