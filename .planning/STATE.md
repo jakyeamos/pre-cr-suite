@@ -35,6 +35,9 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
+
+### Roadmap Evolution
+- 2026-07-04: Phase 7 planned: QR remediation: pre-cr-suite-lsp from QR run qr-fleet-continue-20260704-pre-cr-suite-lsp.
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.

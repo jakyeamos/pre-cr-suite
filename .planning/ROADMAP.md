@@ -97,3 +97,19 @@ Plans:
 **Plans**: 1 plan
 Plans:
 - [ ] 06-01: Final adoption certification proof
+
+### Phase 7: QR remediation: pre-cr-suite-lsp
+
+
+
+**Goal:** Resolve Quality Runner findings for pre-cr-suite-lsp using cluster-oriented, behavior-preserving remediation from run qr-fleet-continue-20260704-pre-cr-suite-lsp.
+**Requirements**: QR-PRE-CR-SUITE-LSP
+**Depends on:** Phase 6
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md - Primary QR cluster remediation
+- [ ] 07-02-PLAN.md - Additional QR cluster remediation
+
+**Cross-cutting constraints:**
+- The post-remediation QR run records no unresolved regression for this plan scope.
