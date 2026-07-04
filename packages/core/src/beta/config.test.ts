@@ -122,4 +122,35 @@ describe('loadProjectConfig', () => {
       unsupported: ['python/**']
     });
   });
+
+  it('loads hook policy with defaults for unspecified rules and audit settings', () => {
+    const workspaceRoot = createWorkspace();
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      hook: {
+        defaultHook: 'pre-push',
+        rules: {
+          'typescript-any': 'warn',
+          'oversized-source': 'off',
+          ignored: 'invalid'
+        },
+        audit: {
+          enabled: true,
+          path: 'reports/pre-cr-audit.jsonl'
+        }
+      }
+    }));
+
+    const result = loadProjectConfig(workspaceRoot);
+
+    expect(result.config.hook.defaultHook).toBe('pre-push');
+    expect(result.config.hook.rules['typescript-any']).toBe('warn');
+    expect(result.config.hook.rules['oversized-source']).toBe('off');
+    expect(result.config.hook.rules['secret-literal']).toBe('block');
+    expect(result.config.hook.rules.ignored).toBeUndefined();
+    expect(result.config.hook.audit).toEqual({
+      enabled: true,
+      path: 'reports/pre-cr-audit.jsonl'
+    });
+  });
 });

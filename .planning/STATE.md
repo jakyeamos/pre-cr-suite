@@ -81,3 +81,9 @@ Resume file: None
 - Release-facing lint warnings were cleared across core and VS Code client surfaces without changing package names, versions, publish settings, tags, remotes, or registry state.
 - VS Code client request/response handling now uses local typed interfaces instead of `any` at LSP/editor feature boundaries.
 - Verification passed after cleanup: `pnpm lint`, `pnpm typecheck`, `pnpm build`, and `pnpm test`.
+
+### Pre-CR Hook Ownership Update - 2026-07-04
+
+- `@pre-cr/server` now owns command-only git hook management for native hooks, Husky, Lefthook, and the Python pre-commit framework.
+- Hook execution ports deterministic AIOS-style commit checks into TypeScript, requires `.pre-cr.json` for staged source commits, and then runs the existing staged Pre-CR readiness gate.
+- `.pre-cr.json` now carries shared hook policy for default hook, per-rule `block`/`warn`/`off`, and optional local JSONL audit output.

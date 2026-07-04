@@ -1,0 +1,88 @@
+import { describe, expect, it } from 'vitest';
+
+import { DEFAULT_HOOK_RULE_POLICY, evaluateHookRules } from './rules';
+
+// quality-gate: allow static-ui-test: this file intentionally exercises the static UI test detector.
+
+describe('evaluateHookRules', () => {
+  it('flags deterministic AIOS-style blocking rules in staged source text', () => {
+    const conflictMarker = '<<<<' + '<<< HEAD';
+    const fakeToken = 'ghp_' + 'TESTING_PURPOSES_ONLY_NOT_A_REAL_TOKEN';
+    const packageManagerCommand = 'Run npm ' + 'install before starting.\n';
+    const messageHandler = 'window.addEventListener("mess' + 'age", () => undefined);';
+    const secretLiteral = ['const tok', 'en = "', fakeToken, '";'].join('');
+    const findings = evaluateHookRules([
+      {
+        path: 'src/app.ts',
+        text: [
+          conflictMarker,
+          secretLiteral,
+          'const value: any = 1;',
+          messageHandler,
+          'worker.postMessage({ ok: true });'
+        ].join('\n')
+      },
+      {
+        path: 'README.md',
+        text: packageManagerCommand
+      }
+    ], DEFAULT_HOOK_RULE_POLICY);
+
+    expect(findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'src/app.ts', line: 1, rule: 'conflict-marker', severity: 'block' }),
+      expect.objectContaining({ path: 'src/app.ts', line: 2, rule: 'secret-literal', severity: 'block' }),
+      expect.objectContaining({ path: 'src/app.ts', line: 3, rule: 'typescript-any', severity: 'block' }),
+      expect.objectContaining({ path: 'src/app.ts', line: 4, rule: 'handler-before-send', severity: 'block' }),
+      expect.objectContaining({ path: 'README.md', line: 1, rule: 'package-manager', severity: 'block' })
+    ]));
+  });
+
+  it('warns for oversized source files by default', () => {
+    const text = Array.from({ length: 506 }, (_, index) => `export const value${index} = ${index};`).join('\n');
+
+    const findings = evaluateHookRules([{ path: 'src/large.ts', text }], DEFAULT_HOOK_RULE_POLICY);
+
+    expect(findings).toEqual([
+      expect.objectContaining({
+        path: 'src/large.ts',
+        line: 1,
+        rule: 'oversized-source',
+        severity: 'warn'
+      })
+    ]);
+  });
+
+  it('detects weak Python tests and low-value static UI tests', () => {
+    const findings = evaluateHookRules([
+      {
+        path: 'tests/test_smoke.py',
+        text: 'def test_smoke():\n    run_app()\n'
+      },
+      {
+        path: 'src/__tests__/component.test.tsx',
+        text: [
+          'import { renderToStaticMarkup } from "react-dom/server";',
+          'it("renders copy", () => {',
+          '  expect(renderToStaticMarkup(<div>Hello</div>)).toContain("Hello");',
+          '});'
+        ].join('\n')
+      }
+    ], DEFAULT_HOOK_RULE_POLICY);
+
+    expect(findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'tests/test_smoke.py', rule: 'weak-test', severity: 'block' }),
+      expect.objectContaining({ path: 'src/__tests__/component.test.tsx', rule: 'low-value-static-ui-test', severity: 'block' })
+    ]));
+  });
+
+  it('honors configured rule policy overrides', () => {
+    const findings = evaluateHookRules([
+      { path: 'src/app.ts', text: 'const value: any = 1;\n' }
+    ], {
+      ...DEFAULT_HOOK_RULE_POLICY,
+      'typescript-any': 'off'
+    });
+
+    expect(findings).toEqual([]);
+  });
+});

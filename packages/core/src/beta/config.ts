@@ -23,6 +23,20 @@ const DEFAULT_QUALITY_ADAPTERS: PreCrQualityAdapterConfig[] = [
   }
 ];
 
+const DEFAULT_HOOK_RULES = {
+  'conflict-marker': 'block',
+  'secret-literal': 'block',
+  'package-manager': 'block',
+  'typescript-any': 'block',
+  'weak-test': 'block',
+  'low-value-static-ui-test': 'block',
+  'handler-before-send': 'block',
+  'pre-cr-required': 'block',
+  'pre-cr-unavailable': 'block',
+  'pre-cr-failed': 'block',
+  'oversized-source': 'warn'
+} as const;
+
 export const DEFAULT_PRE_CR_CONFIG: PreCrProjectConfig = {
   version: 1,
   coveragePaths: DEFAULT_COVERAGE_PATHS,
@@ -47,6 +61,14 @@ export const DEFAULT_PRE_CR_CONFIG: PreCrProjectConfig = {
     coverage: true,
     security: true,
     checklist: true
+  },
+  hook: {
+    defaultHook: 'pre-commit',
+    rules: DEFAULT_HOOK_RULES,
+    audit: {
+      enabled: false,
+      path: '.pre-cr/audit.jsonl'
+    }
   }
 };
 
@@ -62,6 +84,7 @@ interface RawProjectConfig {
   threshold?: unknown;
   excludePatterns?: unknown;
   checks?: unknown;
+  hook?: unknown;
 }
 
 export function loadProjectConfig(workspaceRoot: string): LoadedPreCrProjectConfig {
@@ -126,7 +149,8 @@ export function loadProjectConfig(workspaceRoot: string): LoadedPreCrProjectConf
         coverage: typeof checks.coverage === 'boolean' ? checks.coverage : DEFAULT_PRE_CR_CONFIG.checks.coverage,
         security: typeof checks.security === 'boolean' ? checks.security : DEFAULT_PRE_CR_CONFIG.checks.security,
         checklist: typeof checks.checklist === 'boolean' ? checks.checklist : DEFAULT_PRE_CR_CONFIG.checks.checklist
-      }
+      },
+      hook: parseHook(raw.hook)
     };
 
     return {
@@ -144,6 +168,45 @@ export function loadProjectConfig(workspaceRoot: string): LoadedPreCrProjectConf
       warnings: [`Failed to parse .pre-cr.json: ${message}`]
     };
   }
+}
+
+function parseHook(value: unknown): PreCrProjectConfig['hook'] {
+  if (typeof value !== 'object' || value === null) {
+    return DEFAULT_PRE_CR_CONFIG.hook;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const audit = typeof raw.audit === 'object' && raw.audit !== null
+    ? raw.audit as Record<string, unknown>
+    : {};
+
+  return {
+    defaultHook: raw.defaultHook === 'pre-push' ? 'pre-push' : DEFAULT_PRE_CR_CONFIG.hook.defaultHook,
+    rules: {
+      ...DEFAULT_PRE_CR_CONFIG.hook.rules,
+      ...parseHookRules(raw.rules)
+    },
+    audit: {
+      enabled: typeof audit.enabled === 'boolean' ? audit.enabled : DEFAULT_PRE_CR_CONFIG.hook.audit.enabled,
+      path: typeof audit.path === 'string' && audit.path.trim().length > 0
+        ? audit.path.trim()
+        : DEFAULT_PRE_CR_CONFIG.hook.audit.path
+    }
+  };
+}
+
+function parseHookRules(value: unknown): Record<string, PreCrProjectConfig['hook']['rules'][string]> {
+  if (typeof value !== 'object' || value === null) {
+    return {};
+  }
+
+  const rules: Record<string, PreCrProjectConfig['hook']['rules'][string]> = {};
+  for (const [rule, severity] of Object.entries(value)) {
+    if (severity === 'block' || severity === 'warn' || severity === 'off') {
+      rules[rule] = severity;
+    }
+  }
+  return rules;
 }
 
 export function resolveProjectPath(

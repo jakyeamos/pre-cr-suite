@@ -28,6 +28,18 @@ export interface PreCrChecksConfig {
   checklist: boolean;
 }
 
+export type PreCrHookName = 'pre-commit' | 'pre-push';
+export type PreCrHookRuleSeverity = 'block' | 'warn' | 'off';
+
+export interface PreCrHookConfig {
+  defaultHook: PreCrHookName;
+  rules: Record<string, PreCrHookRuleSeverity>;
+  audit: {
+    enabled: boolean;
+    path: string;
+  };
+}
+
 export interface PreCrProjectConfig {
   version: 1;
   testCommand?: string;
@@ -39,6 +51,7 @@ export interface PreCrProjectConfig {
   threshold: number;
   excludePatterns: string[];
   checks: PreCrChecksConfig;
+  hook: PreCrHookConfig;
 }
 
 export interface LoadedPreCrProjectConfig {

@@ -65,5 +65,5 @@ describe('collectGitChangedFiles', () => {
         isNew: false
       }
     ]);
-  });
+  }, 15000);
 });

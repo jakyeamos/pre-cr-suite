@@ -10,9 +10,11 @@ pnpm add @pre-cr/core
 
 `@pre-cr/core` is the shared runtime library used by the server, editor clients, and headless gate. It is not a standalone command.
 
+Project-level hook policy is parsed from `.pre-cr.json` and consumed by `@pre-cr/server` hook commands. Hook installation and execution live in the server package.
+
 ## Public Beta Surface
 
-The beta-stable surface is the changed-line coverage and setup-health pipeline exported from `@pre-cr/core`. Checklist, docs, review, context, and debug helpers remain available for in-repo use, but they are experimental until their contracts are hardened.
+The beta-stable surface is the changed-line coverage and setup-health pipeline, including shared `.pre-cr.json` hook policy types. Checklist, docs, review, context, and debug helpers remain available for in-repo use, but they are experimental until their contracts are hardened.
 
 ## Scope
 
