@@ -87,3 +87,8 @@ Resume file: None
 - `@pre-cr/server` now owns command-only git hook management for native hooks, Husky, Lefthook, and the Python pre-commit framework.
 - Hook execution ports deterministic AIOS-style commit checks into TypeScript, requires `.pre-cr.json` for staged source commits, and then runs the existing staged Pre-CR readiness gate.
 - `.pre-cr.json` now carries shared hook policy for default hook, per-rule `block`/`warn`/`off`, and optional local JSONL audit output.
+
+### NPM Publish Wizard Update - 2026-07-04
+
+- Added an interactive `scripts/npm-pre-cr-publish-wizard.sh` for the agreed publish path: create/verify the `pre-cr` npm org, publish `@pre-cr/core`, publish `@pre-cr/server`, and skip npm publishing `pre-cr-suite`.
+- The wizard uses explicit human confirmation before irreversible publish steps and uses `--no-git-checks` so the intentionally ignored untracked `.quality-runner/` directory does not block publishing.
