@@ -265,8 +265,8 @@ fi
 
 stage "NPM pack dry-runs" 3
 say "Dry-run the two publishable npm package tarballs."
-run_cmd pnpm --filter @pre-cr/core pack --dry-run
-run_cmd pnpm --filter @pre-cr/server pack --dry-run
+run_cmd pnpm pack --filter @pre-cr/core --dry-run
+run_cmd pnpm pack --filter @pre-cr/server --dry-run
 say "Inspect the tarball contents above. They should include dist files, LICENSE, README, and package.json."
 confirm "Do the dry-run package contents look right?" || exit 1
 
