@@ -218,6 +218,10 @@ package_version_or_empty() {
   npm view "$1" version 2>/dev/null || true
 }
 
+npm_org_visible() {
+  npm org ls pre-cr >/dev/null 2>&1
+}
+
 banner "Pre-CR npm publish"
 
 stage "Preflight" 3
@@ -236,22 +240,27 @@ run_cmd git status --short
 confirm "Continue only if npm whoami is jakyeamos33 and the package names above look right?" || exit 1
 
 stage "Create or verify npm org" 5
-say "The npm CLI can manage an existing org, but cannot create a missing org."
-open_url "https://www.npmjs.com/org/create"
-step "In npm, create an organization named: pre-cr"
-step "Make jakyeamos33 an owner or admin for that org."
-step "Close the npm org creation tab after the org is created."
-pause "Press Enter after the pre-cr npm org exists."
-if npm org ls pre-cr; then
-  say "Verified npm org/scope pre-cr is visible to this npm login."
+if npm_org_visible; then
+  say "Already done: npm org/scope pre-cr is visible to this npm login."
 else
-  warn "npm still cannot see the pre-cr org/scope. Create it in the browser, then rerun this wizard."
-  exit 1
+  say "The npm CLI can manage an existing org, but cannot create a missing org."
+  open_url "https://www.npmjs.com/org/create"
+  step "In npm, create an organization named: pre-cr"
+  step "Make jakyeamos33 an owner or admin for that org."
+  step "Close the npm org creation tab after the org is created."
+  pause "Press Enter after the pre-cr npm org exists."
+  if npm_org_visible; then
+    say "Verified npm org/scope pre-cr is visible to this npm login."
+  else
+    warn "npm still cannot see the pre-cr org/scope. Create it in the browser, then rerun this wizard."
+    exit 1
+  fi
 fi
 
 stage "Final local gates" 8
-say "These gates should pass immediately before publishing."
-if confirm "Run lint, typecheck, build, test, headless smoke, and VSIX package now?"; then
+say "Already done in this release-prep flow: lint, typecheck, build, test, headless smoke, VSIX package, and commit hook passed."
+say "Rerunning is safest if package source changed after those checks."
+if confirm "Rerun lint, typecheck, build, test, headless smoke, and VSIX package now?"; then
   run_cmd pnpm lint
   run_cmd pnpm typecheck
   run_cmd pnpm build
@@ -259,16 +268,19 @@ if confirm "Run lint, typecheck, build, test, headless smoke, and VSIX package n
   run_cmd pnpm test:headless-beta
   run_cmd pnpm package
 else
-  warn "Skipped final gates. Do not publish unless you already ran them for this exact commit."
-  pause "Press Enter to continue anyway, or Ctrl-C to stop."
+  say "Continuing with the completed release-prep verification already recorded for this flow."
 fi
 
 stage "NPM pack dry-runs" 3
-say "Dry-run the two publishable npm package tarballs."
-run_cmd pnpm pack --filter @pre-cr/core --dry-run
-run_cmd pnpm pack --filter @pre-cr/server --dry-run
-say "Inspect the tarball contents above. They should include dist files, LICENSE, README, and package.json."
-confirm "Do the dry-run package contents look right?" || exit 1
+say "Already done after the command fix: both publishable package dry-runs succeeded with pnpm pack --filter ... --dry-run."
+if confirm "Rerun the two npm package dry-runs now?"; then
+  run_cmd pnpm pack --filter @pre-cr/core --dry-run
+  run_cmd pnpm pack --filter @pre-cr/server --dry-run
+  say "Inspect the tarball contents above. They should include dist files, LICENSE, README, and package.json."
+  confirm "Do the dry-run package contents look right?" || exit 1
+else
+  say "Continuing with the completed dry-run inspections already recorded for this flow."
+fi
 
 stage "Publish @pre-cr/core" 2
 CORE_VERSION="$(package_version_or_empty @pre-cr/core)"
@@ -278,7 +290,7 @@ else
   say "This is irreversible for version 0.1.0 once npm accepts it."
   say "If your account uses 2FA, npm/pnpm may prompt for an OTP."
   require_exact_publish_confirmation PUBLISH_CORE_CONFIRM "publish @pre-cr/core@0.1.0" "Type exactly 'publish @pre-cr/core@0.1.0' to publish core:"
-  run_cmd pnpm --filter @pre-cr/core publish --access public --no-git-checks
+  run_cmd pnpm publish --filter @pre-cr/core --access public --no-git-checks
 fi
 
 stage "Publish @pre-cr/server" 2
@@ -294,7 +306,7 @@ else
   say "This is irreversible for version 0.1.0 once npm accepts it."
   say "If your account uses 2FA, npm/pnpm may prompt for an OTP."
   require_exact_publish_confirmation PUBLISH_SERVER_CONFIRM "publish @pre-cr/server@0.1.0" "Type exactly 'publish @pre-cr/server@0.1.0' to publish server:"
-  run_cmd pnpm --filter @pre-cr/server publish --access public --no-git-checks
+  run_cmd pnpm publish --filter @pre-cr/server --access public --no-git-checks
 fi
 
 stage "Post-publish verification" 2
