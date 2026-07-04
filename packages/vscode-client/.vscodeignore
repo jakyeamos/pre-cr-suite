@@ -6,7 +6,9 @@ node_modules/**
 coverage/**
 tsconfig.json
 vitest.config.ts
-!dist/**
+!dist/
+!dist/*.js
 !README.md
 !package.json
 !LICENSE
+dist/*.map

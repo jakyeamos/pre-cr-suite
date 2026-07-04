@@ -101,3 +101,8 @@ Resume file: None
 - `@pre-cr/server@0.1.0` was published from this workspace with `corepack pnpm publish --filter @pre-cr/server --access public --no-git-checks`.
 - `npm access get status` reports both `@pre-cr/core` and `@pre-cr/server` as public; raw `npm view` registry metadata still returned 404 immediately after publish, consistent with first-publish propagation/index lag.
 - `pre-cr-suite` remains intentionally unpublished to npm and should stay on the VS Code Marketplace/VSIX path.
+
+### VS Code Marketplace Prep Update - 2026-07-04
+
+- Production VSIX packaging now excludes source maps and clears stale map artifacts before bundling, reducing `pre-cr-suite-0.1.0.vsix` from 9 files / 8.85 MB to 7 files / 2.79 MB.
+- Verified the candidate VSIX archive contains only `extension.js`, `server.js`, `README.md`, `package.json`, and license payload files.
