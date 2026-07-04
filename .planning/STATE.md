@@ -94,3 +94,10 @@ Resume file: None
 - The wizard uses explicit human confirmation before irreversible publish steps and uses `--no-git-checks` so the intentionally ignored untracked `.quality-runner/` directory does not block publishing.
 - The wizard now resumes cleanly after completed preflight work: it skips browser org creation when `pre-cr` is already visible, treats the completed local gates and package dry-runs as acknowledged, and uses the supported `pnpm pack/publish --filter ...` command shape.
 - Package-local MIT license files were added for `@pre-cr/core` and `@pre-cr/server`; the wizard now uses project-pinned Corepack pnpm to pack into a temp directory, verify `LICENSE`, and inspect contents because pnpm 9 does not support `pack --dry-run`.
+
+### NPM Publish Update - 2026-07-04
+
+- `@pre-cr/core@0.1.0` was published by the user under the `pre-cr` npm org.
+- `@pre-cr/server@0.1.0` was published from this workspace with `corepack pnpm publish --filter @pre-cr/server --access public --no-git-checks`.
+- `npm access get status` reports both `@pre-cr/core` and `@pre-cr/server` as public; raw `npm view` registry metadata still returned 404 immediately after publish, consistent with first-publish propagation/index lag.
+- `pre-cr-suite` remains intentionally unpublished to npm and should stay on the VS Code Marketplace/VSIX path.
