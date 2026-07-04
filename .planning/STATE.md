@@ -106,3 +106,9 @@ Resume file: None
 
 - Production VSIX packaging now excludes source maps and clears stale map artifacts before bundling, reducing `pre-cr-suite-0.1.0.vsix` from 9 files / 8.85 MB to 7 files / 2.79 MB.
 - Verified the candidate VSIX archive contains only `extension.js`, `server.js`, `README.md`, `package.json`, and license payload files.
+
+### VS Code Marketplace Publish Wizard Update - 2026-07-04
+
+- Added `scripts/vscode-marketplace-publish-wizard.sh` for the remaining first-publish path after the `jakye` Marketplace publisher was created.
+- The wizard guides PAT creation with Marketplace Manage scope, runs `vsce login`/`verify-pat`, optionally reruns VS Code build/typecheck/test/package gates, inspects the exact `pre-cr-suite-0.1.0.vsix`, and requires an exact typed confirmation before `vsce publish`.
+- The wizard publishes the existing VSIX artifact and intentionally avoids `vsce publish patch|minor|major` so package metadata is not auto-mutated and no version commit/tag is created.
