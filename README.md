@@ -25,9 +25,16 @@ The beta promise is simple: the same repo-configured coverage workflow should be
 
 ## Quick Start
 
+Published npm packages:
+
+- [`@pre-cr/core`](https://www.npmjs.com/package/@pre-cr/core) provides the shared coverage, config, and gate logic.
+- [`@pre-cr/server`](https://www.npmjs.com/package/@pre-cr/server) provides the LSP server and `pre-cr` headless CLI.
+
+The VS Code Marketplace listing is pending verification. Until that is confirmed, use a built VSIX or local extension package for VS Code installs.
+
 ### VS Code
 
-Install the extension, open a repo, and use:
+Install the extension from a built VSIX or local package artifact, open a repo, and use:
 
 - `Pre-CR: Run Pre-CR Check`
 - `Pre-CR: Refresh Coverage`
@@ -37,7 +44,7 @@ VS Code uses the bundled server artifact inside the extension package. No separa
 
 ### Neovim
 
-Install the server:
+Install the published server package:
 
 ```bash
 pnpm add -g @pre-cr/server
