@@ -10,3 +10,9 @@ packages/*/coverage/
 .aios/audit/
 
 .quality-runner/
+
+# Generated / cache / audit output
+.aios/
+.firecrawl/
+.pytest_cache/
+__pycache__/
