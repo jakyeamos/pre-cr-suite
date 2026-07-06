@@ -24,7 +24,7 @@
     "lint": "node scripts/run-turbo-with-pinned-pnpm.mjs run lint",
     "package": "corepack pnpm run build && corepack pnpm --filter pre-cr-suite package",
     "secret:scan": "node scripts/secret-scan.mjs",
-    "dependency:security": "pnpm audit --audit-level high",
+    "dependency:security": "node scripts/dependency-security.mjs",
     "clean": "pnpm -r run clean && rm -rf node_modules",
     "dev": "node scripts/run-turbo-with-pinned-pnpm.mjs run dev --parallel",
     "format:check": "node scripts/aios-adoption-gates.mjs format",
