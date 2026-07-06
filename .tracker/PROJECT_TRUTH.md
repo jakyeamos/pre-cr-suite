@@ -2,10 +2,10 @@
 schemaVersion: 1
 healthScore: 96
 statusLabel: adopted_runtime_certified
-summary: "AIOS adoption docs, published package guidance, server simplification gates, pinned pnpm runtime behavior, fixture test harness isolation, and cross-client beta parity verification are current; final runtime smoke and Turbo tests now pass in this Codex shell."
+summary: "AIOS adoption docs, published package guidance, server simplification gates, pinned pnpm runtime behavior, fixture test harness isolation, and cross-client beta parity verification are current; final runtime smoke and Turbo tests now pass in this Codex shell. dependency:security now runs scripts/dependency-security.mjs (fails only on real high/critical advisories, skips on registry/network errors) so the offline commit gate no longer false-blocks."
 nextStep: "Continue release-hardening from the public beta roadmap, with lint warning cleanup and the new beta parity gate as ongoing drift prevention."
 blockers: []
-lastUpdated: "2026-07-04"
+lastUpdated: "2026-07-05"
 quality:
   lint: warning
   types: pass
