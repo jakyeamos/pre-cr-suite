@@ -1,11 +1,10 @@
 ---
 schemaVersion: 1
-healthScore: 78
-statusLabel: modernization_audit_complete
-summary: "The public-beta coverage workflow is verified locally, but its current delivery surface is broader, less safe, and less reproducible than its promise. A v2 target and vertical migration plan now prioritize correct changed-line decisions, workspace trust, reproducible installs, one contract, and first-class editor workflow proof."
-nextStep: "Review docs/modernization/TARGET.md and EXEC_PLAN.md, then begin M0/M1: clean-install reproducibility and a correct, bounded, trust-aware gate."
-blockers:
-  - "A clean external install is blocked by the machine-local eslint-plugin-anti-slop file dependency."
+healthScore: 82
+statusLabel: modernization_m1_in_progress
+summary: "M0 now provides a reproducible clean install and truthful CI release proof: the local anti-slop dependency is gone, pnpm build approvals are pinned, and release checks run under Node 20.18.1. M1 is hardening changed-line correctness, workspace trust, path containment, and bounded process execution."
+nextStep: "Complete M1 with canonical path containment, fail-closed changed-line coverage, trusted config execution, and bounded child-process behavior."
+blockers: []
 lastUpdated: "2026-07-10"
 quality:
   lint: pass
@@ -39,21 +38,22 @@ first-class clients. The repo is a TypeScript monorepo whose verified local gate
 now include build, lint, typecheck, 376 tests, headless smoke, server-artifact
 parity smoke, packaging, formatting, complexity, secret, and dependency checks.
 
-The audit found that this verified baseline is not enough to certify the user
-experience: clean installs require a developer-local dependency; the gate can
-falsely pass missing coverage for modified files; repo config can escape the
-workspace and execute commands without an explicit trust boundary; and editor
-parity proves raw server artifacts rather than end-user workflows.
+M0 removed the developer-local install dependency and proves a fresh local clone
+installs with Corepack pnpm 11.7.0. The remaining M1 risks are a gate that can
+falsely pass missing coverage for modified files and repo config that can escape
+the workspace or execute commands without an explicit trust boundary. Editor
+parity still proves raw server artifacts rather than end-user workflows.
 
 ## Risks
 
 The primary risks are an incorrect coverage pass, untrusted workspace execution,
-non-reproducible installation, and drift between the documented beta loop and the
-default editor experiences. M0/M1 resolve the first three before UI migration.
+and drift between the documented beta loop and the default editor experiences.
+M1 resolves the first two before UI migration.
 
 ## Recent Documentation Updates
 
 - 2026-07-10: Added `docs/modernization/AUDIT.md`, `TARGET.md`, `EXEC_PLAN.md`, and `PROGRESS.md` for the protected v2 modernization phase.
+- 2026-07-10: Updated modernization progress after M0 made clean installs and release checks reproducible.
 - 2026-07-04: Clarified README quick start around the published `@pre-cr/core` and `@pre-cr/server` npm packages, with VS Code Marketplace installs still pending verification.
 - 2026-06-30: Removed the stale generated-index skip entry from the AIOS adoption gate scanner; `node --check scripts/aios-adoption-gates.mjs` passes.
 - 2026-05-18: Added or expanded README coverage for project and subproject roots so workspace documentation inventory is complete.
@@ -66,8 +66,6 @@ default editor experiences. M0/M1 resolve the first three before UI migration.
 
 ## Quality Ladder Notes
 
-- 2026-06-25: `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm secret:scan`, `pnpm test:headless-beta`, and VSIX packaging smoke passed.
-- 2026-06-25: `pnpm dependency:security` passed with no known vulnerabilities.
 - 2026-06-25: No `knip` or `audit:dead-code` script is configured, so dead-code and structure status remain unknown.
 - 2026-06-26: `node scripts/aios-adoption-gates.mjs format` and `git diff --check` pass after Phase 04 format remediation.
 - 2026-06-26: `node scripts/aios-adoption-gates.mjs complexity` and `node scripts/aios-adoption-gates.mjs thermo` pass after reducing `packages/server/src/server.ts` from 1684 to 228 lines.
@@ -82,6 +80,7 @@ default editor experiences. M0/M1 resolve the first three before UI migration.
 - 2026-07-04: `pnpm lint`, `pnpm typecheck`, and `pnpm test` passed after the README package-install documentation update; lint still reports only the existing TypeScript support warning banner from `@typescript-eslint/typescript-estree`.
 - 2026-07-04: Added `fixtures/cross-client-beta-parity` and `pnpm test:beta-parity` to verify the public beta workflow across the VS Code bundled server artifact and the published `@pre-cr/server`/Neovim-style server entrypoint from the same `.pre-cr.json`. `pnpm test:beta-parity` and `pnpm test:headless-beta` pass.
 - 2026-07-10: Full local baseline passes: build, lint, typecheck, 376 tests, headless and parity smoke, package, static quality gates, secret scan, and dependency scan; clean install remains blocked by a local `file:` dependency.
+- 2026-07-10: M0 removed the local dependency, passed a fresh clone Corepack pnpm 11.7.0 install, and passed the full release proof; CI now separates compatibility from Node 20.18.1 release checks.
 
 ## QR Remediation Planning
 

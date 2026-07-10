@@ -2,11 +2,9 @@
 
 ## Current state
 
-Audit and target-design phase completed on 2026-07-10 in isolated worktree branch
-`codex/gpt56-modernization-audit`. No application behavior has been changed.
-
-The current checkout was left untouched because it had unrelated untracked files.
-The audit worktree is based on commit `459e09f`.
+M0 is complete on isolated branch `codex/gpt56-modernization-audit` at
+`3e88e4d`. The original checkout remains untouched because it had unrelated
+untracked files. M1—correct, bounded, trust-aware gate behavior—is next.
 
 ## Completed
 
@@ -18,6 +16,14 @@ The audit worktree is based on commit `459e09f`.
 - Completed independent architecture, product/UX, and security/quality audits.
 - Created `AUDIT.md`, `TARGET.md`, and `EXEC_PLAN.md` with evidence, target state,
   contract constraints, and vertical migration milestones.
+- Removed the machine-local anti-slop development dependency and its incompatible
+  ESLint-9 transitive graph; the target repository config now explicitly has no
+  quality adapters.
+- Pinned pnpm build approval policy, aligned CI with pnpm 11.7.0, separated the
+  Node 18/20 compatibility job from the Node 20.18.1 release job, and made the
+  release job run the full quality, security, beta, and packaging proof.
+- Proved a fresh `git clone --no-local` installs with `CI=true corepack pnpm
+  install --frozen-lockfile`, no local symlink, and pnpm 11.7.0.
 
 ## Verified baseline
 
@@ -30,15 +36,14 @@ The audit worktree is based on commit `459e09f`.
 | VSIX package | Pass |
 | Format, validation, dead-code, complexity gates | Pass |
 | Secret and high/critical dependency scan | Pass |
-| Fresh external install | Blocked by a local absolute `file:` dependency |
+| Fresh external install | Pass with pnpm 11.7.0 and no local symlink |
 
 ## Primary risks to resolve first
 
 1. The current gate can pass uncovered modified code.
 2. Workspace config can escape the workspace and execute repository-supplied
    commands without an explicit trust boundary.
-3. A clean external install is impossible with the local dependency.
-4. The first-class editor experiences do not actually prove the public beta loop.
+3. The first-class editor experiences do not actually prove the public beta loop.
 
 ## Proposed defaults pending product review
 
@@ -52,7 +57,6 @@ The audit worktree is based on commit `459e09f`.
 
 ## Next step
 
-Review `TARGET.md` and `EXEC_PLAN.md`, especially the proposed product narrowing,
-config/trust policy, and compatibility window. Once approved, begin M0 and M1 in
-separate coherent commits, keeping the application runnable at every milestone.
-
+Implement M1 in coherent commits: canonical workspace containment, fail-closed
+changed-line attribution, bounded command execution, and trusted config execution.
+Keep the application runnable at every milestone.
