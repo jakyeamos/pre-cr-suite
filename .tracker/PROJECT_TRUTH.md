@@ -1,17 +1,18 @@
 ---
 schemaVersion: 1
-healthScore: 96
-statusLabel: adopted_runtime_certified
-summary: "AIOS adoption docs, published package guidance, server simplification gates, pinned pnpm runtime behavior, fixture test harness isolation, and cross-client beta parity verification are current; final runtime smoke and Turbo tests now pass in this Codex shell. dependency:security now runs scripts/dependency-security.mjs (fails only on real high/critical advisories, skips on registry/network errors) so the offline commit gate no longer false-blocks."
-nextStep: "Continue release-hardening from the public beta roadmap, with lint warning cleanup and the new beta parity gate as ongoing drift prevention."
-blockers: []
-lastUpdated: "2026-07-05"
+healthScore: 78
+statusLabel: modernization_audit_complete
+summary: "The public-beta coverage workflow is verified locally, but its current delivery surface is broader, less safe, and less reproducible than its promise. A v2 target and vertical migration plan now prioritize correct changed-line decisions, workspace trust, reproducible installs, one contract, and first-class editor workflow proof."
+nextStep: "Review docs/modernization/TARGET.md and EXEC_PLAN.md, then begin M0/M1: clean-install reproducibility and a correct, bounded, trust-aware gate."
+blockers:
+  - "A clean external install is blocked by the machine-local eslint-plugin-anti-slop file dependency."
+lastUpdated: "2026-07-10"
 quality:
-  lint: warning
+  lint: pass
   types: pass
   tests: pass
   format: pass
-  deadCode: unknown
+  deadCode: pass
   structure: pass
   security: pass
 tags:
@@ -24,20 +25,35 @@ tags:
 
 ## Summary
 
-pre-cr-suite-lsp is a coverage-first pre-PR readiness workflow for VS Code and Neovim, centered on running a pre-review coverage check, refreshing coverage overlays, and fixing setup issues from shared repo config. The repo is positioned as a public beta with a narrow, explicit promise rather than a broad tool suite, and `.planning/` now exists to drive the next release-hardening phases.
+pre-cr-suite-lsp is a coverage-first pre-PR readiness workflow for VS Code,
+Neovim, and a headless CLI. The public beta should center one repo-configured
+loop—Setup → Run → Diagnose → Fix → Rerun—rather than the current broad legacy
+tool suite. `docs/modernization/` records the evidence-backed v2 target and
+vertical execution plan.
 
 ## Context
 
-The README and `docs/ROADMAP.md` both describe the public beta scope: `Run Pre-CR Check`, `Refresh Coverage`, and `Fix Setup`, with VS Code and Neovim as first-class clients. The repo is a TypeScript monorepo whose release gates require build, lint, test, typecheck, packaging, and parity verification from a clean clone.
+The README and `docs/ROADMAP.md` describe the public beta scope: `Run Pre-CR
+Check`, `Refresh Coverage`, and `Fix Setup`, with VS Code and Neovim as
+first-class clients. The repo is a TypeScript monorepo whose verified local gates
+now include build, lint, typecheck, 376 tests, headless smoke, server-artifact
+parity smoke, packaging, formatting, complexity, secret, and dependency checks.
 
-As of 2026-06-25, the beta gate also has a first-class headless JSON path through `pre-cr run --json`, repo-configured coverage adapters for non-JS emitters, explicit `surfaces` declarations for covered, ignored, and unsupported directories, and AIOS-compatible `.aios/audit/` artifacts when the headless gate blocks, warns, or forces iteration. Protected branches and explicit dev-environment flags block; detected unprotected feature branches warn. Direct executable runs emit start, heartbeat, and finish progress lines to stderr so JSON stdout remains machine-readable while Codex and terminals see long-running activity.
+The audit found that this verified baseline is not enough to certify the user
+experience: clean installs require a developer-local dependency; the gate can
+falsely pass missing coverage for modified files; repo config can escape the
+workspace and execute commands without an explicit trust boundary; and editor
+parity proves raw server artifacts rather than end-user workflows.
 
 ## Risks
 
-The main risk is parity drift between clients while experimental features continue to live in-repo. The product should stay disciplined around the beta workflow until those release gates are routinely passing.
+The primary risks are an incorrect coverage pass, untrusted workspace execution,
+non-reproducible installation, and drift between the documented beta loop and the
+default editor experiences. M0/M1 resolve the first three before UI migration.
 
 ## Recent Documentation Updates
 
+- 2026-07-10: Added `docs/modernization/AUDIT.md`, `TARGET.md`, `EXEC_PLAN.md`, and `PROGRESS.md` for the protected v2 modernization phase.
 - 2026-07-04: Clarified README quick start around the published `@pre-cr/core` and `@pre-cr/server` npm packages, with VS Code Marketplace installs still pending verification.
 - 2026-06-30: Removed the stale generated-index skip entry from the AIOS adoption gate scanner; `node --check scripts/aios-adoption-gates.mjs` passes.
 - 2026-05-18: Added or expanded README coverage for project and subproject roots so workspace documentation inventory is complete.
@@ -50,7 +66,6 @@ The main risk is parity drift between clients while experimental features contin
 
 ## Quality Ladder Notes
 
-- 2026-06-25: `pnpm lint` passed with existing warnings in `@pre-cr/core` and `pre-cr-suite`.
 - 2026-06-25: `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm secret:scan`, `pnpm test:headless-beta`, and VSIX packaging smoke passed.
 - 2026-06-25: `pnpm dependency:security` passed with no known vulnerabilities.
 - 2026-06-25: No `knip` or `audit:dead-code` script is configured, so dead-code and structure status remain unknown.
@@ -66,6 +81,7 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-30: Direct `node packages/server/dist/cli.js run --json --workspace /Users/jakyeamos/projects/pre-cr-suite-lsp` confirms the loaded headless framework command resolves to `corepack pnpm --filter pre-cr-suite test -- --coverage`; with no staged changes at the time of that check, it returned the expected no-changes warning-only result.
 - 2026-07-04: `pnpm lint`, `pnpm typecheck`, and `pnpm test` passed after the README package-install documentation update; lint still reports only the existing TypeScript support warning banner from `@typescript-eslint/typescript-estree`.
 - 2026-07-04: Added `fixtures/cross-client-beta-parity` and `pnpm test:beta-parity` to verify the public beta workflow across the VS Code bundled server artifact and the published `@pre-cr/server`/Neovim-style server entrypoint from the same `.pre-cr.json`. `pnpm test:beta-parity` and `pnpm test:headless-beta` pass.
+- 2026-07-10: Full local baseline passes: build, lint, typecheck, 376 tests, headless and parity smoke, package, static quality gates, secret scan, and dependency scan; clean install remains blocked by a local `file:` dependency.
 
 ## QR Remediation Planning
 
