@@ -17,7 +17,9 @@ M6 has started: legacy VS Code tools are now opt-in behind
 `preCr.experimental.enabled` and their views, commands, keybindings, and quick
 actions stay hidden or disabled by default. The server now also registers its
 legacy request handlers only when `initializationOptions.experimental.enabled`
-is explicitly true.
+is explicitly true. A VS Code activation lifecycle harness now covers stable
+startup, persisted readiness recovery, explicit experimental opt-in, setting
+reload, and restricted-mode trust/setup guidance.
 
 ## Completed
 
@@ -84,13 +86,16 @@ is explicitly true.
   tests covering the default-off surface.
 - Isolated the server's legacy checklist/docs/review/context/debug request
   registration behind the same explicit experimental opt-in.
+- Added VS Code activation lifecycle coverage for stable startup, readiness
+  recovery, experimental opt-in, configuration reload, and restricted-mode
+  setup/trust behavior.
 
 ## Verified baseline
 
 | Check | Result |
 | --- | --- |
 | Build, lint, typecheck | Pass |
-| Unit tests | Pass, 435 tests |
+| Unit tests | Pass, 439 tests |
 | Neovim readiness smoke | Pass (or cleanly skips when Neovim is unavailable) |
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
@@ -101,8 +106,9 @@ is explicitly true.
 
 ## Primary risks to resolve first
 
-1. Client workflows still need extension-host and end-to-end parity proof against
-   the consolidated result contract.
+1. Client workflows still need real extension-host and end-to-end parity proof
+   against the consolidated result contract; the activation harness covers the
+   lifecycle boundary but does not replace a VS Code host run.
 2. The legacy server methods and core modules still need explicit isolation,
    separate versioning, or removal.
 3. Experimental VS Code tools need a documented migration path before deletion.
