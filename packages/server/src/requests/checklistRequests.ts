@@ -2,7 +2,10 @@ import { parseIstanbulFile, parseLcovFile, runChecklist } from '@pre-cr/core';
 import type { ChecklistConfig, ChecklistInput, ChecklistResult, FileChange, FileContent, SourceFile, WorkspaceCoverage } from '@pre-cr/core';
 import { DEFAULT_CHECKLIST_CONFIG } from '@pre-cr/core';
 import type { Connection } from 'vscode-languageserver/node';
+import { DiagnosticSeverity } from 'vscode-languageserver/node';
 import * as fs from 'fs';
+import * as path from 'path';
+import { URI } from 'vscode-uri';
 import type { ServerRequestState } from '../serverSettings';
 import { resolveReadableWorkspacePath } from './workspacePath';
 
@@ -121,10 +124,40 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
         line: number;
         message: string;
         severity: string;
+        pattern: string;
       }>;
     }> => {
+      if (!state.workspaceRoot) {
+        return { hasIssues: false, findings: [] };
+      }
       const { scanSecurity } = await import('@pre-cr/core');
       const result = scanSecurity(params.files);
+
+      for (const file of params.files) {
+        const resolvedFile = resolveReadableWorkspacePath(state.workspaceRoot ?? '', file.path);
+        if (!resolvedFile.valid) {
+          continue;
+        }
+        const uri = URI.file(path.resolve(resolvedFile.path)).toString();
+        const findings = result.findings.filter((finding) => finding.file === file.path);
+        connection.sendDiagnostics({
+          uri,
+          diagnostics: findings.map((finding) => ({
+            severity: finding.severity === 'error'
+              ? DiagnosticSeverity.Error
+              : finding.severity === 'warning'
+                ? DiagnosticSeverity.Warning
+                : DiagnosticSeverity.Information,
+            range: {
+              start: { line: Math.max(0, finding.line - 1), character: 0 },
+              end: { line: Math.max(0, finding.line - 1), character: Number.MAX_SAFE_INTEGER }
+            },
+            message: finding.message,
+            source: 'Pre-CR Security',
+            code: finding.pattern
+          }))
+        });
+      }
 
       return {
         hasIssues: result.findings.length > 0,
@@ -132,7 +165,8 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
           file: f.file,
           line: f.line,
           message: f.message,
-          severity: f.severity
+          severity: f.severity,
+          pattern: f.pattern
         }))
       };
     }
