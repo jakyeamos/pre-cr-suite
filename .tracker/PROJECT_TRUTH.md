@@ -2,7 +2,7 @@
 schemaVersion: 1
 healthScore: 94
 statusLabel: modernization_m4_m5_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 now route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode now keeps the readiness controls available until trust is granted (commit 990a503)."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 now route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode keeps readiness controls available until trust is granted, and security diagnostics now have one server owner (commit 4417a80)."
 nextStep: "Finish extension-host and cross-client acceptance hardening, then begin legacy experimental-surface retirement."
 blockers: []
 lastUpdated: "2026-07-11"
@@ -52,6 +52,7 @@ engine and contract shape before the larger UI migration.
 
 ## Recent Documentation Updates
 
+- 2026-07-11: Moved experimental security diagnostics to the server publisher and made VS Code navigation consume server diagnostics; committed as `4417a80`.
 - 2026-07-11: Kept VS Code readiness view, status, and trust guidance available in Restricted Mode with safe command stubs; committed as `990a503`.
 - 2026-07-11: Committed cross-client readiness hardening as `fa39418`: workspace-scoped stable requests, explicit staged/worktree scope, warning-state parity, stale coverage cleanup, per-root Neovim state, and a Neovim readiness smoke script.
 - 2026-07-11: Recorded M3 completion after adding CLI scope/state/remediation, hook readiness envelopes, package export maps, and published-to-VSIX server artifact identity checks.

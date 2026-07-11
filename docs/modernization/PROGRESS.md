@@ -72,6 +72,8 @@ so multi-root routing and warning-state presentation use the same result.
 - Added cross-client acceptance hardening: explicit workspace-scoped stable
   requests, warning-state derivation, stale coverage/diagnostic cleanup, durable
   per-root Neovim recovery, and a headless Neovim readiness smoke script.
+- Moved the legacy security scan's diagnostic publication to the server and kept
+  VS Code's navigation/code actions on the server-owned diagnostics collection.
 
 ## Verified baseline
 
