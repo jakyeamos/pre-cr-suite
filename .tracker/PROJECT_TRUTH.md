@@ -2,7 +2,7 @@
 schemaVersion: 1
 healthScore: 92
 statusLabel: modernization_m4_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 now gives CLI, hooks, published server, and VSIX one readiness envelope and one server artifact."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 now gives CLI, hooks, published server, and VSIX one readiness envelope and one server artifact (commit c075a88)."
 nextStep: "Start M4 by rebuilding the VS Code experience around the readiness result while preserving documented beta command aliases."
 blockers: []
 lastUpdated: "2026-07-11"
@@ -53,6 +53,7 @@ engine and contract shape before the larger UI migration.
 ## Recent Documentation Updates
 
 - 2026-07-11: Recorded M3 completion after adding CLI scope/state/remediation, hook readiness envelopes, package export maps, and published-to-VSIX server artifact identity checks.
+- 2026-07-11: Committed M3 implementation as `c075a88`; serialized pre-pr, artifact, smoke, and packaging gates pass.
 - 2026-07-11: Recorded M2 completion after adding the stable contract registry, runtime request guards, canonical workspace sessions, nested-workspace coverage routing, and client method migration.
 - 2026-07-11: Committed M2 implementation as `1d0430e`; serialized pre-pr and all beta/package quality gates pass.
 - 2026-07-11: Recorded M1 completion and the M2 starting point after trusted execution, containment, bounded process, Git attribution, and coverage hardening.
