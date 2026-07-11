@@ -20,11 +20,18 @@ export * from './beta';
 export {
   validateCoverageFile,
   validateSourcePath,
+  resolveWorkspacePath,
   sanitizeForDisplay,
   formatBytes,
   LIMITS
 } from './validation';
-export type { ValidationResult } from './validation';
+export type {
+  ResolveWorkspacePathOptions,
+  ValidationResult,
+  WorkspacePathAccess,
+  WorkspacePathErrorCode,
+  WorkspacePathResult
+} from './validation';
 
 // Logger
 export {

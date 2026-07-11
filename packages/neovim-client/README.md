@@ -66,4 +66,12 @@ Project behavior should live in `.pre-cr.json`:
 }
 ```
 
+### Trusting a repository
+
+The default setup loads coverage information but does not execute commands from
+the repository. After reviewing a workspace’s `.pre-cr.json`, explicitly opt
+in with `require("pre-cr").setup({ trustedExecution = true })`. The shared
+[configuration guide](../../docs/CONFIGURATION.md#trusting-repository-commands)
+explains why this distinction exists across clients.
+
 The Neovim client should match the VS Code beta flow when both point at the same repo config.

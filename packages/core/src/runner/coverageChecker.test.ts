@@ -2,6 +2,8 @@
  * Coverage Checker Tests
  */
 
+import * as path from 'path';
+
 import { describe, it, expect } from 'vitest';
 import {
   checkChangesCoverage,
@@ -187,19 +189,146 @@ describe('Coverage Checker', () => {
       expect(result60.passed).toBe(true);
     });
 
-    it('should skip lines not in coverage data (non-executable)', () => {
+    it('fails a modified file when its coverage entry is missing', () => {
+      const changedFiles: ChangedFile[] = [{
+        path: 'src/missing.ts',
+        additions: [6],
+        modifications: [],
+        isNew: false,
+        lineContents: { 6: 'const missingCoverage = true;' }
+      }];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage());
+
+      expect(result.passed).toBe(false);
+      expect(result.coveragePercent).toBe(0);
+      expect(result.summary).toMatchObject({
+        totalChangedLines: 1,
+        coveredLines: 0,
+        uncoveredLines: 1,
+        skippedLines: 0
+      });
+      expect(result.uncoveredDetails).toEqual([{
+        file: 'src/missing.ts',
+        line: 6,
+        content: 'const missingCoverage = true;',
+        reason: 'no-coverage-data'
+      }]);
+      expect(result.fileBreakdown).toEqual([{
+        file: 'src/missing.ts',
+        changedLines: 1,
+        coveredLines: 0,
+        uncoveredLines: 1,
+        percent: 0,
+        passed: false
+      }]);
+    });
+
+    it('fails a missing changed line unless source text proves it is non-executable', () => {
       const changedFiles: ChangedFile[] = [{
         path: 'src/utils.ts',
         additions: [1, 2, 6, 7, 8], // lines 6-8 not in coverage data
+        modifications: [],
+        isNew: false,
+        lineContents: {
+          6: 'const missingCoverage = true;',
+          7: '  ',
+          8: '// documented intent'
+        }
+      }];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage());
+
+      expect(result.passed).toBe(false);
+      expect(result.summary).toMatchObject({
+        totalChangedLines: 3,
+        coveredLines: 2,
+        uncoveredLines: 1,
+        skippedLines: 2
+      });
+      expect(result.uncoveredDetails).toEqual([{
+        file: 'src/utils.ts',
+        line: 6,
+        content: 'const missingCoverage = true;',
+        reason: 'no-coverage-data'
+      }]);
+    });
+
+    it('fails missing coverage when source text is unavailable', () => {
+      const changedFiles: ChangedFile[] = [{
+        path: 'src/utils.ts',
+        additions: [6],
         modifications: [],
         isNew: false
       }];
 
       const result = checkChangesCoverage(changedFiles, createSampleCoverage());
 
-      // Only lines 1, 2 should be counted
-      expect(result.summary.totalChangedLines).toBe(2);
-      expect(result.summary.skippedLines).toBe(3);
+      expect(result.passed).toBe(false);
+      expect(result.summary).toMatchObject({
+        totalChangedLines: 1,
+        uncoveredLines: 1,
+        skippedLines: 0
+      });
+      expect(result.uncoveredDetails).toEqual([{
+        file: 'src/utils.ts',
+        line: 6,
+        reason: 'no-coverage-data'
+      }]);
+    });
+
+    it('does not mistake inline or unknown-language comment markers for full-line comments', () => {
+      const changedFiles: ChangedFile[] = [{
+        path: 'src/utils.ts',
+        additions: [6, 7],
+        modifications: [],
+        isNew: false,
+        lineContents: {
+          6: 'const value = 1; // comment',
+          7: '# not a TypeScript comment'
+        }
+      }];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage());
+
+      expect(result.passed).toBe(false);
+      expect(result.summary).toMatchObject({
+        totalChangedLines: 2,
+        uncoveredLines: 2,
+        skippedLines: 0
+      });
+    });
+
+    it('honors comment and blank-line skip options only with source proof', () => {
+      const changedFiles: ChangedFile[] = [{
+        path: 'src/utils.ts',
+        additions: [6, 7],
+        modifications: [],
+        isNew: false,
+        lineContents: {
+          6: '',
+          7: '/* whole line comment */'
+        }
+      }];
+
+      const skipped = checkChangesCoverage(changedFiles, createSampleCoverage());
+      const required = checkChangesCoverage(changedFiles, createSampleCoverage(), {
+        skipBlankLines: false,
+        skipComments: false
+      });
+
+      expect(skipped.passed).toBe(true);
+      expect(skipped.summary).toMatchObject({
+        totalChangedLines: 0,
+        uncoveredLines: 0,
+        skippedLines: 2
+      });
+      expect(required.passed).toBe(false);
+      expect(required.summary).toMatchObject({
+        totalChangedLines: 2,
+        uncoveredLines: 2,
+        skippedLines: 0
+      });
     });
 
     it('should handle empty changed files', () => {
@@ -294,6 +423,85 @@ describe('Coverage Checker', () => {
       });
       expect(result.unsupportedFiles).toEqual(['python/app.py']);
       expect(result.fileBreakdown.map((entry) => entry.file)).toEqual(['src/utils.ts']);
+    });
+
+    it('fails a file that is omitted from an explicit coverage surface', () => {
+      const changedFiles: ChangedFile[] = [{
+        path: 'scripts/release.ts',
+        additions: [1],
+        modifications: [],
+        isNew: false
+      }];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage(), {
+        surfaces: {
+          covered: ['src/**'],
+          ignored: ['docs/**'],
+          unsupported: []
+        }
+      });
+
+      expect(result.passed).toBe(false);
+      expect(result.unsupportedFiles).toEqual(['scripts/release.ts']);
+      expect(result.surfaceSummary).toEqual({
+        coveredFiles: 0,
+        ignoredFiles: 0,
+        unsupportedFiles: 1
+      });
+    });
+
+    it('does not borrow coverage from a matching filename in another directory', () => {
+      const changedFiles: ChangedFile[] = [{
+        path: 'src/other/utils.ts',
+        additions: [1],
+        modifications: [],
+        isNew: false
+      }];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage());
+
+      expect(result.passed).toBe(false);
+      expect(result.uncoveredDetails).toEqual([{
+        file: 'src/other/utils.ts',
+        line: 1,
+        reason: 'no-coverage-data'
+      }]);
+    });
+
+    it('does not borrow nested coverage for a root-level filename', () => {
+      const changedFiles: ChangedFile[] = [{
+        path: 'utils.ts',
+        additions: [1],
+        modifications: [],
+        isNew: false
+      }];
+
+      const result = checkChangesCoverage(changedFiles, createSampleCoverage());
+
+      expect(result.passed).toBe(false);
+      expect(result.uncoveredDetails).toEqual([{
+        file: 'utils.ts',
+        line: 1,
+        reason: 'no-coverage-data'
+      }]);
+    });
+
+    it('matches an absolute reporter path only through the supplied workspace root', () => {
+      const workspaceRoot = '/workspace';
+      const coverage = createSampleCoverage();
+      const relativeCoverage = coverage.files.get('src/utils.ts');
+      expect(relativeCoverage).toBeDefined();
+      coverage.files = new Map([[path.join(workspaceRoot, 'src/utils.ts'), relativeCoverage!]]);
+
+      const result = checkChangesCoverage([{
+        path: 'src/utils.ts',
+        additions: [1],
+        modifications: [],
+        isNew: false
+      }], coverage, { workspaceRoot });
+
+      expect(result.passed).toBe(true);
+      expect(result.summary.coveredLines).toBe(1);
     });
   });
 

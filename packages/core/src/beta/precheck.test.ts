@@ -5,7 +5,8 @@ import { execFileSync } from 'child_process';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { runWorkspacePreCrCheck } from './precheck';
+import { loadWorkspaceCoverage, runWorkspacePreCrCheck } from './precheck';
+import { loadProjectConfig } from './config';
 
 const tempRoots: string[] = [];
 const PRECHECK_INTEGRATION_TIMEOUT_MS = 15_000;
@@ -69,7 +70,9 @@ fs.writeFileSync('build/python.lcov', [
     execFileSync('git', ['commit', '-m', 'initial'], { cwd: workspaceRoot });
     fs.appendFileSync(path.join(workspaceRoot, 'python', 'app.py'), 'print("new")\n');
 
-    const result = await runWorkspacePreCrCheck(workspaceRoot);
+    const result = await runWorkspacePreCrCheck(workspaceRoot, {
+      allowConfigExecution: true
+    });
 
     expect(result.error).toBeUndefined();
     expect(result.result?.coveragePath).toBe(path.join(workspaceRoot, 'build', 'python.lcov'));
@@ -133,7 +136,9 @@ fs.writeFileSync('build/python.lcov', [
     execFileSync('git', ['commit', '-m', 'initial'], { cwd: workspaceRoot });
     fs.appendFileSync(path.join(workspaceRoot, 'python', 'app.py'), 'print("new")\n');
 
-    const result = await runWorkspacePreCrCheck(workspaceRoot);
+    const result = await runWorkspacePreCrCheck(workspaceRoot, {
+      allowConfigExecution: true
+    });
 
     expect(result.result?.coveragePath).toBe(path.join(workspaceRoot, 'build', 'python.lcov'));
     expect(result.result?.coverageCheck?.passed).toBe(true);
@@ -186,7 +191,7 @@ process.exit(0);
       ],
       surfaces: {
         covered: ['src/**'],
-        ignored: [],
+        ignored: ['docs/**'],
         unsupported: []
       },
       threshold: 100
@@ -194,14 +199,18 @@ process.exit(0);
     execFileSync('git', ['add', '.'], { cwd: workspaceRoot });
     execFileSync('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'initial'], { cwd: workspaceRoot });
     fs.appendFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'console.log("new");\n');
+    fs.mkdirSync(path.join(workspaceRoot, 'docs'));
+    fs.writeFileSync(path.join(workspaceRoot, 'docs', 'arg --not-a-flag.md'), 'docs only\n');
 
-    const result = await runWorkspacePreCrCheck(workspaceRoot);
+    const result = await runWorkspacePreCrCheck(workspaceRoot, {
+      allowConfigExecution: true
+    });
     const qualityArgs = JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'quality-args.json'), 'utf-8'));
 
     expect(result.result?.coverageCheck?.passed).toBe(true);
     expect(result.result?.qualityAdaptersPassed).toBe(true);
     expect(result.result?.qualityAdapters[0].name).toBe('anti-slop');
-    expect(qualityArgs).toEqual(['--files', 'src/app.js']);
+    expect(qualityArgs).toEqual(['--files', 'src/app.js,docs/arg --not-a-flag.md']);
   }, PRECHECK_INTEGRATION_TIMEOUT_MS);
 
   it('marks the Pre-CR result failed when a required quality adapter fails', async () => {
@@ -255,11 +264,85 @@ fs.writeFileSync('build/app.lcov', [
     execFileSync('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'initial'], { cwd: workspaceRoot });
     fs.appendFileSync(path.join(workspaceRoot, 'src', 'app.js'), 'console.log("new");\n');
 
-    const result = await runWorkspacePreCrCheck(workspaceRoot);
+    const result = await runWorkspacePreCrCheck(workspaceRoot, {
+      allowConfigExecution: true
+    });
 
     expect(result.result?.coverageCheck?.passed).toBe(true);
     expect(result.result?.qualityAdaptersPassed).toBe(false);
     expect(result.result?.qualityAdapters[0].success).toBe(false);
   }, PRECHECK_INTEGRATION_TIMEOUT_MS);
+
+  it('does not execute repository commands before the workspace is trusted', async () => {
+    const workspaceRoot = createGitWorkspace();
+    const markerPath = path.join(workspaceRoot, 'repository-command-ran');
+    fs.mkdirSync(path.join(workspaceRoot, 'scripts'));
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'unsafe-command.js'), `
+const fs = require('fs');
+fs.writeFileSync(${JSON.stringify(markerPath)}, 'ran');
+`);
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      testCommand: 'node scripts/unsafe-command.js',
+      qualityAdapters: []
+    }));
+
+    const result = await runWorkspacePreCrCheck(workspaceRoot);
+
+    expect(fs.existsSync(markerPath)).toBe(false);
+    expect(result.result?.health.ready).toBe(false);
+    expect(result.result?.health.issues).toContainEqual(expect.objectContaining({
+      code: 'untrusted-workspace',
+      severity: 'error'
+    }));
+    expect(result.result?.testRun).toBeNull();
+  });
+
+  it('rejects an escaping configured coverage path before running repository commands', async () => {
+    const workspaceRoot = createGitWorkspace();
+    const markerPath = path.join(workspaceRoot, 'repository-command-ran');
+    fs.mkdirSync(path.join(workspaceRoot, 'scripts'));
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'unsafe-command.js'), `
+const fs = require('fs');
+fs.writeFileSync(${JSON.stringify(markerPath)}, 'ran');
+`);
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      testCommand: 'node scripts/unsafe-command.js',
+      coveragePaths: ['../outside.lcov'],
+      qualityAdapters: []
+    }));
+
+    const result = await runWorkspacePreCrCheck(workspaceRoot, {
+      allowConfigExecution: true
+    });
+
+    expect(fs.existsSync(markerPath)).toBe(false);
+    expect(result.result?.health.ready).toBe(false);
+    expect(result.result?.health.issues).toContainEqual(expect.objectContaining({
+      code: 'invalid-config',
+      severity: 'error'
+    }));
+    expect(result.result?.testRun).toBeNull();
+  });
+
+  it('rejects an oversized configured coverage report before parsing it', () => {
+    const workspaceRoot = createGitWorkspace();
+    fs.mkdirSync(path.join(workspaceRoot, 'coverage'));
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      coveragePaths: ['coverage/lcov.info'],
+      qualityAdapters: []
+    }));
+    fs.writeFileSync(
+      path.join(workspaceRoot, 'coverage', 'lcov.info'),
+      Buffer.alloc(10 * 1024 * 1024 + 1, 'x')
+    );
+
+    const result = loadWorkspaceCoverage(workspaceRoot, loadProjectConfig(workspaceRoot));
+
+    expect(result.coverage).toBeNull();
+    expect(result.error).toContain('Coverage file is too large');
+  });
 
 });

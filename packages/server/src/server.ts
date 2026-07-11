@@ -56,6 +56,7 @@ let coverage: WorkspaceCoverage | null = null;
 let coveragePath: string | null = null;
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
+let trustedExecution = false;
 
 const requestState: ServerRequestState = {
   get workspaceRoot() {
@@ -66,6 +67,9 @@ const requestState: ServerRequestState = {
   },
   get coverage() {
     return coverage;
+  },
+  get trustedExecution() {
+    return trustedExecution;
   }
 };
 
@@ -76,6 +80,7 @@ const coverageController = createCoverageController({
   getWorkspaceRoot: () => workspaceRoot,
   getCoverage: () => coverage,
   getCoveragePath: () => coveragePath,
+  getTrustedExecution: () => trustedExecution,
   setCoverageState: (nextCoverage, nextCoveragePath) => {
     coverage = nextCoverage;
     coveragePath = nextCoveragePath;
@@ -119,6 +124,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   hasWorkspaceFolderCapability = !!(
     capabilities.workspace && !!capabilities.workspace.workspaceFolders
   );
+  trustedExecution = hasTrustedExecution(params.initializationOptions);
 
   if (params.workspaceFolders && params.workspaceFolders.length > 0) {
     workspaceRoot = URI.parse(params.workspaceFolders[0].uri).fsPath;
@@ -126,7 +132,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     workspaceRoot = URI.parse(params.rootUri).fsPath;
   }
 
-  connection.console.info(`Pre-CR Server initializing. Workspace: ${workspaceRoot}`);
+  connection.console.info(`Pre-CR Server initializing. Workspace: ${workspaceRoot}; trusted execution: ${trustedExecution}`);
 
   if (workspaceRoot) {
     coverageController.loadCoverage();
@@ -145,6 +151,14 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     }
   };
 });
+
+function hasTrustedExecution(initializationOptions: unknown): boolean {
+  if (typeof initializationOptions !== 'object' || initializationOptions === null) {
+    return false;
+  }
+
+  return (initializationOptions as Record<string, unknown>).trustedExecution === true;
+}
 
 connection.onInitialized(() => {
   if (hasConfigurationCapability) {

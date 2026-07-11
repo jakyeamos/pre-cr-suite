@@ -10,19 +10,28 @@ import { runHeadlessCli, runHeadlessCliWithProgress } from './cli';
 
 describe('runHeadlessCli', () => {
   it('runs the gate in JSON mode without using the LSP transport', async () => {
-    const calls: Array<{ workspaceRoot: string; changeScope: string | undefined }> = [];
+    const calls: Array<{
+      workspaceRoot: string;
+      changeScope: string | undefined;
+      allowConfigExecution: boolean | undefined;
+    }> = [];
 
     const result = await runHeadlessCli(['run', '--json', '--workspace', '/repo'], {
       runCheck: async (workspaceRoot, options) => {
         calls.push({
           workspaceRoot,
-          changeScope: options?.changeScope
+          changeScope: options?.changeScope,
+          allowConfigExecution: options?.allowConfigExecution
         });
         return makeRunResult(workspaceRoot);
       }
     });
 
-    expect(calls).toEqual([{ workspaceRoot: '/repo', changeScope: 'staged' }]);
+    expect(calls).toEqual([{
+      workspaceRoot: '/repo',
+      changeScope: 'staged',
+      allowConfigExecution: true
+    }]);
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
       ok: true,

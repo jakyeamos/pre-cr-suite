@@ -3,8 +3,8 @@ import type { ChecklistConfig, ChecklistInput, ChecklistResult, FileChange, File
 import { DEFAULT_CHECKLIST_CONFIG } from '@pre-cr/core';
 import type { Connection } from 'vscode-languageserver/node';
 import * as fs from 'fs';
-import * as path from 'path';
 import type { ServerRequestState } from '../serverSettings';
+import { resolveReadableWorkspacePath } from './workspacePath';
 
 export function registerChecklistRequests(connection: Connection, state: ServerRequestState): void {
   interface RunChecklistParams {
@@ -51,11 +51,14 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
         for (const change of params.changes) {
           if (change.isDeleted) continue;
 
-          const filePath = path.join(state.workspaceRoot, change.path);
+          const resolvedFile = resolveReadableWorkspacePath(state.workspaceRoot, change.path);
+          if (!resolvedFile.valid) {
+            return { result: null, error: resolvedFile.error };
+          }
 
           try {
-            if (fs.existsSync(filePath)) {
-              const content = fs.readFileSync(filePath, 'utf-8');
+            if (fs.existsSync(resolvedFile.path)) {
+              const content = fs.readFileSync(resolvedFile.path, 'utf-8');
               files.push({ path: change.path, content });
               sourceFiles.push({
                 path: change.path,
@@ -65,18 +68,22 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
             }
           } catch (err) {
             // Skip files that can't be read
-            connection.console.warn(`Could not read file: ${filePath}`);
+            connection.console.warn(`Could not read file: ${change.path}`);
           }
         }
 
         // Load base coverage if provided
         let baseCoverage: WorkspaceCoverage | undefined;
         if (params.baseCoveragePath) {
-          const basePath = path.join(state.workspaceRoot, params.baseCoveragePath);
-          if (fs.existsSync(basePath)) {
-            const result = basePath.endsWith('.json')
-              ? parseIstanbulFile(basePath, state.workspaceRoot)
-              : parseLcovFile(basePath, state.workspaceRoot);
+          const resolvedBaseCoverage = resolveReadableWorkspacePath(state.workspaceRoot, params.baseCoveragePath);
+          if (!resolvedBaseCoverage.valid) {
+            return { result: null, error: resolvedBaseCoverage.error };
+          }
+
+          if (fs.existsSync(resolvedBaseCoverage.path)) {
+            const result = resolvedBaseCoverage.path.endsWith('.json')
+              ? parseIstanbulFile(resolvedBaseCoverage.path, state.workspaceRoot)
+              : parseLcovFile(resolvedBaseCoverage.path, state.workspaceRoot);
             if (result.success && result.data) {
               baseCoverage = result.data;
             }

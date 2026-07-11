@@ -74,6 +74,9 @@ class LspSession {
           configuration: true,
           workspaceFolders: true
         }
+      },
+      initializationOptions: {
+        trustedExecution: true
       }
     });
     this.notify('initialized', {});

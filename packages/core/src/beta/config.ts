@@ -8,6 +8,7 @@ import type {
   PreCrQualityAdapterConfig,
   PreCrSurfaceConfig
 } from '../protocol';
+import { resolveWorkspacePath } from '../validation';
 
 const DEFAULT_COVERAGE_PATHS = [
   'coverage/lcov.info',
@@ -211,11 +212,18 @@ function parseHookRules(value: unknown): Record<string, PreCrProjectConfig['hook
 
 export function resolveProjectPath(
   workspaceRoot: string,
-  loadedConfig: LoadedPreCrProjectConfig,
+  _loadedConfig: LoadedPreCrProjectConfig,
   relativePath: string
 ): string {
-  const baseDirectory = loadedConfig.path ? path.dirname(loadedConfig.path) : workspaceRoot;
-  return path.resolve(baseDirectory, relativePath);
+  const result = resolveWorkspacePath(workspaceRoot, relativePath, {
+    access: 'read',
+    allowMissing: true
+  });
+  if (!result.valid) {
+    throw new Error(`Invalid project path "${relativePath}": ${result.error}`);
+  }
+
+  return result.resolvedPath;
 }
 
 export function inferCoverageFormat(filePath: string): Exclude<PreCrProjectConfig['coverageFormat'], 'auto'> {

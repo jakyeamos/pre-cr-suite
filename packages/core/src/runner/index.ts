@@ -6,3 +6,4 @@
 
 export * from './testRunner';
 export * from './coverageChecker';
+export * from './processRunner';

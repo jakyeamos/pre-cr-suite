@@ -1,9 +1,7 @@
 import { createHash, randomUUID } from 'crypto';
-import { execFile } from 'child_process';
 import { appendFile, mkdir, readFile, writeFile } from 'fs/promises';
 import * as path from 'path';
-import { promisify } from 'util';
-import type { RunPreCrCheckResult } from '@pre-cr/core';
+import { runProcess, type RunPreCrCheckResult } from '@pre-cr/core';
 
 export type GateDecision = 'block' | 'warn';
 
@@ -51,7 +49,6 @@ interface QualityGateAuditEvent {
 
 const SECRET_RE =
   /\b(api[_-]?key|secret|token|password|private[_-]?key|client[_-]?secret)\b\s*[:=]\s*['"][^'"\s]{8,}['"]/gi;
-const execFileAsync = promisify(execFile);
 const PROTECTED_BRANCHES = new Set(['main', 'master', 'dev', 'develop', 'development']);
 const BRANCH_ENV_KEYS = ['AIOS_BRANCH', 'GITHUB_REF_NAME', 'GITHUB_HEAD_REF', 'BRANCH_NAME', 'VERCEL_GIT_COMMIT_REF'];
 const DEV_ENV_KEYS = ['AIOS_DEV_ENVIRONMENT', 'AIOS_DEV_ENV', 'QUALITY_GATE_DEV_ENV', 'GATE_CONNECTED_DEV_ENV'];
@@ -169,10 +166,18 @@ export async function defaultCurrentBranch(workspaceRoot: string): Promise<strin
     return normalizeBranch(envBranch);
   }
   try {
-    const result = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-      cwd: workspaceRoot
+    const result = await runProcess({
+      command: 'git',
+      args: ['rev-parse', '--abbrev-ref', 'HEAD'],
+      cwd: workspaceRoot,
+      env: { ...process.env, GIT_PAGER: 'cat', PAGER: 'cat' },
+      maxStdoutBytes: 64 * 1024,
+      maxStderrBytes: 64 * 1024
     });
-    const branch = result.stdout.trim();
+    if (!result.success) {
+      return null;
+    }
+    const branch = result.stdout.text.trim();
     return branch ? normalizeBranch(branch) : null;
   } catch {
     return null;

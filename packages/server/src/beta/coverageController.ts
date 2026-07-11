@@ -43,6 +43,7 @@ interface CoverageControllerContext {
   getWorkspaceRoot: () => string | null;
   getCoverage: () => WorkspaceCoverage | null;
   getCoveragePath: () => string | null;
+  getTrustedExecution: () => boolean;
   setCoverageState: (coverage: WorkspaceCoverage | null, coveragePath: string | null) => void;
 }
 
@@ -62,6 +63,7 @@ export function createCoverageController(context: CoverageControllerContext): Co
     getWorkspaceRoot,
     getCoverage,
     getCoveragePath,
+    getTrustedExecution,
     setCoverageState
   } = context;
 
@@ -375,7 +377,9 @@ export function createCoverageController(context: CoverageControllerContext): Co
         return { result: null, error: 'No workspace root' };
       }
 
-      const result = await runWorkspacePreCrCheck(workspaceRoot);
+      const result = await runWorkspacePreCrCheck(workspaceRoot, {
+        allowConfigExecution: getTrustedExecution()
+      });
       if (result.result?.coveragePath) {
         loadCoverage();
       }

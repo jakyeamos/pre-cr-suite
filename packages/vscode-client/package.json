@@ -37,6 +37,12 @@
     "workspaceContains:**/.nyc_output/**"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Pre-CR does not run repository-configured commands until the workspace is trusted."
+    }
+  },
   "contributes": {
     "commands": [
       {

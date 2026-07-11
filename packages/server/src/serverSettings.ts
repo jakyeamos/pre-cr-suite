@@ -62,4 +62,5 @@ export interface ServerRequestState {
   readonly workspaceRoot: string | null;
   readonly globalSettings: ServerSettings;
   readonly coverage: WorkspaceCoverage | null;
+  readonly trustedExecution: boolean;
 }

@@ -2,9 +2,10 @@
 
 ## Current state
 
-M0 is complete on isolated branch `codex/gpt56-modernization-audit` at
-`3e88e4d`. The original checkout remains untouched because it had unrelated
-untracked files. M1—correct, bounded, trust-aware gate behavior—is next.
+M0 and M1 are complete on isolated branch `codex/gpt56-modernization-audit`.
+The original checkout remains untouched because it had unrelated untracked
+files. M1 establishes the safe execution and changed-line correctness boundary
+that the v2 engine will build on.
 
 ## Completed
 
@@ -24,6 +25,21 @@ untracked files. M1—correct, bounded, trust-aware gate behavior—is next.
   release job run the full quality, security, beta, and packaging proof.
 - Proved a fresh `git clone --no-local` installs with `CI=true corepack pnpm
   install --frozen-lockfile`, no local symlink, and pnpm 11.7.0.
+- Added one canonical workspace-path resolver with lexical and realpath checks,
+  including symlink and missing-write-target handling.
+- Made repository command execution explicit: VS Code requires workspace trust,
+  Neovim defaults to read-only readiness, the server requires a trusted init
+  option, and CLI/hooks acknowledge execution explicitly.
+- Replaced unbounded repository/test/adapter subprocesses with one bounded,
+  non-shell runner that caps output, times out, supports cancellation, and
+  terminates process groups.
+- Made Git attribution NUL-safe and content-aware for staged, worktree,
+  untracked, renamed, unusual-name, and binary changes.
+- Made changed-line coverage fail closed for missing data and unclassified
+  surfaces; coverage reports and their source paths are size- and workspace-
+  validated before parsing.
+- Added containment checks to legacy server request, hook-audit, hook-Git, and
+  VS Code fallback Git paths.
 
 ## Verified baseline
 
@@ -40,10 +56,12 @@ untracked files. M1—correct, bounded, trust-aware gate behavior—is next.
 
 ## Primary risks to resolve first
 
-1. The current gate can pass uncovered modified code.
-2. Workspace config can escape the workspace and execute repository-supplied
-   commands without an explicit trust boundary.
-3. The first-class editor experiences do not actually prove the public beta loop.
+1. The legacy suite still exposes experimental surfaces that should be isolated
+   or removed as the v2 contract is introduced.
+2. Client workflows still need end-to-end parity proof against the consolidated
+   result contract.
+3. The current server and bundled artifact still contain duplicate ownership that
+   M2–M3 must collapse.
 
 ## Proposed defaults pending product review
 
@@ -52,11 +70,11 @@ untracked files. M1—correct, bounded, trust-aware gate behavior—is next.
 | Product scope | Ship only the coverage-readiness beta loop; remove or explicitly isolate experimental features. |
 | Migration shape | Build v2 in parallel and migrate vertical slices; do not refactor the legacy suite in place. |
 | Config evolution | Read v1 through a tested adapter, offer explicit v2 migration, then remove the adapter at the documented cutover. |
-| Trust behavior | Require VS Code workspace trust before execution and an explicit CLI acknowledgement when non-interactive automation needs it. |
+| Trust behavior | Require explicit execution trust at every repository-command boundary; VS Code supplies Workspace Trust, Neovim requires opt-in, and automation opts in explicitly. |
 | Public compatibility | Preserve documented beta commands/entrypoints temporarily; do not preserve undocumented experimental RPC as permanent shims. |
 
 ## Next step
 
-Implement M1 in coherent commits: canonical workspace containment, fail-closed
-changed-line attribution, bounded command execution, and trusted config execution.
+Implement M2–M3 in coherent vertical slices: separate domain/contracts from the
+workspace engine, then consolidate the server runtime and packaged artifact.
 Keep the application runnable at every milestone.

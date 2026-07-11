@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import type { PreCrProjectConfig, RunPreCrCheckResult } from '@pre-cr/core';
+import type { PreCrProjectConfig, RunPreCrCheckResult, RunWorkspacePreCrCheckOptions } from '@pre-cr/core';
 import { loadProjectConfig, runWorkspacePreCrCheck } from '@pre-cr/core';
 
 import { appendHookAuditEvents } from './audit';
@@ -9,7 +9,7 @@ import { DEFAULT_HOOK_RULE_POLICY, evaluateHookRules, findingForRule, hasSourceF
 import type { HookFinding, HookName, HookRunResult } from './types';
 
 export interface HookRunDependencies {
-  runCheck?: (workspaceRoot: string, options?: { changeScope?: 'worktree' | 'staged' }) => Promise<RunPreCrCheckResult>;
+  runCheck?: (workspaceRoot: string, options?: RunWorkspacePreCrCheckOptions) => Promise<RunPreCrCheckResult>;
   collectStagedPaths?: (workspaceRoot: string) => Promise<string[]>;
 }
 
@@ -60,7 +60,10 @@ export async function runHook(options: HookRunOptions, dependencies: HookRunDepe
 
   if (!findings.some((finding) => finding.severity === 'block') && configExists) {
     const runCheck = dependencies.runCheck ?? runWorkspacePreCrCheck;
-    const result = await runCheck(options.workspaceRoot, { changeScope: 'staged' });
+    const result = await runCheck(options.workspaceRoot, {
+      changeScope: 'staged',
+      allowConfigExecution: true
+    });
     const coveragePassed = result.result?.coverageCheck?.passed ?? false;
     const qualityAdaptersPassed = result.result?.qualityAdaptersPassed ?? true;
     const ok = Boolean(result.result && !result.error && coveragePassed && qualityAdaptersPassed);

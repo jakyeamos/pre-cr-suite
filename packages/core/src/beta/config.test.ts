@@ -71,6 +71,9 @@ describe('loadProjectConfig', () => {
     expect(resolveProjectPath(workspaceRoot, result, 'reports/lcov.info')).toBe(
       path.join(workspaceRoot, 'reports/lcov.info')
     );
+    expect(() => resolveProjectPath(workspaceRoot, result, '../outside/lcov.info')).toThrow(
+      'Invalid project path "../outside/lcov.info": Path is outside workspace directory'
+    );
   });
 
   it('loads coverage adapters, quality adapters, and surface declarations', () => {

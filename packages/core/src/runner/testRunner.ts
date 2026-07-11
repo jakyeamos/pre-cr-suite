@@ -7,10 +7,11 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn } from 'child_process';
 
 import { loadProjectConfig, inferCoverageFormat } from '../beta/config';
 import { parseCommandString, resolveWorkspaceCommand } from '../beta/command';
+import { resolveWorkspacePath } from '../validation';
+import { runProcess } from './processRunner';
 
 export interface TestFramework {
   name: string;
@@ -204,85 +205,52 @@ export async function runTestsWithCoverage(
     onOutput?: (data: string, isError: boolean) => void;
   }
 ): Promise<TestExecutionResult> {
-  const startTime = Date.now();
   const timeout = options?.timeout ?? 300000; // 5 min default
-
-  return new Promise((resolve) => {
-    const args = [...framework.args];
-
-    // Add test file pattern if specified
-    if (options?.testFilePattern) {
-      if (framework.name === 'jest' || framework.name === 'vitest') {
-        args.push(options.testFilePattern);
-      }
-    }
-
-    const proc = spawn(framework.command, args, {
-      cwd: workspaceRoot,
-      shell: false,
-      env: { ...process.env, FORCE_COLOR: '0' }
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    proc.stdout?.on('data', (data) => {
-      const text = data.toString();
-      stdout += text;
-      options?.onOutput?.(text, false);
-    });
-
-    proc.stderr?.on('data', (data) => {
-      const text = data.toString();
-      stderr += text;
-      options?.onOutput?.(text, true);
-    });
-
-    const timeoutId = setTimeout(() => {
-      proc.kill('SIGTERM');
-      resolve({
-        success: false,
-        exitCode: -1,
-        stdout,
-        stderr,
-        coveragePath: null,
-        duration: Date.now() - startTime,
-        error: `Test run timed out after ${timeout / 1000}s`
-      });
-    }, timeout);
-
-    proc.on('close', (code) => {
-      clearTimeout(timeoutId);
-      const duration = Date.now() - startTime;
-      const exitCode = code ?? 0;
-
-      // Check if coverage file was generated
-      const coveragePath = path.join(workspaceRoot, framework.coverageOutputPath);
-      const coverageExists = fs.existsSync(coveragePath);
-
-      resolve({
-        success: exitCode === 0,
-        exitCode,
-        stdout,
-        stderr,
-        coveragePath: coverageExists ? coveragePath : null,
-        duration
-      });
-    });
-
-    proc.on('error', (err) => {
-      clearTimeout(timeoutId);
-      resolve({
-        success: false,
-        exitCode: -1,
-        stdout,
-        stderr,
-        coveragePath: null,
-        duration: Date.now() - startTime,
-        error: `Failed to start test process: ${err.message}`
-      });
-    });
+  const coveragePathResult = resolveWorkspacePath(workspaceRoot, framework.coverageOutputPath, {
+    access: 'write'
   });
+  if (!coveragePathResult.valid) {
+    return {
+      success: false,
+      exitCode: -1,
+      stdout: '',
+      stderr: '',
+      coveragePath: null,
+      duration: 0,
+      error: `Invalid coverage output path: ${coveragePathResult.error}`
+    };
+  }
+
+  const args = [...framework.args];
+  if (options?.testFilePattern && (framework.name === 'jest' || framework.name === 'vitest')) {
+    args.push(options.testFilePattern);
+  }
+
+  const result = await runProcess({
+    command: framework.command,
+    args,
+    cwd: workspaceRoot,
+    env: { ...process.env, FORCE_COLOR: '0' },
+    timeoutMs: timeout,
+    onStdout: (text) => options?.onOutput?.(text, false),
+    onStderr: (text) => options?.onOutput?.(text, true)
+  });
+  const coverageReadResult = resolveWorkspacePath(workspaceRoot, framework.coverageOutputPath, {
+    access: 'read'
+  });
+  const coveragePath = coverageReadResult.valid && fs.existsSync(coverageReadResult.resolvedPath)
+    ? coverageReadResult.resolvedPath
+    : null;
+
+  return {
+    success: result.success,
+    exitCode: result.exitCode ?? -1,
+    stdout: result.stdout.text,
+    stderr: result.stderr.text,
+    coveragePath,
+    duration: result.durationMs,
+    error: result.error
+  };
 }
 
 /**

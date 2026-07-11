@@ -35,6 +35,7 @@ import {
   mergeSummaries
 } from '../types';
 import { getLogger } from '../logger';
+import { resolveWorkspacePath } from '../validation';
 
 /**
  * Parse an LCOV file from disk
@@ -93,15 +94,27 @@ export function parseLcovContent(
 
     // Source file
     if (trimmed.startsWith('SF:')) {
-      currentFile = trimmed.slice(3);
+      const requestedPath = trimmed.slice(3);
+      if (workspaceRoot) {
+        const pathResult = resolveWorkspacePath(workspaceRoot, requestedPath, {
+          access: 'read',
+          allowMissing: true,
+          allowAbsolute: true
+        });
+        if (!pathResult.valid) {
+          errors.push({
+            message: `Coverage source path is outside the workspace: ${requestedPath}`,
+            line: lineNum,
+            fatal: true
+          });
+          currentFile = null;
+          continue;
+        }
 
-      // Resolve relative paths
-      if (workspaceRoot && !path.isAbsolute(currentFile)) {
-        currentFile = path.resolve(workspaceRoot, currentFile);
+        currentFile = pathResult.resolvedPath;
+      } else {
+        currentFile = path.normalize(requestedPath);
       }
-
-      // Normalize path separators
-      currentFile = path.normalize(currentFile);
       continue;
     }
 

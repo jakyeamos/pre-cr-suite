@@ -67,6 +67,19 @@ export async function activate(context: vscode.ExtensionContext) {
     log(`State init failed: ${error}`);
   }
 
+  if (!vscode.workspace.isTrusted) {
+    log('Pre-CR is inactive until this workspace is trusted.', 'warn');
+    context.subscriptions.push(
+      vscode.workspace.onDidGrantWorkspaceTrust(() => {
+        void vscode.commands.executeCommand('workbench.action.reloadWindow');
+      })
+    );
+    void vscode.window.showWarningMessage(
+      'Pre-CR will not run repository-configured commands until this workspace is trusted.'
+    );
+    return;
+  }
+
   // Set up consolidated status bar (subscribes to state changes)
   let statusBarItem: vscode.StatusBarItem | undefined;
   try {
@@ -156,7 +169,10 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.workspace.createFileSystemWatcher('**/.nyc_output/**')
       ]
     },
-    initializationOptions: getConfiguration()
+    initializationOptions: {
+      ...getConfiguration(),
+      trustedExecution: true
+    }
   };
 
   // Create and start the client

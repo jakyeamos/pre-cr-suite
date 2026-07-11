@@ -5,7 +5,8 @@ import {
   formatUnsupportedSurfaceSetupGuidance,
   runWorkspacePreCrCheck,
   setLogger,
-  type RunPreCrCheckResult
+  type RunPreCrCheckResult,
+  type RunWorkspacePreCrCheckOptions
 } from '@pre-cr/core';
 import { runHookCli } from './hooks/cli';
 import {
@@ -24,7 +25,7 @@ export interface HeadlessCliResult {
 }
 
 interface HeadlessCliDependencies {
-  runCheck?: (workspaceRoot: string, options?: { changeScope?: 'worktree' | 'staged' }) => Promise<RunPreCrCheckResult>;
+  runCheck?: (workspaceRoot: string, options?: RunWorkspacePreCrCheckOptions) => Promise<RunPreCrCheckResult>;
   cwd?: () => string;
   audit?: QualityGateAuditAppender;
   currentBranch?: (workspaceRoot: string) => Promise<string | null>;
@@ -71,7 +72,10 @@ export async function runHeadlessCli(
   }
 
   const runCheck = dependencies.runCheck ?? runWorkspacePreCrCheck;
-  const result = await runCheck(parsed.workspaceRoot, { changeScope: 'staged' });
+  const result = await runCheck(parsed.workspaceRoot, {
+    changeScope: 'staged',
+    allowConfigExecution: true
+  });
   const coveragePassed = result.result?.coverageCheck?.passed ?? false;
   const qualityAdaptersPassed = result.result?.qualityAdaptersPassed ?? true;
   const ok = Boolean(result.result && !result.error && coveragePassed && qualityAdaptersPassed);

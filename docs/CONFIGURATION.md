@@ -274,6 +274,15 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
 
 During beta, `.pre-cr.json` owns project behavior. Editor settings should be used for presentation only.
 
+### Trusting repository commands
+
+`.pre-cr.json` can name test, coverage, and quality commands, so it is executable
+repository input rather than passive metadata. VS Code relies on its Workspace
+Trust decision before it runs those commands. Neovim starts in read-only
+readiness mode; after reviewing a repository, opt in with
+`require('pre-cr').setup({ trustedExecution = true })`. Running the packaged CLI
+is an explicit local invocation and therefore permits its configured commands.
+
 ### Headless Gate
 
 Use the packaged CLI when automation needs JSON without speaking LSP over stdio:

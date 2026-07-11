@@ -4,7 +4,105 @@
  * Tests that the core modules can be imported and basic functionality works.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+const serverHarness = vi.hoisted(() => {
+  type InitializeHandler = (params: unknown) => unknown;
+  type CoverageControllerContext = {
+    getTrustedExecution: () => boolean;
+  };
+
+  let initializeHandler: InitializeHandler | undefined;
+  let coverageControllerContext: CoverageControllerContext | undefined;
+
+  return {
+    reset(): void {
+      initializeHandler = undefined;
+      coverageControllerContext = undefined;
+    },
+    recordInitializeHandler(handler: InitializeHandler): void {
+      initializeHandler = handler;
+    },
+    recordCoverageControllerContext(context: CoverageControllerContext): void {
+      coverageControllerContext = context;
+    },
+    initialize(params: unknown): void {
+      if (!initializeHandler) {
+        throw new Error('Expected the server to register an initialize handler.');
+      }
+
+      initializeHandler(params);
+    },
+    getTrustedExecution(): boolean {
+      if (!coverageControllerContext) {
+        throw new Error('Expected the server to create a coverage controller.');
+      }
+
+      return coverageControllerContext.getTrustedExecution();
+    }
+  };
+});
+
+vi.mock('vscode-languageserver/node', () => {
+  class MockTextDocuments {
+    constructor(_textDocument: unknown) {}
+
+    listen = vi.fn();
+    all = () => [];
+    onDidOpen = vi.fn();
+    onDidChangeContent = vi.fn();
+    onDidSave = vi.fn();
+  }
+
+  return {
+    createConnection: () => ({
+      console: {
+        debug: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        log: vi.fn(),
+        warn: vi.fn()
+      },
+      client: {
+        register: vi.fn()
+      },
+      workspace: {
+        onDidChangeWorkspaceFolders: vi.fn()
+      },
+      onCodeLens: vi.fn(),
+      onDidChangeConfiguration: vi.fn(),
+      onHover: vi.fn(),
+      onInitialize: (handler: (params: unknown) => unknown) => {
+        serverHarness.recordInitializeHandler(handler);
+      },
+      onInitialized: vi.fn(),
+      onRequest: vi.fn(),
+      sendDiagnostics: vi.fn(),
+      sendNotification: vi.fn(),
+      listen: vi.fn()
+    }),
+    ProposedFeatures: {
+      all: {}
+    },
+    TextDocumentSyncKind: {
+      Incremental: 2
+    },
+    TextDocuments: MockTextDocuments
+  };
+});
+
+vi.mock('../beta/coverageController', () => ({
+  createCoverageController: vi.fn((context: { getTrustedExecution: () => boolean }) => {
+    serverHarness.recordCoverageControllerContext(context);
+    return {
+      loadCoverage: vi.fn(),
+      validateTextDocument: vi.fn(),
+      handleHover: vi.fn(() => null),
+      handleCodeLens: vi.fn(() => []),
+      registerBetaRequests: vi.fn()
+    };
+  })
+}));
 import {
   // Checklist
   scanSecurity,
@@ -130,5 +228,29 @@ end_of_record
       expect(result.success).toBe(true);
       expect(result.data?.files.size).toBe(1);
     });
+  });
+});
+
+async function initializeServer(initializationOptions: unknown): Promise<boolean> {
+  serverHarness.reset();
+  vi.resetModules();
+
+  await import('../server');
+  serverHarness.initialize({
+    capabilities: {},
+    initializationOptions,
+    rootUri: 'file:///workspace'
+  });
+
+  return serverHarness.getTrustedExecution();
+}
+
+describe('Server execution trust', () => {
+  it('defaults to untrusted and accepts only an explicit true initialization option', async () => {
+    await expect(initializeServer(undefined)).resolves.toBe(false);
+    await expect(initializeServer({})).resolves.toBe(false);
+    await expect(initializeServer({ trustedExecution: false })).resolves.toBe(false);
+    await expect(initializeServer({ trustedExecution: 'true' })).resolves.toBe(false);
+    await expect(initializeServer({ trustedExecution: true })).resolves.toBe(true);
   });
 });

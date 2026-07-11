@@ -22,6 +22,10 @@ M.config = {
   
   -- Filetypes to activate on (empty = all files)
   filetypes = {},
+
+  -- Repository-configured commands are executable input. Opt in for a
+  -- workspace only after you have reviewed and trusted its .pre-cr.json.
+  trustedExecution = false,
   
   -- Server settings
   settings = {
@@ -160,6 +164,7 @@ local function setup_lsp_manual()
           name = 'pre-cr',
           cmd = M.config.cmd,
           root_dir = vim.fn.getcwd(),
+          init_options = { trustedExecution = M.config.trustedExecution == true },
           settings = M.config.settings,
           on_attach = function(client, bufnr)
             -- Request coverage decorations
@@ -199,6 +204,7 @@ local function setup_lsp_lspconfig()
         cmd = M.config.cmd,
         filetypes = M.config.filetypes,
         root_dir = lspconfig.util.root_pattern('package.json', '.git', 'coverage'),
+        init_options = { trustedExecution = M.config.trustedExecution == true },
         settings = M.config.settings,
         on_attach = function(client, bufnr)
           -- Request coverage decorations when buffer is opened

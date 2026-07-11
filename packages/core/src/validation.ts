@@ -36,6 +36,269 @@ export interface ValidationResult {
   fileSize?: number;
 }
 
+export type WorkspacePathAccess = 'read' | 'write';
+
+export interface ResolveWorkspacePathOptions {
+  /**
+   * A read target must exist unless allowMissing is explicitly enabled. Write
+   * targets validate their nearest existing parent instead.
+   */
+  access?: WorkspacePathAccess;
+  allowMissing?: boolean;
+  /** Coverage reporters may provide absolute paths; still require containment. */
+  allowAbsolute?: boolean;
+}
+
+export type WorkspacePathErrorCode =
+  | 'path-too-long'
+  | 'nul-byte'
+  | 'absolute-path'
+  | 'workspace-unavailable'
+  | 'outside-workspace'
+  | 'not-found'
+  | 'not-directory'
+  | 'unresolvable-path';
+
+export interface WorkspacePathSuccess {
+  valid: true;
+  workspaceRoot: string;
+  /** Absolute lexical path beneath workspaceRoot. */
+  resolvedPath: string;
+  /** Canonical target path when the target already exists. */
+  realPath?: string;
+  /** Canonical nearest existing parent when a target may be created. */
+  realParentPath?: string;
+}
+
+export interface WorkspacePathFailure {
+  valid: false;
+  code: WorkspacePathErrorCode;
+  error: string;
+  /** Present when lexical resolution succeeded before validation failed. */
+  resolvedPath?: string;
+}
+
+export type WorkspacePathResult = WorkspacePathSuccess | WorkspacePathFailure;
+
+/**
+ * Resolve an untrusted path only when it remains inside a real workspace root.
+ *
+ * Existing targets are resolved through realpath so symlink escapes are rejected.
+ * Missing write targets validate the nearest existing parent for the same reason.
+ */
+export function resolveWorkspacePath(
+  workspaceRoot: string,
+  requestedPath: string,
+  options: ResolveWorkspacePathOptions = {}
+): WorkspacePathResult {
+  const access = options.access ?? 'read';
+  const allowMissing = options.allowMissing ?? access === 'write';
+
+  if (requestedPath.length > LIMITS.MAX_PATH_LENGTH) {
+    return {
+      valid: false,
+      code: 'path-too-long',
+      error: `Path exceeds maximum length of ${LIMITS.MAX_PATH_LENGTH} characters`
+    };
+  }
+
+  if (requestedPath.includes('\0')) {
+    return {
+      valid: false,
+      code: 'nul-byte',
+      error: 'Path contains null bytes'
+    };
+  }
+
+  const requestedPathIsAbsolute = path.isAbsolute(requestedPath) || path.win32.isAbsolute(requestedPath);
+  if (requestedPathIsAbsolute && options.allowAbsolute !== true) {
+    return {
+      valid: false,
+      code: 'absolute-path',
+      error: 'Absolute paths are not allowed'
+    };
+  }
+
+  let realWorkspaceRoot: string;
+  try {
+    realWorkspaceRoot = fs.realpathSync(workspaceRoot);
+  } catch (error) {
+    return {
+      valid: false,
+      code: 'workspace-unavailable',
+      error: `Cannot resolve workspace root: ${String(error)}`
+    };
+  }
+
+  const lexicalWorkspaceRoot = path.resolve(workspaceRoot);
+  const resolvedPath = requestedPathIsAbsolute
+    ? path.resolve(requestedPath)
+    : path.resolve(lexicalWorkspaceRoot, requestedPath);
+  if (!isContainedPath(lexicalWorkspaceRoot, resolvedPath)) {
+    return {
+      valid: false,
+      code: 'outside-workspace',
+      error: 'Path is outside workspace directory',
+      resolvedPath
+    };
+  }
+
+  const targetState = getPathState(resolvedPath);
+  if (targetState.error) {
+    return {
+      valid: false,
+      code: 'unresolvable-path',
+      error: `Cannot inspect path: ${String(targetState.error)}`,
+      resolvedPath
+    };
+  }
+
+  if (targetState.exists) {
+    let realPath: string;
+    try {
+      realPath = fs.realpathSync(resolvedPath);
+    } catch (error) {
+      return {
+        valid: false,
+        code: 'unresolvable-path',
+        error: `Cannot resolve path: ${String(error)}`,
+        resolvedPath
+      };
+    }
+
+    if (!isContainedPath(realWorkspaceRoot, realPath)) {
+      return {
+        valid: false,
+        code: 'outside-workspace',
+        error: 'Path resolves outside workspace directory',
+        resolvedPath
+      };
+    }
+
+    return {
+      valid: true,
+      workspaceRoot: realWorkspaceRoot,
+      resolvedPath,
+      realPath
+    };
+  }
+
+  if (!allowMissing) {
+    return {
+      valid: false,
+      code: 'not-found',
+      error: 'Path does not exist',
+      resolvedPath
+    };
+  }
+
+  const parentResult = resolveExistingParent(path.dirname(resolvedPath));
+  if (!parentResult.valid) {
+    return {
+      valid: false,
+      code: parentResult.code,
+      error: parentResult.error,
+      resolvedPath
+    };
+  }
+
+  if (!isContainedPath(realWorkspaceRoot, parentResult.realPath)) {
+    return {
+      valid: false,
+      code: 'outside-workspace',
+      error: 'Path parent resolves outside workspace directory',
+      resolvedPath
+    };
+  }
+
+  return {
+    valid: true,
+    workspaceRoot: realWorkspaceRoot,
+    resolvedPath,
+    realParentPath: parentResult.realPath
+  };
+}
+
+function getPathState(filePath: string): { exists: boolean; error?: unknown } {
+  try {
+    fs.lstatSync(filePath);
+    return { exists: true };
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return { exists: false };
+    }
+
+    return { exists: false, error };
+  }
+}
+
+function resolveExistingParent(startPath: string):
+  | { valid: true; realPath: string }
+  | { valid: false; code: WorkspacePathErrorCode; error: string } {
+  let currentPath = startPath;
+  let hasParentToInspect = true;
+
+  while (hasParentToInspect) {
+    const state = getPathState(currentPath);
+    if (state.error) {
+      return {
+        valid: false,
+        code: 'unresolvable-path',
+        error: `Cannot inspect path parent: ${String(state.error)}`
+      };
+    }
+
+    if (state.exists) {
+      try {
+        const realPath = fs.realpathSync(currentPath);
+        if (!fs.statSync(realPath).isDirectory()) {
+          return {
+            valid: false,
+            code: 'not-directory',
+            error: 'Path parent is not a directory'
+          };
+        }
+
+        return { valid: true, realPath };
+      } catch (error) {
+        return {
+          valid: false,
+          code: 'unresolvable-path',
+          error: `Cannot resolve path parent: ${String(error)}`
+        };
+      }
+    }
+
+    const nextPath = path.dirname(currentPath);
+    if (nextPath === currentPath) {
+      hasParentToInspect = false;
+      continue;
+    }
+
+    currentPath = nextPath;
+  }
+
+  return {
+    valid: false,
+    code: 'not-found',
+    error: 'No existing parent directory found for path'
+  };
+}
+
+function isContainedPath(workspaceRoot: string, targetPath: string): boolean {
+  const relativePath = path.relative(workspaceRoot, targetPath);
+  return relativePath === '' || (
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relativePath)
+  );
+}
+
+function isNotFoundError(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error !== null &&
+    'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+}
+
 /**
  * Validate a coverage file before parsing
  */
@@ -54,35 +317,27 @@ export function validateCoverageFile(
     };
   }
 
-  // Normalize and resolve path
-  const normalizedPath = path.normalize(filePath);
-  const resolvedPath = path.resolve(workspaceRoot, normalizedPath);
-
-  // Check for path traversal
-  if (!resolvedPath.startsWith(workspaceRoot)) {
-    logger.warn('Path traversal attempt detected', {
+  const pathResult = resolveWorkspacePath(workspaceRoot, filePath);
+  if (!pathResult.valid) {
+    logger.warn('Invalid coverage file path', {
       requested: filePath,
-      resolved: resolvedPath,
+      error: pathResult.error,
       workspace: workspaceRoot
     });
     return {
       valid: false,
-      error: 'Coverage file path is outside workspace directory'
+      error: pathResult.code === 'not-found'
+        ? `Coverage file not found: ${pathResult.resolvedPath ?? filePath}`
+        : pathResult.error
     };
   }
 
-  // Check file exists
-  if (!fs.existsSync(resolvedPath)) {
-    return {
-      valid: false,
-      error: `Coverage file not found: ${resolvedPath}`
-    };
-  }
+  const resolvedPath = pathResult.resolvedPath;
 
   // Get file stats
   let stats: fs.Stats;
   try {
-    stats = fs.lstatSync(resolvedPath);
+    stats = fs.statSync(pathResult.realPath ?? resolvedPath);
   } catch (err) {
     logger.error('Failed to stat file', err, { path: resolvedPath });
     return {
@@ -97,28 +352,6 @@ export function validateCoverageFile(
       valid: false,
       error: 'Path is a directory, not a file'
     };
-  }
-
-  // If symlink, verify target is within workspace
-  if (stats.isSymbolicLink()) {
-    try {
-      const realPath = fs.realpathSync(resolvedPath);
-      if (!realPath.startsWith(workspaceRoot)) {
-        logger.warn('Symlink points outside workspace', {
-          symlink: resolvedPath,
-          target: realPath
-        });
-        return {
-          valid: false,
-          error: 'Symbolic link points outside workspace directory'
-        };
-      }
-    } catch (err) {
-      return {
-        valid: false,
-        error: `Cannot resolve symbolic link: ${String(err)}`
-      };
-    }
   }
 
   // Check file size
@@ -155,23 +388,18 @@ export function validateSourcePath(
   sourcePath: string,
   workspaceRoot: string
 ): { valid: boolean; resolvedPath?: string; error?: string } {
-  // Normalize the path
-  const normalized = path.normalize(sourcePath);
-
-  // Resolve relative paths
-  const resolved = path.isAbsolute(normalized)
-    ? normalized
-    : path.resolve(workspaceRoot, normalized);
-
-  // Check for null bytes
-  if (sourcePath.includes('\0') || resolved.includes('\0')) {
+  const pathResult = resolveWorkspacePath(workspaceRoot, sourcePath, {
+    access: 'read',
+    allowMissing: true
+  });
+  if (!pathResult.valid) {
     return {
       valid: false,
-      error: 'Path contains null bytes'
+      error: pathResult.error
     };
   }
 
-  return { valid: true, resolvedPath: resolved };
+  return { valid: true, resolvedPath: pathResult.resolvedPath };
 }
 
 /**

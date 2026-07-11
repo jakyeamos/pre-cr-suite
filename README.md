@@ -128,6 +128,7 @@ Notes:
 - Anti-Slop is the default required quality adapter. If `anti-slop` reports blocking findings or the binary is unavailable, Pre-CR fails unless the repo explicitly overrides `qualityAdapters`.
 - `surfaces` lets repos declare covered, ignored, and unsupported directories in repo config.
 - Editor settings are for presentation only: colors, notifications, and experimental visibility.
+- Repository config can name executable commands. Editors require an explicit trust decision before running them; see [configuration trust guidance](docs/CONFIGURATION.md#trusting-repository-commands).
 
 ## Development
 

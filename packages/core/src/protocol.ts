@@ -67,7 +67,8 @@ export type ProjectHealthIssueCode =
   | 'missing-git'
   | 'missing-test-command'
   | 'missing-coverage'
-  | 'no-changes';
+  | 'no-changes'
+  | 'untrusted-workspace';
 
 export interface ProjectHealthIssue {
   code: ProjectHealthIssueCode;
