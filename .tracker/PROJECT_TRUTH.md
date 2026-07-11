@@ -2,7 +2,7 @@
 schemaVersion: 1
 healthScore: 92
 statusLabel: modernization_m4_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4 now persists and presents readiness in VS Code; M5 has started the same recovery flow in Neovim."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4 now persists and presents readiness in VS Code; M5 has started the same recovery flow in Neovim (commit 256868e)."
 nextStep: "Start M4 by rebuilding the VS Code experience around the readiness result while preserving documented beta command aliases."
 blockers: []
 lastUpdated: "2026-07-11"
@@ -55,6 +55,7 @@ engine and contract shape before the larger UI migration.
 - 2026-07-11: Recorded M3 completion after adding CLI scope/state/remediation, hook readiness envelopes, package export maps, and published-to-VSIX server artifact identity checks.
 - 2026-07-11: Started M4 with persisted VS Code readiness state, status/view presentation, and server-owned coverage diagnostics; focused client tests pass.
 - 2026-07-11: Started M5 with Neovim persisted readiness, recovery buffer, shared labels, and default keymap behavior; headless Lua load/setup checks pass.
+- 2026-07-11: Committed the M5 Neovim recovery slice as `256868e`; Lua load/setup checks pass alongside the TypeScript gates.
 - 2026-07-11: Committed the M4 readiness slice as `ef58bfd`; client state/presentation tests and package typechecks pass.
 - 2026-07-11: Committed M3 implementation as `c075a88`; serialized pre-pr, artifact, smoke, and packaging gates pass.
 - 2026-07-11: Recorded M2 completion after adding the stable contract registry, runtime request guards, canonical workspace sessions, nested-workspace coverage routing, and client method migration.
