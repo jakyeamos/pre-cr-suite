@@ -99,11 +99,13 @@ export async function runHook(options: HookRunOptions, dependencies: HookRunDepe
 
   await appendHookAuditEvents(options.workspaceRoot, auditConfig(configExists ? loadedConfig.config : null), findings);
   const ok = !findings.some((finding) => finding.severity === 'block');
+  const finalState = readiness?.state ?? readinessState(ok, findings);
+  const finalDecision = readiness?.gateDecision ?? readinessDecision(findings);
   return {
     schemaVersion: 1,
     scope: 'staged',
-    state: readinessState(ok, findings),
-    gateDecision: readinessDecision(findings),
+    state: finalState,
+    gateDecision: finalDecision,
     ok,
     findings,
     remediation: readinessRemediation(findings),

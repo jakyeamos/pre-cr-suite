@@ -371,6 +371,8 @@ describe('runHeadlessCli', () => {
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       ok: true,
+      state: 'warning',
+      gateDecision: 'warn',
       findings: [
         {
           rule: 'typescript-any',
@@ -406,6 +408,8 @@ describe('runHeadlessCli', () => {
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       ok: true,
+      state: 'warning',
+      gateDecision: 'warn',
       findings: [
         {
           rule: 'pre-cr-failed',
