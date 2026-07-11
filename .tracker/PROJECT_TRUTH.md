@@ -1,9 +1,9 @@
 ---
 schemaVersion: 1
-healthScore: 92
-statusLabel: modernization_m4_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4 now persists and presents readiness in VS Code; M5 has started the same recovery flow in Neovim. Hook warnings and Neovim LSP errors now preserve safe readiness handling (commit 6599fa7)."
-nextStep: "Finish M4/M5 acceptance hardening around the shared readiness result, then begin legacy experimental-surface retirement."
+healthScore: 94
+statusLabel: modernization_m4_m5_in_progress
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 now route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage (commit fa39418)."
+nextStep: "Finish extension-host and cross-client acceptance hardening, then begin legacy experimental-surface retirement."
 blockers: []
 lastUpdated: "2026-07-11"
 quality:
@@ -52,6 +52,7 @@ engine and contract shape before the larger UI migration.
 
 ## Recent Documentation Updates
 
+- 2026-07-11: Committed cross-client readiness hardening as `fa39418`: workspace-scoped stable requests, explicit staged/worktree scope, warning-state parity, stale coverage cleanup, per-root Neovim state, and a Neovim readiness smoke script.
 - 2026-07-11: Recorded M3 completion after adding CLI scope/state/remediation, hook readiness envelopes, package export maps, and published-to-VSIX server artifact identity checks.
 - 2026-07-11: Started M4 with persisted VS Code readiness state, status/view presentation, and server-owned coverage diagnostics; focused client tests pass.
 - 2026-07-11: Started M5 with Neovim persisted readiness, recovery buffer, shared labels, and default keymap behavior; headless Lua load/setup checks pass.
