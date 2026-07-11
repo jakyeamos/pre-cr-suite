@@ -1,5 +1,6 @@
 import type { CoverageCheckResult, ChangedFile } from './runner/coverageChecker';
 import type { CoverageDecoration, CoverageSummary } from './types';
+import { PRE_CR_METHODS } from './contracts/methods';
 
 export type PreCrCoverageFormat = 'auto' | 'lcov' | 'istanbul';
 
@@ -181,27 +182,27 @@ export interface RunPreCrCheckResult {
 }
 
 export interface PreCrBetaMethodMap {
-  '$/preCr/getProjectHealth': {
+  [PRE_CR_METHODS.getProjectHealth]: {
     params: Record<string, never>;
     result: GetProjectHealthResult;
   };
-  '$/preCr/runPreCrCheck': {
+  [PRE_CR_METHODS.runPreCrCheck]: {
     params: Record<string, never>;
     result: RunPreCrCheckResult;
   };
-  '$/preCr/refreshCoverage': {
+  [PRE_CR_METHODS.refreshCoverage]: {
     params: Record<string, never>;
     result: RefreshCoverageResult;
   };
-  '$/preCr/getCoverageSummary': {
+  [PRE_CR_METHODS.getCoverageSummary]: {
     params: Record<string, never>;
     result: GetCoverageSummaryResult;
   };
-  '$/preCr/getCoverage': {
+  [PRE_CR_METHODS.getCoverage]: {
     params: GetCoverageParams;
     result: CoverageFileResult;
   };
-  '$/preCr/getCoverageDecorations': {
+  [PRE_CR_METHODS.getCoverageDecorations]: {
     params: GetCoverageDecorationsParams;
     result: GetCoverageDecorationsResult;
   };

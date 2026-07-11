@@ -11,7 +11,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import type { CoverageFileResult, GetCoverageSummaryResult } from '@pre-cr/core';
+import { PRE_CR_METHODS, type CoverageFileResult, type GetCoverageSummaryResult } from '@pre-cr/core';
 import * as notify from '../utils/notifications';
 import * as statusBar from '../utils/statusBar';
 import * as git from '../utils/git';
@@ -126,7 +126,7 @@ function createDecorations() {
  * Load coverage from file
  */
 async function loadCoverage(client: LanguageClient) {
-  const result = await sendBetaRequestWithNotify(client, '$/preCr/refreshCoverage', {}, 'Refresh coverage');
+  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.refreshCoverage, {}, 'Refresh coverage');
   if (!result) {
     return;
   }
@@ -229,7 +229,7 @@ async function updateDecorations(editor: vscode.TextEditor, client: LanguageClie
   const uri = editor.document.uri.toString();
 
   try {
-    const result = await sendBetaRequestWithNotify(client, '$/preCr/getCoverageDecorations', {
+    const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getCoverageDecorations, {
       textDocument: { uri }
     }, 'Coverage decorations');
     const decorations = result?.decorations ?? [];
@@ -272,7 +272,7 @@ async function updateDecorations(editor: vscode.TextEditor, client: LanguageClie
  * Show coverage summary in a quick pick or notification
  */
 async function showCoverageSummary(client: LanguageClient) {
-  const result = await sendBetaRequestWithNotify(client, '$/preCr/getCoverageSummary', {}, 'Coverage summary');
+  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getCoverageSummary, {}, 'Coverage summary');
   if (!result?.summary) {
     const action = await notify.showWarning('No coverage data is loaded yet.', undefined, 'Refresh Coverage');
     if (action === 'Refresh Coverage') {
@@ -344,7 +344,7 @@ async function showFileCoverage(client: LanguageClient) {
   }
 
   try {
-    const result = await sendBetaRequestWithNotify(client, '$/preCr/getCoverage', {
+    const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getCoverage, {
       uri: editor.document.uri.toString()
     }, 'File coverage');
     const coverage = result?.coverage;
@@ -402,7 +402,7 @@ async function checkChangesCoverage(client: LanguageClient) {
     let totalLines = 0;
 
     for (const file of changedFiles) {
-      const result = await sendBetaRequestWithNotify(client, '$/preCr/getCoverage', {
+      const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getCoverage, {
         uri: vscode.Uri.file(file.path).toString()
       }, 'Changed file coverage');
       const coverage = result?.coverage;
@@ -568,7 +568,7 @@ class CoverageTreeProvider implements vscode.TreeDataProvider<CoverageTreeItem> 
     if (!element) {
       // Root level - get all files with coverage
       try {
-        const result = await sendBetaRequestWithNotify(this.client, '$/preCr/getCoverageSummary', {}, 'Coverage summary');
+        const result = await sendBetaRequestWithNotify(this.client, PRE_CR_METHODS.getCoverageSummary, {}, 'Coverage summary');
         const summary = result?.summary;
 
         if (!summary) {

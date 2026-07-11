@@ -2,10 +2,11 @@
 
 ## Current state
 
-M0 and M1 are complete on isolated branch `codex/gpt56-modernization-audit`.
+M0, M1, and M2 are complete on isolated branch `codex/gpt56-modernization-audit`.
 The original checkout remains untouched because it had unrelated untracked
-files. M1 establishes the safe execution and changed-line correctness boundary
-that the v2 engine will build on.
+files. M1 establishes the safe execution and changed-line correctness boundary;
+M2 adds the shared stable contract registry and canonical workspace-session
+engine that the runtime consolidation will build on.
 
 ## Completed
 
@@ -40,13 +41,21 @@ that the v2 engine will build on.
   validated before parsing.
 - Added containment checks to legacy server request, hook-audit, hook-Git, and
   VS Code fallback Git paths.
+- Added a value-level stable beta method and notification registry plus runtime
+  request payload guards, while preserving the typed protocol map for package
+  compatibility.
+- Added canonical workspace sessions keyed by real paths, nested-workspace URI
+  routing, isolated coverage/trust state, and server workspace-folder lifecycle
+  handling.
+- Removed coverage basename fallback and migrated the server, VS Code, Neovim,
+  and parity smoke stable calls to explicit contract identifiers.
 
 ## Verified baseline
 
 | Check | Result |
 | --- | --- |
 | Build, lint, typecheck | Pass |
-| Unit tests | Pass, 376 tests |
+| Unit tests | Pass, 423 tests |
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
 | VSIX package | Pass |
@@ -61,7 +70,7 @@ that the v2 engine will build on.
 2. Client workflows still need end-to-end parity proof against the consolidated
    result contract.
 3. The current server and bundled artifact still contain duplicate ownership that
-   M2–M3 must collapse.
+   M3 must collapse.
 
 ## Proposed defaults pending product review
 
@@ -75,6 +84,6 @@ that the v2 engine will build on.
 
 ## Next step
 
-Implement M2–M3 in coherent vertical slices: separate domain/contracts from the
-workspace engine, then consolidate the server runtime and packaged artifact.
-Keep the application runnable at every milestone.
+Implement M3 in a coherent vertical slice: consolidate the server runtime and
+packaged artifact around the shared contract and workspace-session engine. Keep
+the application runnable at every milestone.

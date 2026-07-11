@@ -14,6 +14,13 @@
 
 local M = {}
 local last_coverage_check = nil
+local stable_methods = {
+  getProjectHealth = '$/preCr/getProjectHealth',
+  runPreCrCheck = '$/preCr/runPreCrCheck',
+  refreshCoverage = '$/preCr/refreshCoverage',
+  getCoverageSummary = '$/preCr/getCoverageSummary',
+  getCoverageDecorations = '$/preCr/getCoverageDecorations'
+}
 
 -- Default configuration
 M.config = {
@@ -174,7 +181,7 @@ local function setup_lsp_manual()
               }
             }
             
-            client.request('$/preCr/getCoverageDecorations', params, function(err, result)
+            client.request(stable_methods.getCoverageDecorations, params, function(err, result)
               if not err and result and result.decorations then
                 apply_decorations(bufnr, result.decorations)
               end
@@ -217,7 +224,7 @@ local function setup_lsp_lspconfig()
                 }
               }
               
-              client.request('$/preCr/getCoverageDecorations', params, function(err, result)
+              client.request(stable_methods.getCoverageDecorations, params, function(err, result)
                 if not err and result and result.decorations then
                   apply_decorations(bufnr, result.decorations)
                 end
@@ -247,7 +254,7 @@ local function setup_commands()
       return
     end
 
-    clients[1].request('$/preCr/runPreCrCheck', {}, function(err, result)
+    clients[1].request(stable_methods.runPreCrCheck, {}, function(err, result)
       if err then
         vim.notify('Pre-CR check failed: ' .. err.message, vim.log.levels.ERROR)
         return
@@ -287,7 +294,7 @@ local function setup_commands()
       return
     end
 
-    clients[1].request('$/preCr/getProjectHealth', {}, function(err, result)
+    clients[1].request(stable_methods.getProjectHealth, {}, function(err, result)
       if err then
         vim.notify('Failed to inspect Pre-CR setup: ' .. err.message, vim.log.levels.ERROR)
         return
@@ -340,7 +347,7 @@ local function setup_commands()
       }
     }
     
-    clients[1].request('$/preCr/getCoverageDecorations', params, function(err, result)
+    clients[1].request(stable_methods.getCoverageDecorations, params, function(err, result)
       if err then
         vim.notify('Failed to get coverage: ' .. err.message, vim.log.levels.ERROR)
       elseif result and result.decorations then
@@ -367,7 +374,7 @@ local function setup_commands()
       return
     end
     
-    clients[1].request('$/preCr/refreshCoverage', {}, function(err, result)
+    clients[1].request(stable_methods.refreshCoverage, {}, function(err, result)
       if err then
         vim.notify('Failed to refresh: ' .. err.message, vim.log.levels.ERROR)
       elseif result and result.success then
@@ -390,7 +397,7 @@ local function setup_commands()
       return
     end
     
-    clients[1].request('$/preCr/getCoverageSummary', {}, function(err, result)
+    clients[1].request(stable_methods.getCoverageSummary, {}, function(err, result)
       if err then
         vim.notify('Failed to get summary: ' .. err.message, vim.log.levels.ERROR)
       elseif result and result.summary then

@@ -9,6 +9,11 @@ const vscodeBundledServerPath = path.join(repoRoot, 'packages', 'vscode-client',
 const publishedServerPath = path.join(repoRoot, 'packages', 'server', 'dist', 'server.js');
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pre-cr-cross-client-beta-'));
 const workspaceRoot = path.join(tempRoot, 'workspace');
+const stableMethods = {
+  getProjectHealth: '$/preCr/getProjectHealth',
+  runPreCrCheck: '$/preCr/runPreCrCheck',
+  refreshCoverage: '$/preCr/refreshCoverage'
+};
 
 function runGit(args) {
   execFileSync('git', args, {
@@ -271,10 +276,10 @@ async function collectPublicBetaSnapshot(label, serverPath) {
   const session = new LspSession(label, serverPath);
   try {
     await session.initialize();
-    const healthBefore = await session.request('$/preCr/getProjectHealth', {});
-    const refreshBefore = await session.request('$/preCr/refreshCoverage', {});
-    const check = await session.request('$/preCr/runPreCrCheck', {});
-    const refreshAfter = await session.request('$/preCr/refreshCoverage', {});
+    const healthBefore = await session.request(stableMethods.getProjectHealth, {});
+    const refreshBefore = await session.request(stableMethods.refreshCoverage, {});
+    const check = await session.request(stableMethods.runPreCrCheck, {});
+    const refreshAfter = await session.request(stableMethods.refreshCoverage, {});
 
     return {
       healthBefore: normalizeHealth(healthBefore.health),

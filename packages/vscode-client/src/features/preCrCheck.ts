@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import { formatUnsupportedSurfaceSetupGuidance, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth } from '@pre-cr/core';
+import { formatUnsupportedSurfaceSetupGuidance, PRE_CR_METHODS, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth } from '@pre-cr/core';
 
 import * as notify from '../utils/notifications';
 import { state } from '../utils/state';
@@ -84,7 +84,7 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
   outputChannel.appendLine('== Pre-CR Check ==');
 
   try {
-    const response = await sendBetaRequestWithNotify(client, '$/preCr/runPreCrCheck', {}, 'Pre-CR check');
+    const response = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.runPreCrCheck, {}, 'Pre-CR check');
     if (!response?.result) {
       return;
     }
@@ -136,7 +136,7 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
 }
 
 async function refreshCoverage(client: LanguageClient): Promise<void> {
-  const refresh = await sendBetaRequestWithNotify(client, '$/preCr/refreshCoverage', {}, 'Refresh coverage');
+  const refresh = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.refreshCoverage, {}, 'Refresh coverage');
   if (!refresh) {
     return;
   }
@@ -170,7 +170,7 @@ async function showProjectHealth(
   openPanel = false,
   coverageCheck?: CoverageCheckResult
 ): Promise<void> {
-  const result = await sendBetaRequestWithNotify(client, '$/preCr/getProjectHealth', {}, 'Project health');
+  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, {}, 'Project health');
   if (!result) {
     return;
   }
@@ -205,7 +205,7 @@ async function openProjectConfig(client: LanguageClient): Promise<void> {
     return;
   }
 
-  const health = await sendBetaRequestWithNotify(client, '$/preCr/getProjectHealth', {}, 'Project health');
+  const health = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, {}, 'Project health');
   const template = buildProjectConfigTemplate(health?.health);
 
   const document = await vscode.workspace.openTextDocument({

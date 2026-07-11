@@ -8,6 +8,8 @@
 // Types
 export * from './types';
 export * from './protocol';
+export * from './contracts';
+export * from './engine';
 
 // Parsers
 export { parseLcovFile, parseLcovContent } from './parsers/lcov';
