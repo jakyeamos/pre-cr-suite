@@ -27,13 +27,15 @@ import {
   type RefreshCoverageResult,
   type RunPreCrCheckResult,
   type WorkspaceCoverage,
+  type WorkspaceSessionUpdate,
   LineCoverageStatus,
   lineCoverageToDecoration,
   loadProjectConfig,
   loadWorkspaceCoverage,
   getProjectHealth as buildProjectHealth,
   runWorkspacePreCrCheck,
-  isEmptyRequestParams,
+  isRunPreCrCheckParams,
+  isWorkspaceRequestParams,
   isGetCoverageDecorationsParams,
   isGetCoverageParams,
   resolveWorkspacePath
@@ -48,21 +50,22 @@ interface CoverageControllerContext {
   connection: Connection;
   documents: TextDocuments<TextDocument>;
   getCoverageSettings: () => CoverageSettings;
-  getWorkspaceRoot: () => string | null;
-  getCoverage: () => WorkspaceCoverage | null;
-  getCoveragePath: () => string | null;
-  getTrustedExecution: () => boolean;
+  getWorkspaceRoot: (params?: unknown) => string | null;
+  getCoverage: (params?: unknown) => WorkspaceCoverage | null;
+  getCoveragePath: (params?: unknown) => string | null;
+  getTrustedExecution: (params?: unknown) => boolean;
   getSessionForUri?: (uri: string) => {
     workspaceRoot: string;
     coverage: WorkspaceCoverage | null;
     coveragePath: string | null;
     trustedExecution: boolean;
   } | null;
-  setCoverageState: (coverage: WorkspaceCoverage | null, coveragePath: string | null) => void;
+  setCoverageState: (coverage: WorkspaceCoverage | null, coveragePath: string | null, workspaceRoot?: string) => void;
+  setSessionState?: (workspaceRoot: string, update: WorkspaceSessionUpdate) => void;
 }
 
 export interface CoverageController {
-  loadCoverage: () => boolean;
+  loadCoverage: (workspaceRoot?: string) => boolean;
   validateTextDocument: (textDocument: TextDocument) => void;
   handleHover: (params: TextDocumentPositionParams) => Hover | null;
   handleCodeLens: (params: CodeLensParams) => CodeLens[];
@@ -79,7 +82,8 @@ export function createCoverageController(context: CoverageControllerContext): Co
     getCoveragePath,
     getTrustedExecution,
     getSessionForUri,
-    setCoverageState
+    setCoverageState,
+    setSessionState
   } = context;
 
   function getFileCoverage(uri: string): FileCoverage | undefined {
@@ -120,8 +124,8 @@ export function createCoverageController(context: CoverageControllerContext): Co
     return undefined;
   }
 
-  function loadCoverage(): boolean {
-    const workspaceRoot = getWorkspaceRoot();
+  function loadCoverage(workspaceRootOverride?: string): boolean {
+    const workspaceRoot = workspaceRootOverride ?? getWorkspaceRoot();
     if (!workspaceRoot) {
       connection.console.warn('No workspace root, cannot load coverage');
       return false;
@@ -135,11 +139,14 @@ export function createCoverageController(context: CoverageControllerContext): Co
       } else {
         connection.console.info('No coverage file found');
       }
-      setCoverageState(null, null);
+      setCoverageState(null, null, workspaceRoot);
+      for (const document of documents.all()) {
+        validateTextDocument(document);
+      }
       return false;
     }
 
-    setCoverageState(result.coverage, result.coveragePath);
+    setCoverageState(result.coverage, result.coveragePath, workspaceRoot);
     connection.console.info(
       `Coverage loaded: ${result.coverage.summary.linePercentage}% lines, ` +
       `${result.coverage.files.size} files`
@@ -330,10 +337,10 @@ export function createCoverageController(context: CoverageControllerContext): Co
     );
 
     connection.onRequest(PRE_CR_METHODS.getCoverageSummary, (_params: unknown = {}): GetCoverageSummaryResult => {
-      assertRequestParams(_params, isEmptyRequestParams, PRE_CR_METHODS.getCoverageSummary);
+      assertRequestParams(_params, isWorkspaceRequestParams, PRE_CR_METHODS.getCoverageSummary);
       return {
-        summary: getCoverage()?.summary ?? null,
-        coveragePath: getCoveragePath()
+        summary: getCoverage(_params)?.summary ?? null,
+        coveragePath: getCoveragePath(_params)
       };
     });
 
@@ -359,11 +366,12 @@ export function createCoverageController(context: CoverageControllerContext): Co
     });
 
     const refreshCoverageRequest = (_params: unknown = {}): RefreshCoverageResult => {
-      assertRequestParams(_params, isEmptyRequestParams, PRE_CR_METHODS.refreshCoverage);
+      assertRequestParams(_params, isWorkspaceRequestParams, PRE_CR_METHODS.refreshCoverage);
+      const workspaceRoot = getWorkspaceRoot(_params);
       return {
-        success: loadCoverage(),
-        coveragePath: getCoveragePath(),
-        summary: getCoverage()?.summary ?? null
+        success: workspaceRoot ? loadCoverage(workspaceRoot) : false,
+        coveragePath: getCoveragePath(_params),
+        summary: getCoverage(_params)?.summary ?? null
       };
     };
 
@@ -371,8 +379,8 @@ export function createCoverageController(context: CoverageControllerContext): Co
     connection.onRequest('$/preCr/loadCoverage', refreshCoverageRequest);
 
     connection.onRequest(PRE_CR_METHODS.getProjectHealth, async (_params: unknown = {}): Promise<GetProjectHealthResult> => {
-      assertRequestParams(_params, isEmptyRequestParams, PRE_CR_METHODS.getProjectHealth);
-      const workspaceRoot = getWorkspaceRoot();
+      assertRequestParams(_params, isWorkspaceRequestParams, PRE_CR_METHODS.getProjectHealth);
+      const workspaceRoot = getWorkspaceRoot(_params);
       if (!workspaceRoot) {
         return {
           health: {
@@ -405,38 +413,51 @@ export function createCoverageController(context: CoverageControllerContext): Co
         };
       }
 
-      return {
-        health: await buildProjectHealth(workspaceRoot, getCoverage())
-      };
+      const health = await buildProjectHealth(workspaceRoot, getCoverage(_params));
+      setSessionState?.(workspaceRoot, { health });
+      return { health };
     });
 
     connection.onRequest(PRE_CR_METHODS.runPreCrCheck, async (_params: unknown = {}): Promise<RunPreCrCheckResult> => {
-      assertRequestParams(_params, isEmptyRequestParams, PRE_CR_METHODS.runPreCrCheck);
-      const workspaceRoot = getWorkspaceRoot();
+      const parsed = assertRequestParams(_params, isRunPreCrCheckParams, PRE_CR_METHODS.runPreCrCheck);
+      const workspaceRoot = getWorkspaceRoot(parsed);
       if (!workspaceRoot) {
         return { result: null, error: 'No workspace root' };
       }
 
       const result = await runWorkspacePreCrCheck(workspaceRoot, {
-        allowConfigExecution: getTrustedExecution()
+        allowConfigExecution: getTrustedExecution(parsed),
+        changeScope: parsed.scope ?? 'staged'
       });
       if (result.result?.coveragePath) {
-        loadCoverage();
+        loadCoverage(workspaceRoot);
       }
 
-      const ok = Boolean(
-        result.result &&
-        !result.error &&
-        result.result.coverageCheck?.passed &&
-        result.result.qualityAdaptersPassed
-      );
+      const hasBlockingIssue = result.result?.health.issues.some((issue) => issue.severity === 'error') ?? false;
+      const hasWarningIssue = result.result?.health.issues.some((issue) => issue.severity === 'warning') ?? false;
+      const coverageFailed = result.result?.coverageCheck
+        ? !result.result.coverageCheck.passed
+        : Boolean(result.result?.testRun);
+      const qualityPassed = result.result?.qualityAdaptersPassed ?? false;
+      const gateDecision = result.error || hasBlockingIssue || coverageFailed || !qualityPassed
+        ? 'block'
+        : hasWarningIssue || (result.result?.coverageCheck?.unsupportedFiles.length ?? 0) > 0
+          ? 'warn'
+          : 'pass';
+      const ok = gateDecision !== 'block';
+      const readiness = buildReadinessEnvelope(result, {
+        scope: parsed.scope ?? 'staged',
+        ok,
+        gateDecision
+      });
+      setSessionState?.(workspaceRoot, {
+        health: result.result?.health ?? null,
+        lastResult: result.result ?? null,
+        readiness: readiness.state
+      });
       return {
         ...result,
-        readiness: buildReadinessEnvelope(result, {
-          scope: 'staged',
-          ok,
-          gateDecision: ok ? 'pass' : 'block'
-        })
+        readiness
       };
     });
   }

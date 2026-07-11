@@ -10,7 +10,9 @@ export {
   assertRequestParams,
   isEmptyRequestParams,
   isGetCoverageDecorationsParams,
-  isGetCoverageParams
+  isGetCoverageParams,
+  isRunPreCrCheckParams,
+  isWorkspaceRequestParams
 } from './validators';
 export {
   buildReadinessEnvelope,

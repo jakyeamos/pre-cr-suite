@@ -11,7 +11,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import { PRE_CR_METHODS, type CoverageFileResult, type GetCoverageSummaryResult } from '@pre-cr/core';
+import { PRE_CR_METHODS, type CoverageFileResult, type GetCoverageSummaryResult, type WorkspaceRequestParams } from '@pre-cr/core';
 import * as notify from '../utils/notifications';
 import * as statusBar from '../utils/statusBar';
 import * as git from '../utils/git';
@@ -37,6 +37,17 @@ interface ChangedFileCoverageView {
   coverage: number | null;
   coveredLines: number;
   totalLines: number;
+}
+
+function getWorkspaceRequestParams(): WorkspaceRequestParams {
+  const folders = vscode.workspace.workspaceFolders;
+  if (!folders?.length) {
+    return {};
+  }
+
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeFolder = activeEditor ? vscode.workspace.getWorkspaceFolder(activeEditor.document.uri) : undefined;
+  return { workspaceUri: (activeFolder ?? folders[0]).uri.toString() };
 }
 
 export function registerCoverageFeatures(
@@ -126,7 +137,7 @@ function createDecorations() {
  * Load coverage from file
  */
 async function loadCoverage(client: LanguageClient) {
-  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.refreshCoverage, {}, 'Refresh coverage');
+  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.refreshCoverage, getWorkspaceRequestParams(), 'Refresh coverage');
   if (!result) {
     return;
   }
@@ -193,7 +204,7 @@ function toggleCoverageOverlay(client: LanguageClient) {
 /**
  * Clear coverage data and decorations
  */
-function clearCoverage() {
+export function clearCoverage(showNotification = true): void {
   state.setCoverage({
     isLoaded: false,
     percent: null,
@@ -213,12 +224,22 @@ function clearCoverage() {
     editor.setDecorations(partialDecoration, []);
   }
 
-  notify.showSuccess('Coverage cleared');
+  if (showNotification) {
+    notify.showSuccess('Coverage cleared');
+  }
 }
 
 /**
  * Update decorations for an editor
  */
+export async function refreshCoverageDecorations(client: LanguageClient): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (editor) {
+    await updateDecorations(editor, client);
+  }
+  vscode.commands.executeCommand('preCr.coverage.refresh');
+}
+
 async function updateDecorations(editor: vscode.TextEditor, client: LanguageClient) {
   // Don't show decorations if toggled off
   const coverage = state.get('coverage');
@@ -272,7 +293,7 @@ async function updateDecorations(editor: vscode.TextEditor, client: LanguageClie
  * Show coverage summary in a quick pick or notification
  */
 async function showCoverageSummary(client: LanguageClient) {
-  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getCoverageSummary, {}, 'Coverage summary');
+  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getCoverageSummary, getWorkspaceRequestParams(), 'Coverage summary');
   if (!result?.summary) {
     const action = await notify.showWarning('No coverage data is loaded yet.', undefined, 'Refresh Coverage');
     if (action === 'Refresh Coverage') {
@@ -568,7 +589,7 @@ class CoverageTreeProvider implements vscode.TreeDataProvider<CoverageTreeItem> 
     if (!element) {
       // Root level - get all files with coverage
       try {
-        const result = await sendBetaRequestWithNotify(this.client, PRE_CR_METHODS.getCoverageSummary, {}, 'Coverage summary');
+        const result = await sendBetaRequestWithNotify(this.client, PRE_CR_METHODS.getCoverageSummary, getWorkspaceRequestParams(), 'Coverage summary');
         const summary = result?.summary;
 
         if (!summary) {

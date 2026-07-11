@@ -2,15 +2,26 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import { formatUnsupportedSurfaceSetupGuidance, PRE_CR_METHODS, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth, type ReadinessResultEnvelope } from '@pre-cr/core';
+import { formatUnsupportedSurfaceSetupGuidance, PRE_CR_METHODS, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth, type ReadinessResultEnvelope, type RunPreCrCheckParams, type WorkspaceRequestParams } from '@pre-cr/core';
 
 import * as notify from '../utils/notifications';
+import * as statusBar from '../utils/statusBar';
 import { state } from '../utils/state';
 import { sendBetaRequestWithNotify } from '../utils/lsp';
 import * as webview from '../utils/webview';
 
 let outputChannel: vscode.OutputChannel;
 let isRunning = false;
+
+async function clearCoveragePresentation(): Promise<void> {
+  const coverage = await import('./coverage');
+  coverage.clearCoverage(false);
+}
+
+async function refreshCoveragePresentation(client: LanguageClient): Promise<void> {
+  const coverage = await import('./coverage');
+  await coverage.refreshCoverageDecorations(client);
+}
 
 type CoverageSurfaceFields = Pick<CoverageCheckResult, 'surfaceSummary' | 'unsupportedFiles'>;
 
@@ -39,7 +50,19 @@ function getWorkspaceRoot(): string | null {
     return null;
   }
 
-  return findProjectRoot(workspaceFolders[0].uri.fsPath);
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeFolder = activeEditor ? vscode.workspace.getWorkspaceFolder(activeEditor.document.uri) : undefined;
+  return findProjectRoot((activeFolder ?? workspaceFolders[0]).uri.fsPath);
+}
+
+function getWorkspaceRequestParams(scope?: RunPreCrCheckParams['scope']): WorkspaceRequestParams & Pick<RunPreCrCheckParams, 'scope'> {
+  const folders = vscode.workspace.workspaceFolders;
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeFolder = activeEditor ? vscode.workspace.getWorkspaceFolder(activeEditor.document.uri) : undefined;
+  return {
+    ...((activeFolder ?? folders?.[0]) ? { workspaceUri: (activeFolder ?? folders?.[0])!.uri.toString() } : {}),
+    ...(scope ? { scope } : {})
+  };
 }
 
 export function registerPreCrCheckFeature(
@@ -84,7 +107,7 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
   outputChannel.appendLine('== Pre-CR Check ==');
 
   try {
-    const response = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.runPreCrCheck, {}, 'Pre-CR check');
+    const response = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.runPreCrCheck, getWorkspaceRequestParams('staged'), 'Pre-CR check');
     if (!response) {
       state.setReadiness({
         state: 'blocked',
@@ -166,17 +189,23 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
 }
 
 async function refreshCoverage(client: LanguageClient): Promise<void> {
-  const refresh = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.refreshCoverage, {}, 'Refresh coverage');
+  const refresh = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.refreshCoverage, getWorkspaceRequestParams(), 'Refresh coverage');
   if (!refresh) {
     return;
   }
 
   if (!refresh.success || !refresh.summary) {
-    state.setCoverage({
-      isLoaded: false,
-      percent: null,
-      fileCount: 0,
-      lastLoadedFile: null
+    await clearCoveragePresentation();
+    state.setReadiness({
+      state: 'setup-needed',
+      gateDecision: 'block',
+      scope: 'staged',
+      summary: 'No configured coverage report is available.',
+      remediation: [{
+        code: 'missing-coverage',
+        message: 'Run the configured test command, then refresh coverage again.'
+      }],
+      lastRunAt: Date.now()
     });
     const action = await notify.showWarning('No configured coverage report is available yet.', undefined, 'Fix Setup');
     if (action === 'Fix Setup') {
@@ -192,6 +221,21 @@ async function refreshCoverage(client: LanguageClient): Promise<void> {
     lastLoadedFile: refresh.coveragePath
   });
 
+  await vscode.commands.executeCommand('setContext', 'preCr.hasCoverage', true);
+  statusBar.setCoverage(refresh.summary.linePercentage);
+  await refreshCoveragePresentation(client);
+  state.setReadiness({
+    state: 'warning',
+    gateDecision: 'warn',
+    scope: 'staged',
+    summary: 'Coverage refreshed. Run Pre-CR Check to recompute readiness.',
+    remediation: [{
+      code: 'readiness-refresh-required',
+      message: 'Run Pre-CR Check to verify changed-line coverage and quality adapters.'
+    }],
+    lastRunAt: Date.now()
+  });
+
   notify.showSuccess(`Coverage refreshed: ${refresh.summary.linePercentage.toFixed(1)}%`, 4000);
 }
 
@@ -200,24 +244,28 @@ async function showProjectHealth(
   openPanel = false,
   coverageCheck?: CoverageCheckResult
 ): Promise<void> {
-  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, {}, 'Project health');
+  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, getWorkspaceRequestParams(), 'Project health');
   if (!result) {
     return;
   }
 
   const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error');
+  const warningIssues = result.health.issues.filter((issue) => issue.severity === 'warning');
   state.setReadiness({
-    state: blockingIssues.length > 0 ? 'setup-needed' : 'ready',
-    gateDecision: blockingIssues.length > 0 ? 'block' : 'pass',
+    state: blockingIssues.length > 0 ? 'setup-needed' : warningIssues.length > 0 ? 'warning' : 'ready',
+    gateDecision: blockingIssues.length > 0 ? 'block' : warningIssues.length > 0 ? 'warn' : 'pass',
     scope: null,
     summary: blockingIssues.length > 0
       ? `${blockingIssues.length} setup issue${blockingIssues.length === 1 ? '' : 's'} require attention.`
-      : 'Project health is ready for the Pre-CR workflow.',
-    remediation: blockingIssues.map((issue) => ({
+      : warningIssues.length > 0
+        ? 'Project health has warnings to review.'
+        : 'Project health is ready for the Pre-CR workflow.',
+    remediation: result.health.issues.map((issue) => ({
       code: issue.code,
       message: issue.message,
       hint: issue.hint
-    }))
+    })),
+    lastRunAt: Date.now()
   });
 
   if (!openPanel) {
@@ -250,7 +298,7 @@ async function openProjectConfig(client: LanguageClient): Promise<void> {
     return;
   }
 
-  const health = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, {}, 'Project health');
+  const health = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, getWorkspaceRequestParams(), 'Project health');
   const template = buildProjectConfigTemplate(health?.health);
 
   const document = await vscode.workspace.openTextDocument({

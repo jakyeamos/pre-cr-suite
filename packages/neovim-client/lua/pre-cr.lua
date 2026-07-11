@@ -13,8 +13,10 @@
 -- ============================================================================
 
 local M = {}
-local last_coverage_check = nil
+local coverage_checks = {}
 local last_readiness = nil
+local current_workspace_root = nil
+local load_readiness
 local stable_methods = {
   getProjectHealth = '$/preCr/getProjectHealth',
   runPreCrCheck = '$/preCr/runPreCrCheck',
@@ -28,6 +30,13 @@ local function error_message(err)
     return err.message
   end
   return tostring(err)
+end
+
+local function workspace_request_params(client)
+  local root = client.config and client.config.root_dir or vim.fn.getcwd()
+  current_workspace_root = vim.fn.resolve(vim.fn.fnamemodify(root, ':p'))
+  load_readiness()
+  return { workspaceUri = vim.uri_from_fname(current_workspace_root) }
 end
 
 -- Default configuration
@@ -168,15 +177,19 @@ local function readiness_state_label(readiness)
   return labels[readiness and readiness.state] or 'NOT RUN'
 end
 
+local function workspace_key()
+  return current_workspace_root or vim.fn.resolve(vim.fn.fnamemodify(vim.fn.getcwd(), ':p'))
+end
+
 local function readiness_store_path()
-  local root = vim.fn.getcwd()
-  local key = root:gsub('[^%w%-_]', '_')
+  local root = current_workspace_root or vim.fn.resolve(vim.fn.fnamemodify(vim.fn.getcwd(), ':p'))
+  local key = vim.fn.sha256(root)
   local directory = vim.fn.stdpath('state') .. '/pre-cr'
   vim.fn.mkdir(directory, 'p')
   return directory .. '/' .. key .. '.json'
 end
 
-local function load_readiness()
+load_readiness = function()
   local path = readiness_store_path()
   if vim.fn.filereadable(path) == 0 then
     return
@@ -232,13 +245,27 @@ local function open_readiness_buffer()
     end
   end
 
-  local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_name(bufnr, 'Pre-CR Readiness')
+  local bufnr = vim.fn.bufnr('Pre-CR Readiness')
+  if bufnr <= 0 or not vim.api.nvim_buf_is_valid(bufnr) then
+    bufnr = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_name(bufnr, 'Pre-CR Readiness')
+  end
+  vim.bo[bufnr].modifiable = true
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
   vim.bo[bufnr].buftype = 'nofile'
   vim.bo[bufnr].bufhidden = 'wipe'
   vim.bo[bufnr].modifiable = false
   vim.api.nvim_set_current_buf(bufnr)
+end
+
+local function sync_workspace_from_buffer(bufnr)
+  for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = bufnr })) do
+    if client.name == 'pre-cr' and client.config and client.config.root_dir then
+      current_workspace_root = vim.fn.resolve(vim.fn.fnamemodify(client.config.root_dir, ':p'))
+      load_readiness()
+      return
+    end
+  end
 end
 
 -- ============================================================================
@@ -345,7 +372,7 @@ local function setup_commands()
       return
     end
 
-    clients[1].request(stable_methods.runPreCrCheck, {}, function(err, result)
+    clients[1].request(stable_methods.runPreCrCheck, vim.tbl_extend('force', workspace_request_params(clients[1]), { scope = 'staged' }), function(err, result)
       if err then
         set_readiness({
           state = 'blocked',
@@ -376,7 +403,7 @@ local function setup_commands()
         set_readiness(result.readiness)
       end
       if check.coverageCheck then
-        last_coverage_check = check.coverageCheck
+        coverage_checks[workspace_key()] = check.coverageCheck
         local lines = format_coverage_surface_lines(check.coverageCheck)
         local status = check.coverageCheck.passed and 'passed' or format_coverage_failure_message(check.coverageCheck)
         local summary = string.format(
@@ -403,7 +430,7 @@ local function setup_commands()
       return
     end
 
-    clients[1].request(stable_methods.getProjectHealth, {}, function(err, result)
+    clients[1].request(stable_methods.getProjectHealth, workspace_request_params(clients[1]), function(err, result)
       if err then
         vim.notify('Failed to inspect Pre-CR setup: ' .. error_message(err), vim.log.levels.ERROR)
         return
@@ -415,16 +442,28 @@ local function setup_commands()
       end
 
       local health = result.health
+      local has_blocking_issue = false
+      local has_warning_issue = false
+      for _, issue in ipairs(health.issues or {}) do
+        if issue.severity == 'error' then
+          has_blocking_issue = true
+        elseif issue.severity == 'warning' then
+          has_warning_issue = true
+        end
+      end
       set_readiness({
-        state = (health.issues and #health.issues > 0) and 'setup-needed' or 'ready',
-        gateDecision = (health.issues and #health.issues > 0) and 'block' or 'pass',
+        state = has_blocking_issue and 'setup-needed' or has_warning_issue and 'warning' or 'ready',
+        gateDecision = has_blocking_issue and 'block' or has_warning_issue and 'warn' or 'pass',
         scope = nil,
-        summary = (health.issues and #health.issues > 0)
+        summary = has_blocking_issue
           and 'Project setup requires attention.'
+          or has_warning_issue
+            and 'Project setup has warnings to review.'
           or 'Project health is ready for the Pre-CR workflow.',
         remediation = health.issues or {},
         lastRunAt = os.time() * 1000
       })
+      local last_coverage_check = coverage_checks[workspace_key()]
       local last_unsupported_files = last_coverage_check and last_coverage_check.unsupportedFiles or {}
       local has_last_unsupported_files = #last_unsupported_files > 0
       local lines = { 'Pre-CR Setup Health:' }
@@ -493,14 +532,44 @@ local function setup_commands()
       return
     end
     
-    clients[1].request(stable_methods.refreshCoverage, {}, function(err, result)
+    clients[1].request(stable_methods.refreshCoverage, workspace_request_params(clients[1]), function(err, result)
       if err then
+        set_readiness({
+          state = 'blocked',
+          gateDecision = 'block',
+          scope = 'staged',
+          summary = 'Coverage refresh failed before the server returned a result.',
+          remediation = {
+            { code = 'refresh-failed', message = error_message(err) }
+          },
+          lastRunAt = os.time() * 1000
+        })
         vim.notify('Failed to refresh: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.success then
+        set_readiness({
+          state = 'warning',
+          gateDecision = 'warn',
+          scope = 'staged',
+          summary = 'Coverage refreshed. Run :PreCrCheck to recompute readiness.',
+          remediation = {
+            { code = 'readiness-refresh-required', message = 'Run :PreCrCheck to verify changed-line coverage and quality adapters.' }
+          },
+          lastRunAt = os.time() * 1000
+        })
         vim.notify('Coverage refreshed', vim.log.levels.INFO)
         -- Re-apply decorations
         vim.cmd('PreCrShow')
       else
+        set_readiness({
+          state = 'setup-needed',
+          gateDecision = 'block',
+          scope = 'staged',
+          summary = 'No configured coverage report is available.',
+          remediation = {
+            { code = 'missing-coverage', message = 'Run the configured test command, then refresh coverage again.' }
+          },
+          lastRunAt = os.time() * 1000
+        })
         vim.notify('Failed to refresh coverage', vim.log.levels.WARN)
       end
     end, bufnr)
@@ -516,7 +585,7 @@ local function setup_commands()
       return
     end
     
-    clients[1].request(stable_methods.getCoverageSummary, {}, function(err, result)
+    clients[1].request(stable_methods.getCoverageSummary, workspace_request_params(clients[1]), function(err, result)
       if err then
         vim.notify('Failed to get summary: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.summary then
@@ -535,6 +604,7 @@ local function setup_commands()
   end, { desc = 'Show coverage summary' })
 
   vim.api.nvim_create_user_command('PreCrReadiness', function()
+    sync_workspace_from_buffer(vim.api.nvim_get_current_buf())
     open_readiness_buffer()
   end, { desc = 'Show the persisted Pre-CR readiness result' })
 end

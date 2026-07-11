@@ -116,6 +116,23 @@ type StateListener<T> = (newValue: T, oldValue: T) => void;
 type UnknownStateListener = (newValue: unknown, oldValue: unknown) => void;
 type StateKey = keyof ExtensionState;
 
+function isReadinessState(value: unknown): value is PreCrReadinessState {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Partial<PreCrReadinessState>;
+  const validState = candidate.state === 'idle' || candidate.state === 'ready' || candidate.state === 'warning' || candidate.state === 'blocked' || candidate.state === 'setup-needed';
+  const validDecision = candidate.gateDecision === null || candidate.gateDecision === 'pass' || candidate.gateDecision === 'warn' || candidate.gateDecision === 'block';
+  const validScope = candidate.scope === null || candidate.scope === 'staged' || candidate.scope === 'worktree';
+  const validRemediation = Array.isArray(candidate.remediation) && candidate.remediation.every((item) => (
+    typeof item === 'object' && item !== null &&
+    typeof (item as { code?: unknown }).code === 'string' &&
+    typeof (item as { message?: unknown }).message === 'string'
+  ));
+  return validState && validDecision && validScope && validRemediation;
+}
+
 class StateManager {
   private state: ExtensionState;
   private listeners: Map<string, Set<UnknownStateListener>> = new Map();
@@ -141,7 +158,7 @@ class StateManager {
     }
 
     const persistedReadiness = context.workspaceState.get<PreCrReadinessState>('preCr.readiness');
-    if (persistedReadiness) {
+    if (isReadinessState(persistedReadiness)) {
       this.state.readiness = {
         ...initialState.readiness,
         ...persistedReadiness

@@ -62,6 +62,17 @@ function getActiveSession(): WorkspaceSession | null {
   return activeSessionKey ? sessionManager.get(activeSessionKey) : null;
 }
 
+function getSessionForRequest(params?: unknown): WorkspaceSession | null {
+  if (typeof params === 'object' && params !== null && !Array.isArray(params)) {
+    const workspaceUri = (params as Record<string, unknown>).workspaceUri;
+    if (workspaceUri !== undefined) {
+      return typeof workspaceUri === 'string' ? sessionManager.get(workspaceUri) : null;
+    }
+  }
+
+  return getActiveSession();
+}
+
 const requestState: ServerRequestState = {
   get workspaceRoot() {
     return getActiveSession()?.workspaceRoot ?? null;
@@ -81,10 +92,10 @@ const coverageController = createCoverageController({
   connection,
   documents,
   getCoverageSettings: () => globalSettings.coverage,
-  getWorkspaceRoot: () => getActiveSession()?.workspaceRoot ?? null,
-  getCoverage: () => getActiveSession()?.coverage ?? null,
-  getCoveragePath: () => getActiveSession()?.coveragePath ?? null,
-  getTrustedExecution: () => getActiveSession()?.trustedExecution ?? false,
+  getWorkspaceRoot: (params) => getSessionForRequest(params)?.workspaceRoot ?? null,
+  getCoverage: (params) => getSessionForRequest(params)?.coverage ?? null,
+  getCoveragePath: (params) => getSessionForRequest(params)?.coveragePath ?? null,
+  getTrustedExecution: (params) => getSessionForRequest(params)?.trustedExecution ?? false,
   getSessionForUri: (uri) => {
     const session = sessionManager.getForUri(uri);
     return session
@@ -96,12 +107,15 @@ const coverageController = createCoverageController({
       }
       : null;
   },
-  setCoverageState: (nextCoverage, nextCoveragePath) => {
-    const session = getActiveSession();
+  setCoverageState: (nextCoverage, nextCoveragePath, workspaceRoot) => {
+    const session = workspaceRoot ? sessionManager.get(workspaceRoot) : getActiveSession();
     if (session) {
       session.coverage = nextCoverage;
       session.coveragePath = nextCoveragePath;
     }
+  },
+  setSessionState: (workspaceRoot, update) => {
+    sessionManager.update(workspaceRoot, update);
   }
 });
 
@@ -161,8 +175,8 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   const activeSession = getActiveSession();
   connection.console.info(`Pre-CR Server initializing. Workspace: ${activeSession?.workspaceRoot ?? null}; trusted execution: ${trustedExecution}`);
 
-  if (activeSession) {
-    coverageController.loadCoverage();
+  for (const session of sessionManager.values()) {
+    coverageController.loadCoverage(session.workspaceRoot);
   }
 
   return {

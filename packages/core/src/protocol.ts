@@ -1,7 +1,7 @@
 import type { CoverageCheckResult, ChangedFile } from './runner/coverageChecker';
 import type { CoverageDecoration, CoverageSummary } from './types';
 import { PRE_CR_METHODS } from './contracts/methods';
-import type { ReadinessResultEnvelope } from './contracts/readiness';
+import type { ReadinessResultEnvelope, ReadinessScope } from './contracts/readiness';
 
 export type PreCrCoverageFormat = 'auto' | 'lcov' | 'istanbul';
 
@@ -183,21 +183,29 @@ export interface RunPreCrCheckResult {
   readiness?: ReadinessResultEnvelope;
 }
 
+export interface WorkspaceRequestParams {
+  workspaceUri?: string;
+}
+
+export interface RunPreCrCheckParams extends WorkspaceRequestParams {
+  scope?: ReadinessScope;
+}
+
 export interface PreCrBetaMethodMap {
   [PRE_CR_METHODS.getProjectHealth]: {
-    params: Record<string, never>;
+    params: WorkspaceRequestParams;
     result: GetProjectHealthResult;
   };
   [PRE_CR_METHODS.runPreCrCheck]: {
-    params: Record<string, never>;
+    params: RunPreCrCheckParams;
     result: RunPreCrCheckResult;
   };
   [PRE_CR_METHODS.refreshCoverage]: {
-    params: Record<string, never>;
+    params: WorkspaceRequestParams;
     result: RefreshCoverageResult;
   };
   [PRE_CR_METHODS.getCoverageSummary]: {
-    params: Record<string, never>;
+    params: WorkspaceRequestParams;
     result: GetCoverageSummaryResult;
   };
   [PRE_CR_METHODS.getCoverage]: {

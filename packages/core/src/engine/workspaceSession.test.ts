@@ -45,4 +45,21 @@ describe('WorkspaceSessionManager', () => {
     expect(manager.getForPath(path.join(outerRoot, 'README.md'))).toBe(outer);
     expect(manager.getForPath(path.join(os.tmpdir(), 'outside-pre-cr.ts'))).toBeNull();
   });
+
+  it('keeps same-named files and readiness state isolated across roots', () => {
+    const firstRoot = createWorkspace();
+    const secondRoot = createWorkspace();
+    const manager = new WorkspaceSessionManager();
+    const first = manager.getOrCreate(firstRoot);
+    const second = manager.getOrCreate(secondRoot);
+
+    manager.update(firstRoot, { readiness: 'warning', coveragePath: path.join(firstRoot, 'coverage.lcov') });
+    manager.update(secondRoot, { readiness: 'ready', coveragePath: path.join(secondRoot, 'coverage.lcov') });
+
+    expect(manager.getForUri(canonicalWorkspaceUri(firstRoot))).toBe(first);
+    expect(manager.getForUri(canonicalWorkspaceUri(secondRoot))).toBe(second);
+    expect(first.readiness).toBe('warning');
+    expect(second.readiness).toBe('ready');
+    expect(first.coveragePath).not.toBe(second.coveragePath);
+  });
 });

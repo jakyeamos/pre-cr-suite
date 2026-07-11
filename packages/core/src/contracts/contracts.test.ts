@@ -5,7 +5,9 @@ import {
   PRE_CR_NOTIFICATIONS,
   isEmptyRequestParams,
   isGetCoverageDecorationsParams,
-  isGetCoverageParams
+  isGetCoverageParams,
+  isRunPreCrCheckParams,
+  isWorkspaceRequestParams
 } from './index';
 
 describe('stable protocol contracts', () => {
@@ -30,5 +32,11 @@ describe('stable protocol contracts', () => {
       textDocument: { uri: 'file:///workspace/src/index.ts' }
     })).toBe(true);
     expect(isGetCoverageDecorationsParams({ textDocument: {} })).toBe(false);
+    expect(isWorkspaceRequestParams({})).toBe(true);
+    expect(isWorkspaceRequestParams({ workspaceUri: 'file:///workspace' })).toBe(true);
+    expect(isWorkspaceRequestParams({ workspaceUri: 42 })).toBe(false);
+    expect(isWorkspaceRequestParams({ extra: true })).toBe(false);
+    expect(isRunPreCrCheckParams({ workspaceUri: 'file:///workspace', scope: 'staged' })).toBe(true);
+    expect(isRunPreCrCheckParams({ scope: 'invalid' })).toBe(false);
   });
 });
