@@ -10,7 +10,9 @@ engine that the runtime consolidation now uses.
 M4 is in progress: the first readiness slice now persists the last result,
 surfaces the state in VS Code, and leaves diagnostics owned by the server.
 M5 has started with the same durable readiness result and remediation buffer in
-Neovim, while preserving the existing commands and coverage overlays.
+Neovim, while preserving the existing commands and coverage overlays. Stable
+editor requests now carry workspace identity and explicit staged/worktree scope,
+so multi-root routing and warning-state presentation use the same result.
 
 ## Completed
 
@@ -67,13 +69,17 @@ Neovim, while preserving the existing commands and coverage overlays.
 - Started Neovim readiness parity with a per-workspace persisted snapshot,
   `:PreCrReadiness` recovery buffer, shared state labels, and default keymaps
   enabled by no-options `setup()`.
+- Added cross-client acceptance hardening: explicit workspace-scoped stable
+  requests, warning-state derivation, stale coverage/diagnostic cleanup, durable
+  per-root Neovim recovery, and a headless Neovim readiness smoke script.
 
 ## Verified baseline
 
 | Check | Result |
 | --- | --- |
 | Build, lint, typecheck | Pass |
-| Unit tests | Pass, 424 tests |
+| Unit tests | Pass, 431 tests |
+| Neovim readiness smoke | Pass (or cleanly skips when Neovim is unavailable) |
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
 | VSIX package | Pass |
@@ -85,10 +91,9 @@ Neovim, while preserving the existing commands and coverage overlays.
 
 1. The legacy suite still exposes experimental surfaces that should be isolated
    or removed as the v2 contract is introduced.
-2. Client workflows still need end-to-end parity proof against the consolidated
-   result contract.
-3. VS Code and Neovim still need readiness-first presentation and durable
-   recovery around the consolidated result.
+2. Client workflows still need extension-host and end-to-end parity proof against
+   the consolidated result contract.
+3. The legacy experimental surface still needs explicit isolation or removal.
 
 ## Proposed defaults pending product review
 
@@ -102,7 +107,6 @@ Neovim, while preserving the existing commands and coverage overlays.
 
 ## Next step
 
-Continue M4/M5 in coherent vertical slices: finish VS Code extension-host and
-Neovim headless acceptance coverage around the shared readiness result while
-keeping existing beta commands as compatibility aliases. Keep the application
-runnable at every milestone.
+Continue M4/M5 in coherent vertical slices: add VS Code extension-host coverage
+for trust/setup/recovery, then retire or explicitly isolate legacy experimental
+entrypoints. Keep the application runnable at every milestone.
