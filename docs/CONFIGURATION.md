@@ -8,6 +8,15 @@ All settings are prefixed with `preCr.` in VS Code settings.
 
 ---
 
+## Experimental Settings
+
+### `preCr.experimental.enabled`
+- **Type:** `boolean`
+- **Default:** `false`
+- **Description:** Enable the legacy checklist, documentation, review, context, debug, and dashboard tools. Reload VS Code after changing this setting.
+
+---
+
 ## Coverage Settings
 
 ### `preCr.coverage.autoLoad`

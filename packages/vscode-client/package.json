@@ -55,7 +55,8 @@
         "command": "preCr.showDashboard",
         "title": "Show Dashboard",
         "category": "Pre-CR",
-        "icon": "$(dashboard)"
+        "icon": "$(dashboard)",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.showReadiness",
@@ -155,92 +156,110 @@
       {
         "command": "preCr.runChecklist",
         "title": "Run on Git Changes",
-        "category": "Pre-CR Review"
+        "category": "Pre-CR Review",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.runChecklistWorkspace",
         "title": "Run on Workspace",
-        "category": "Pre-CR Review"
+        "category": "Pre-CR Review",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.quickSecurityScan",
         "title": "Scan Current File",
-        "category": "Pre-CR Security"
+        "category": "Pre-CR Security",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.securityScanWorkspace",
         "title": "Scan Workspace",
-        "category": "Pre-CR Security"
+        "category": "Pre-CR Security",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.securityScanChanges",
         "title": "Scan Git Changes",
-        "category": "Pre-CR Security"
+        "category": "Pre-CR Security",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.estimateReviewTime",
         "title": "Estimate Review Time",
-        "category": "Pre-CR Review"
+        "category": "Pre-CR Review",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.showFlakyTests",
         "title": "Show Flaky Tests",
-        "category": "Pre-CR Review"
+        "category": "Pre-CR Review",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.generateDocs",
         "title": "Generate All (Current File)",
-        "category": "Pre-CR Docs"
+        "category": "Pre-CR Docs",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.generateDocAtCursor",
         "title": "Generate at Cursor",
-        "category": "Pre-CR Docs"
+        "category": "Pre-CR Docs",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.checkDocHealth",
         "title": "Check File Health",
-        "category": "Pre-CR Docs"
+        "category": "Pre-CR Docs",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.checkDocHealthWorkspace",
         "title": "Check Workspace Health",
-        "category": "Pre-CR Docs"
+        "category": "Pre-CR Docs",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.captureContext",
         "title": "Save Snapshot",
-        "category": "Pre-CR Context"
+        "category": "Pre-CR Context",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.restoreContext",
         "title": "Restore Snapshot",
-        "category": "Pre-CR Context"
+        "category": "Pre-CR Context",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.whereWasI",
         "title": "Where Was I?",
-        "category": "Pre-CR Context"
+        "category": "Pre-CR Context",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.startDebugCapture",
         "title": "Start Capture",
-        "category": "Pre-CR Debug"
+        "category": "Pre-CR Debug",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.stopDebugCapture",
         "title": "Stop Capture",
-        "category": "Pre-CR Debug"
+        "category": "Pre-CR Debug",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.discardDebugCapture",
         "title": "Discard Capture",
-        "category": "Pre-CR Debug"
+        "category": "Pre-CR Debug",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.analyzeDebugSession",
         "title": "Analyze Session",
-        "category": "Pre-CR Debug"
+        "category": "Pre-CR Debug",
+        "enablement": "preCr.experimentalEnabled"
       }
     ],
     "configuration": {
@@ -281,6 +300,11 @@
           "minimum": 0,
           "maximum": 100,
           "description": "Minimum coverage percentage required for changed lines to pass Pre-CR check"
+        },
+        "preCr.experimental.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable legacy checklist, documentation, review, context, debug, and dashboard tools (requires reload)"
         },
         "preCr.coverage.excludePatterns": {
           "type": "array",
@@ -445,15 +469,18 @@
         },
         {
           "id": "preCr.checklist",
-          "name": "PR Checklist"
+          "name": "PR Checklist",
+          "when": "preCr.experimentalEnabled"
         },
         {
           "id": "preCr.flakyTests",
-          "name": "Flaky Tests"
+          "name": "Flaky Tests",
+          "when": "preCr.experimentalEnabled"
         },
         {
           "id": "preCr.debugSessions",
-          "name": "Debug Sessions"
+          "name": "Debug Sessions",
+          "when": "preCr.experimentalEnabled"
         }
       ]
     },
@@ -468,14 +495,17 @@
       },
       {
         "view": "preCr.checklist",
+        "when": "preCr.experimentalEnabled",
         "contents": "No checklist results yet.\n[Run PR Checklist](command:preCr.runChecklist)\n\nRun a checklist to see security, documentation, and code quality issues."
       },
       {
         "view": "preCr.flakyTests",
+        "when": "preCr.experimentalEnabled",
         "contents": "No flaky test data available.\n[View Flaky Tests](command:preCr.showFlakyTests)\n\nRun your tests multiple times to detect flaky tests."
       },
       {
         "view": "preCr.debugSessions",
+        "when": "preCr.experimentalEnabled",
         "contents": "No debug sessions recorded.\n[Start Capture](command:preCr.startDebugCapture)\n\nRecord a debug session to analyze patterns and get insights."
       }
     ],
@@ -484,12 +514,12 @@
         {
           "command": "preCr.quickSecurityScan",
           "group": "1_preCr@1",
-          "when": "editorTextFocus"
+          "when": "editorTextFocus && preCr.experimentalEnabled"
         },
         {
           "command": "preCr.generateDocAtCursor",
           "group": "1_preCr@2",
-          "when": "editorTextFocus && resourceLangId =~ /typescript|javascript|typescriptreact|javascriptreact/"
+          "when": "editorTextFocus && preCr.experimentalEnabled && resourceLangId =~ /typescript|javascript|typescriptreact|javascriptreact/"
         },
         {
           "command": "preCr.showFileCoverage",
@@ -521,22 +551,22 @@
         },
         {
           "command": "preCr.runChecklist",
-          "when": "view == preCr.checklist",
+          "when": "view == preCr.checklist && preCr.experimentalEnabled",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
           "command": "preCr.startDebugCapture",
-          "when": "!preCr.isCapturing"
+          "when": "!preCr.isCapturing && preCr.experimentalEnabled"
         },
         {
           "command": "preCr.stopDebugCapture",
-          "when": "preCr.isCapturing"
+          "when": "preCr.isCapturing && preCr.experimentalEnabled"
         },
         {
           "command": "preCr.discardDebugCapture",
-          "when": "preCr.isCapturing"
+          "when": "preCr.isCapturing && preCr.experimentalEnabled"
         }
       ]
     },
@@ -550,7 +580,8 @@
       {
         "command": "preCr.showDashboard",
         "key": "ctrl+shift+b",
-        "mac": "cmd+shift+b"
+        "mac": "cmd+shift+b",
+        "when": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.runPreCrCheck",
@@ -561,23 +592,25 @@
         "command": "preCr.quickSecurityScan",
         "key": "ctrl+shift+s",
         "mac": "cmd+shift+s",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus && preCr.experimentalEnabled"
       },
       {
         "command": "preCr.generateDocAtCursor",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus && preCr.experimentalEnabled"
       },
       {
         "command": "preCr.runChecklist",
         "key": "ctrl+shift+c",
-        "mac": "cmd+shift+c"
+        "mac": "cmd+shift+c",
+        "when": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.whereWasI",
         "key": "ctrl+shift+w",
-        "mac": "cmd+shift+w"
+        "mac": "cmd+shift+w",
+        "when": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.toggleCoverageOverlay",

@@ -112,6 +112,7 @@ describe('Config Utilities', () => {
       const config = getFullConfig();
 
       expect(config).toHaveProperty('coverage');
+      expect(config).toHaveProperty('experimental');
       expect(config).toHaveProperty('security');
       expect(config).toHaveProperty('checklist');
       expect(config).toHaveProperty('docs');
@@ -133,6 +134,7 @@ describe('Config Utilities', () => {
 describe('Config Schema Validation', () => {
   it('should handle all known config keys without error', () => {
     const knownKeys = [
+      'experimental.enabled',
       'coverage.autoLoad',
       'coverage.searchPaths',
       'coverage.decorations.covered',

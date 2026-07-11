@@ -32,6 +32,28 @@ import { initState, state } from './utils/state';
 
 let client: LanguageClient;
 
+const EXPERIMENTAL_COMMANDS = new Set([
+  'preCr.showDashboard',
+  'preCr.runChecklist',
+  'preCr.runChecklistWorkspace',
+  'preCr.quickSecurityScan',
+  'preCr.securityScanWorkspace',
+  'preCr.securityScanChanges',
+  'preCr.estimateReviewTime',
+  'preCr.showFlakyTests',
+  'preCr.generateDocs',
+  'preCr.generateDocAtCursor',
+  'preCr.checkDocHealth',
+  'preCr.checkDocHealthWorkspace',
+  'preCr.captureContext',
+  'preCr.restoreContext',
+  'preCr.whereWasI',
+  'preCr.startDebugCapture',
+  'preCr.stopDebugCapture',
+  'preCr.discardDebugCapture',
+  'preCr.analyzeDebugSession'
+]);
+
 // Output channel for logs
 let outputChannel: vscode.OutputChannel;
 
@@ -68,7 +90,13 @@ export async function activate(context: vscode.ExtensionContext) {
     log(`State init failed: ${error}`);
   }
 
-  if (!vscode.workspace.isTrusted) {
+  const workspaceTrusted = vscode.workspace.isTrusted;
+  const experimentalEnabled = workspaceTrusted && vscode.workspace
+    .getConfiguration('preCr')
+    .get<boolean>('experimental.enabled', false);
+  void vscode.commands.executeCommand('setContext', 'preCr.experimentalEnabled', experimentalEnabled);
+
+  if (!workspaceTrusted) {
     log('Pre-CR is inactive until this workspace is trusted.', 'warn');
     try {
       statusBar.initStatusBar(context);
@@ -206,28 +234,41 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register features that require LSP
     registerCoverageFeatures(context, client);
-    registerChecklistFeatures(context, client);
-    registerDocgenFeatures(context, client);
-    registerReviewFeatures(context, client);
-    registerContextFeatures(context, client);
-    registerDebugFeatures(context, client);
-    registerDashboardFeature(context, client);
     registerPreCrCheckFeature(context, client);
     registerReadinessFeature(context);
+
+    if (experimentalEnabled) {
+      registerChecklistFeatures(context, client);
+      registerDocgenFeatures(context, client);
+      registerReviewFeatures(context, client);
+      registerContextFeatures(context, client);
+      registerDebugFeatures(context, client);
+      registerDashboardFeature(context, client);
+    }
 
     // Mark LSP as connected
     state.setLspConnected(true);
 
     // Watch for configuration changes
-    context.subscriptions.push(
-      vscode.workspace.onDidChangeConfiguration(e => {
-        if (e.affectsConfiguration('preCr')) {
-          client.sendNotification('workspace/didChangeConfiguration', {
-            settings: getConfiguration()
-          });
-        }
-      })
-    );
+      context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+          if (e.affectsConfiguration('preCr')) {
+            client.sendNotification('workspace/didChangeConfiguration', {
+              settings: getConfiguration()
+            });
+          }
+          if (e.affectsConfiguration('preCr.experimental.enabled')) {
+            void vscode.window.showInformationMessage(
+              'Experimental Pre-CR tools change after reload.',
+              'Reload Window'
+            ).then((selection) => {
+              if (selection === 'Reload Window') {
+                void vscode.commands.executeCommand('workbench.action.reloadWindow');
+              }
+            });
+          }
+        })
+      );
 
     // Watch for branch changes (git)
     watchBranchChanges(context, client);
@@ -256,6 +297,9 @@ export function deactivate(): Thenable<void> | undefined {
 function getConfiguration(): Record<string, unknown> {
   const config = vscode.workspace.getConfiguration('preCr');
   return {
+    experimental: {
+      enabled: config.get('experimental.enabled')
+    },
     coverage: {
       autoLoad: config.get('coverage.autoLoad'),
       searchPaths: config.get('coverage.searchPaths'),
@@ -380,6 +424,9 @@ function getRecentActionsItems(): (vscode.QuickPickItem & { command?: string })[
   ];
 
   for (const command of recent) {
+    if (!isExperimentalEnabled() && EXPERIMENTAL_COMMANDS.has(command)) {
+      continue;
+    }
     const label = COMMAND_LABELS[command] || command.replace('preCr.', '');
     items.push({
       label: `$(history) ${label.replace(/^\$\([^)]+\)\s*/, '')}`,
@@ -389,6 +436,10 @@ function getRecentActionsItems(): (vscode.QuickPickItem & { command?: string })[
   }
 
   return items;
+}
+
+function isExperimentalEnabled(): boolean {
+  return vscode.workspace.getConfiguration('preCr').get<boolean>('experimental.enabled', false);
 }
 
 /**
@@ -485,6 +536,15 @@ function registerQuickActions(context: vscode.ExtensionContext) {
           quickItem('$(gear) Open Settings', 'Configure Pre-CR Suite', 'preCr.openSettings'),
           quickItem('$(output) Show Logs', 'View output channel', 'preCr.showLogs'),
         ];
+      }
+
+      if (!isExperimentalEnabled()) {
+        items = items.filter((item) => {
+          if (item.command && EXPERIMENTAL_COMMANDS.has(item.command)) {
+            return false;
+          }
+          return item.label !== 'Experimental';
+        });
       }
 
       const selected = await vscode.window.showQuickPick(items, {

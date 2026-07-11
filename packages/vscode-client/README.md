@@ -40,7 +40,9 @@ Editor settings are presentation-only during beta. Use them for notification and
 
 ## Experimental Features
 
-These features remain in the extension, but they are explicitly experimental during beta:
+These features remain in the extension, but they are explicitly experimental and
+disabled by default during beta. Enable `preCr.experimental.enabled` and reload
+VS Code to expose them:
 
 - Checklist and security flows outside the main coverage path
 - Documentation generation
