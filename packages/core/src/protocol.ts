@@ -1,6 +1,7 @@
 import type { CoverageCheckResult, ChangedFile } from './runner/coverageChecker';
 import type { CoverageDecoration, CoverageSummary } from './types';
 import { PRE_CR_METHODS } from './contracts/methods';
+import type { ReadinessResultEnvelope } from './contracts/readiness';
 
 export type PreCrCoverageFormat = 'auto' | 'lcov' | 'istanbul';
 
@@ -179,6 +180,7 @@ export interface PreCrCheckResult {
 export interface RunPreCrCheckResult {
   result: PreCrCheckResult | null;
   error?: string;
+  readiness?: ReadinessResultEnvelope;
 }
 
 export interface PreCrBetaMethodMap {

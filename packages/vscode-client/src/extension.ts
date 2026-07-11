@@ -25,6 +25,7 @@ import { registerContextFeatures } from './features/context';
 import { registerDebugFeatures, isDebugCapturing } from './features/debug';
 import { registerDashboardFeature } from './features/dashboard';
 import { registerPreCrCheckFeature } from './features/preCrCheck';
+import { registerReadinessFeature } from './features/readiness';
 import * as notify from './utils/notifications';
 import * as statusBar from './utils/statusBar';
 import { initState, state } from './utils/state';
@@ -197,6 +198,7 @@ export async function activate(context: vscode.ExtensionContext) {
     registerDebugFeatures(context, client);
     registerDashboardFeature(context, client);
     registerPreCrCheckFeature(context, client);
+    registerReadinessFeature(context);
 
     // Mark LSP as connected
     state.setLspConnected(true);

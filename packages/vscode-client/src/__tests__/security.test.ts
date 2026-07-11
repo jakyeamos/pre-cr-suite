@@ -132,6 +132,7 @@ vi.mock('../features/debug', () => ({
 }));
 vi.mock('../features/dashboard', () => ({ registerDashboardFeature: vi.fn() }));
 vi.mock('../features/preCrCheck', () => ({ registerPreCrCheckFeature: vi.fn() }));
+vi.mock('../features/readiness', () => ({ registerReadinessFeature: vi.fn() }));
 vi.mock('../utils/notifications', () => ({
   showInfo: vi.fn(),
   showWarning: vi.fn()

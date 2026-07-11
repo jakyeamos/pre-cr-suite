@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import { formatUnsupportedSurfaceSetupGuidance, PRE_CR_METHODS, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth } from '@pre-cr/core';
+import { formatUnsupportedSurfaceSetupGuidance, PRE_CR_METHODS, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth, type ReadinessResultEnvelope } from '@pre-cr/core';
 
 import * as notify from '../utils/notifications';
 import { state } from '../utils/state';
@@ -85,15 +85,45 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
 
   try {
     const response = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.runPreCrCheck, {}, 'Pre-CR check');
-    if (!response?.result) {
+    if (!response) {
+      state.setReadiness({
+        state: 'blocked',
+        gateDecision: 'block',
+        scope: 'staged',
+        summary: 'The readiness request failed before the server returned a result.',
+        remediation: [{
+          code: 'server-request-failed',
+          message: 'Reconnect to the Pre-CR server and run the check again.'
+        }],
+        lastRunAt: Date.now()
+      });
+      return;
+    }
+    if (!response.result) {
+      if (response.readiness) {
+        applyReadinessState(response.readiness);
+      } else {
+        state.setReadiness({
+          state: 'setup-needed',
+          gateDecision: 'block',
+          scope: 'staged',
+          summary: response.error ?? 'Project setup is required before the readiness check can run.',
+          remediation: response.error
+            ? [{ code: 'readiness-failed', message: response.error }]
+            : [],
+          lastRunAt: Date.now()
+        });
+      }
       return;
     }
 
     renderCheckOutput(response.result);
+    if (response.readiness) {
+      applyReadinessState(response.readiness);
+    }
     applyCoverageState(response.result);
 
     if (response.result.coverageCheck) {
-      await showUncoveredAsDiagnostics(response.result.coverageCheck.uncoveredDetails);
       const summary = response.result.coverageCheck;
       const message = summary.passed
         ? `Coverage ${summary.coveragePercent.toFixed(1)}% on changed lines`
@@ -174,6 +204,21 @@ async function showProjectHealth(
   if (!result) {
     return;
   }
+
+  const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error');
+  state.setReadiness({
+    state: blockingIssues.length > 0 ? 'setup-needed' : 'ready',
+    gateDecision: blockingIssues.length > 0 ? 'block' : 'pass',
+    scope: null,
+    summary: blockingIssues.length > 0
+      ? `${blockingIssues.length} setup issue${blockingIssues.length === 1 ? '' : 's'} require attention.`
+      : 'Project health is ready for the Pre-CR workflow.',
+    remediation: blockingIssues.map((issue) => ({
+      code: issue.code,
+      message: issue.message,
+      hint: issue.hint
+    }))
+  });
 
   if (!openPanel) {
     const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error').length;
@@ -336,6 +381,22 @@ function applyCoverageState(result: PreCrCheckResult): void {
   });
 }
 
+function applyReadinessState(readiness: ReadinessResultEnvelope): void {
+  const coverage = readiness.result?.coverageCheck;
+  state.setReadiness({
+    state: readiness.state,
+    gateDecision: readiness.gateDecision,
+    scope: readiness.scope,
+    summary: coverage
+      ? `${coverage.coveragePercent.toFixed(1)}% changed-line coverage (threshold ${coverage.threshold}%).`
+      : readiness.state === 'setup-needed'
+        ? 'Project setup is required before the readiness check can run.'
+        : 'Pre-CR readiness result received.',
+    remediation: readiness.remediation,
+    lastRunAt: Date.now()
+  });
+}
+
 function formatHealthBlock(health: ProjectHealth): string {
   const lines = [
     'Project Health',
@@ -418,31 +479,4 @@ function buildProjectHealthHtml(
       </div>
     `
   });
-}
-
-async function showUncoveredAsDiagnostics(details: Array<{ file: string; line: number }>): Promise<void> {
-  const collection = vscode.languages.createDiagnosticCollection('preCr-coverage');
-  const grouped = new Map<string, vscode.Diagnostic[]>();
-
-  for (const detail of details) {
-    const existing = grouped.get(detail.file) ?? [];
-    existing.push(new vscode.Diagnostic(
-      new vscode.Range(detail.line - 1, 0, detail.line - 1, 1000),
-      'Line not covered by tests',
-      vscode.DiagnosticSeverity.Warning
-    ));
-    grouped.set(detail.file, existing);
-  }
-
-  for (const [file, diagnostics] of grouped) {
-    const matches = await vscode.workspace.findFiles(`**/${path.basename(file)}`, undefined, 1);
-    if (matches.length > 0) {
-      collection.set(matches[0], diagnostics);
-    }
-  }
-
-  setTimeout(() => {
-    collection.clear();
-    collection.dispose();
-  }, 60000);
 }

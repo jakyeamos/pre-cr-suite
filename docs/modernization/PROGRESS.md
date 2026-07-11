@@ -7,6 +7,8 @@ The original checkout remains untouched because it had unrelated untracked
 files. M1 establishes the safe execution and changed-line correctness boundary;
 M2 adds the shared stable contract registry and canonical workspace-session
 engine that the runtime consolidation now uses.
+M4 is in progress: the first readiness slice now persists the last result,
+surfaces the state in VS Code, and leaves diagnostics owned by the server.
 
 ## Completed
 
@@ -57,6 +59,9 @@ engine that the runtime consolidation now uses.
   identity between published and bundled artifacts.
 - Added package export maps and release-facing CLI/config documentation for the
   stable contract.
+- Started the VS Code readiness migration with workspace-persisted state,
+  `Ready`/`Warning`/`Blocked`/`Setup needed` status presentation, a dedicated
+  Readiness view, and server-owned coverage diagnostics.
 
 ## Verified baseline
 
@@ -92,6 +97,6 @@ engine that the runtime consolidation now uses.
 
 ## Next step
 
-Implement M4 in a coherent vertical slice: rebuild the VS Code experience around
-the readiness result while keeping the existing beta commands as compatibility
-aliases. Keep the application runnable at every milestone.
+Continue M4 in a coherent vertical slice: finish the VS Code readiness flow and
+extension-host verification while keeping the existing beta commands as
+compatibility aliases. Keep the application runnable at every milestone.

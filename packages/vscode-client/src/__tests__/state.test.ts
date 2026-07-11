@@ -91,6 +91,33 @@ describe('State Manager', () => {
     });
   });
 
+  describe('Readiness State', () => {
+    it('persists and restores the last readiness result for recovery', () => {
+      const context = createMockContext();
+      initState(context as unknown as Parameters<typeof initState>[0]);
+      state.setReadiness({
+        state: 'blocked',
+        gateDecision: 'block',
+        scope: 'staged',
+        summary: 'Coverage is below threshold.',
+        remediation: [{ code: 'coverage', message: 'Add coverage.' }],
+        lastRunAt: 123
+      });
+
+      state.reset();
+      initState(context as unknown as Parameters<typeof initState>[0]);
+
+      expect(state.get('readiness')).toEqual({
+        state: 'blocked',
+        gateDecision: 'block',
+        scope: 'staged',
+        summary: 'Coverage is below threshold.',
+        remediation: [{ code: 'coverage', message: 'Add coverage.' }],
+        lastRunAt: 123
+      });
+    });
+  });
+
   describe('Security State', () => {
     it('should have default security state', () => {
       const security = state.get('security');

@@ -58,6 +58,12 @@
         "icon": "$(dashboard)"
       },
       {
+        "command": "preCr.showReadiness",
+        "title": "Show Pre-CR Readiness",
+        "category": "Pre-CR",
+        "icon": "$(pulse)"
+      },
+      {
         "command": "preCr.runPreCrCheck",
         "title": "Run Pre-CR Check",
         "category": "Pre-CR",
@@ -430,6 +436,10 @@
     "views": {
       "preCrSuite": [
         {
+          "id": "preCr.readiness",
+          "name": "Readiness"
+        },
+        {
           "id": "preCr.coverage",
           "name": "Coverage"
         },
@@ -448,6 +458,10 @@
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "preCr.readiness",
+        "contents": "No readiness result yet.\n[Run Pre-CR Check](command:preCr.runPreCrCheck)\n\nThe view keeps the last result and remediation steps for this workspace."
+      },
       {
         "view": "preCr.coverage",
         "contents": "No coverage data loaded.\n[Load Coverage File](command:preCr.loadCoverage)\n\nRun your tests with coverage enabled, then load the report here."
@@ -490,6 +504,16 @@
         }
       ],
       "view/title": [
+        {
+          "command": "preCr.runPreCrCheck",
+          "when": "view == preCr.readiness",
+          "group": "navigation"
+        },
+        {
+          "command": "preCr.fixSetup",
+          "when": "view == preCr.readiness",
+          "group": "navigation@2"
+        },
         {
           "command": "preCr.loadCoverage",
           "when": "view == preCr.coverage",

@@ -9,6 +9,12 @@
  */
 
 import * as vscode from 'vscode';
+import type {
+  ReadinessGateDecision,
+  ReadinessRemediation,
+  ReadinessScope,
+  ReadinessState
+} from '@pre-cr/core';
 
 // ============================================================================
 // State Types
@@ -42,11 +48,21 @@ export interface ContextState {
   snapshotDescription: string | null;
 }
 
+export interface PreCrReadinessState {
+  state: ReadinessState | 'idle';
+  gateDecision: ReadinessGateDecision | null;
+  scope: ReadinessScope | null;
+  summary: string | null;
+  remediation: ReadinessRemediation[];
+  lastRunAt: number | null;
+}
+
 export interface ExtensionState {
   coverage: CoverageState;
   security: SecurityState;
   debug: DebugState;
   context: ContextState;
+  readiness: PreCrReadinessState;
   recentActions: string[];
   isLspConnected: boolean;
 }
@@ -79,6 +95,14 @@ const initialState: ExtensionState = {
     currentBranch: null,
     hasSnapshot: false,
     snapshotDescription: null
+  },
+  readiness: {
+    state: 'idle',
+    gateDecision: null,
+    scope: null,
+    summary: null,
+    remediation: [],
+    lastRunAt: null
   },
   recentActions: [],
   isLspConnected: false
@@ -114,6 +138,14 @@ class StateManager {
       if (persisted.recentActions) {
         this.state.recentActions = persisted.recentActions;
       }
+    }
+
+    const persistedReadiness = context.workspaceState.get<PreCrReadinessState>('preCr.readiness');
+    if (persistedReadiness) {
+      this.state.readiness = {
+        ...initialState.readiness,
+        ...persistedReadiness
+      };
     }
   }
 
@@ -165,6 +197,15 @@ class StateManager {
     const oldValue = { ...this.state.context };
     this.state.context = { ...this.state.context, ...updates };
     this.notifyListeners('context', this.state.context, oldValue);
+  }
+
+  setReadiness(updates: Partial<PreCrReadinessState>) {
+    const oldValue = { ...this.state.readiness };
+    this.state.readiness = { ...this.state.readiness, ...updates };
+    if (this.extensionContext) {
+      void this.extensionContext.workspaceState.update('preCr.readiness', this.state.readiness);
+    }
+    this.notifyListeners('readiness', this.state.readiness, oldValue);
   }
 
   /**

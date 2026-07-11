@@ -19,6 +19,7 @@ import {
   PRE_CR_METHODS,
   PRE_CR_NOTIFICATIONS,
   assertRequestParams,
+  buildReadinessEnvelope,
   type FileCoverage,
   type GetCoverageDecorationsResult,
   type GetCoverageSummaryResult,
@@ -146,6 +147,9 @@ export function createCoverageController(context: CoverageControllerContext): Co
     connection.sendNotification(PRE_CR_NOTIFICATIONS.coverageChanged, {
       summary: result.coverage.summary
     });
+    for (const document of documents.all()) {
+      validateTextDocument(document);
+    }
     return true;
   }
 
@@ -420,7 +424,20 @@ export function createCoverageController(context: CoverageControllerContext): Co
         loadCoverage();
       }
 
-      return result;
+      const ok = Boolean(
+        result.result &&
+        !result.error &&
+        result.result.coverageCheck?.passed &&
+        result.result.qualityAdaptersPassed
+      );
+      return {
+        ...result,
+        readiness: buildReadinessEnvelope(result, {
+          scope: 'staged',
+          ok,
+          gateDecision: ok ? 'pass' : 'block'
+        })
+      };
     });
   }
 
