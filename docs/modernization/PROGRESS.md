@@ -13,6 +13,9 @@ M5 has started with the same durable readiness result and remediation buffer in
 Neovim, while preserving the existing commands and coverage overlays. Stable
 editor requests now carry workspace identity and explicit staged/worktree scope,
 so multi-root routing and warning-state presentation use the same result.
+M6 has started: legacy VS Code tools are now opt-in behind
+`preCr.experimental.enabled` and their views, commands, keybindings, and quick
+actions stay hidden or disabled by default.
 
 ## Completed
 
@@ -74,13 +77,16 @@ so multi-root routing and warning-state presentation use the same result.
   per-root Neovim recovery, and a headless Neovim readiness smoke script.
 - Moved the legacy security scan's diagnostic publication to the server and kept
   VS Code's navigation/code actions on the server-owned diagnostics collection.
+- Gated legacy VS Code checklist, documentation, review, context, debug, and
+  dashboard registration behind an explicit experimental setting, with manifest
+  tests covering the default-off surface.
 
 ## Verified baseline
 
 | Check | Result |
 | --- | --- |
 | Build, lint, typecheck | Pass |
-| Unit tests | Pass, 432 tests |
+| Unit tests | Pass, 435 tests |
 | Neovim readiness smoke | Pass (or cleanly skips when Neovim is unavailable) |
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
@@ -91,11 +97,11 @@ so multi-root routing and warning-state presentation use the same result.
 
 ## Primary risks to resolve first
 
-1. The legacy suite still exposes experimental surfaces that should be isolated
-   or removed as the v2 contract is introduced.
-2. Client workflows still need extension-host and end-to-end parity proof against
+1. Client workflows still need extension-host and end-to-end parity proof against
    the consolidated result contract.
-3. The legacy experimental surface still needs explicit isolation or removal.
+2. The legacy server methods and core modules still need explicit isolation,
+   separate versioning, or removal.
+3. Experimental VS Code tools need a documented migration path before deletion.
 
 ## Proposed defaults pending product review
 
@@ -109,6 +115,6 @@ so multi-root routing and warning-state presentation use the same result.
 
 ## Next step
 
-Continue M4/M5 in coherent vertical slices: add VS Code extension-host coverage
-for trust/setup/recovery, then retire or explicitly isolate legacy experimental
-entrypoints. Keep the application runnable at every milestone.
+Continue M6 in coherent vertical slices: add VS Code extension-host coverage for
+trust/setup/recovery, then retire or explicitly isolate legacy server methods and
+core modules. Keep the application runnable at every milestone.
