@@ -23,6 +23,13 @@ local stable_methods = {
   getCoverageDecorations = '$/preCr/getCoverageDecorations'
 }
 
+local function error_message(err)
+  if type(err) == 'table' and err.message then
+    return err.message
+  end
+  return tostring(err)
+end
+
 -- Default configuration
 M.config = {
   -- Path to the server executable
@@ -350,7 +357,7 @@ local function setup_commands()
           },
           lastRunAt = os.time() * 1000
         })
-        vim.notify('Pre-CR check failed: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Pre-CR check failed: ' .. error_message(err), vim.log.levels.ERROR)
         return
       end
 
@@ -398,7 +405,7 @@ local function setup_commands()
 
     clients[1].request(stable_methods.getProjectHealth, {}, function(err, result)
       if err then
-        vim.notify('Failed to inspect Pre-CR setup: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Failed to inspect Pre-CR setup: ' .. error_message(err), vim.log.levels.ERROR)
         return
       end
 
@@ -461,7 +468,7 @@ local function setup_commands()
     
     clients[1].request(stable_methods.getCoverageDecorations, params, function(err, result)
       if err then
-        vim.notify('Failed to get coverage: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Failed to get coverage: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.decorations then
         apply_decorations(bufnr, result.decorations)
         vim.notify('Coverage applied: ' .. #result.decorations .. ' lines', vim.log.levels.INFO)
@@ -488,7 +495,7 @@ local function setup_commands()
     
     clients[1].request(stable_methods.refreshCoverage, {}, function(err, result)
       if err then
-        vim.notify('Failed to refresh: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Failed to refresh: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.success then
         vim.notify('Coverage refreshed', vim.log.levels.INFO)
         -- Re-apply decorations
@@ -511,7 +518,7 @@ local function setup_commands()
     
     clients[1].request(stable_methods.getCoverageSummary, {}, function(err, result)
       if err then
-        vim.notify('Failed to get summary: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Failed to get summary: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.summary then
         local s = result.summary
         local msg = string.format(
