@@ -80,7 +80,7 @@ so multi-root routing and warning-state presentation use the same result.
 | Check | Result |
 | --- | --- |
 | Build, lint, typecheck | Pass |
-| Unit tests | Pass, 431 tests |
+| Unit tests | Pass, 432 tests |
 | Neovim readiness smoke | Pass (or cleanly skips when Neovim is unavailable) |
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
