@@ -7,10 +7,6 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": ".",
-    "paths": {
-      "@pre-cr/core/experimental": ["../core/dist/experimental.d.ts"]
-    },
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
