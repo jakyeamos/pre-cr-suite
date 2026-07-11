@@ -70,6 +70,21 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (!vscode.workspace.isTrusted) {
     log('Pre-CR is inactive until this workspace is trusted.', 'warn');
+    try {
+      statusBar.initStatusBar(context);
+      registerReadinessFeature(context);
+      const explainTrust = () => {
+        void vscode.window.showWarningMessage(
+          'Trust this workspace before running repository-configured Pre-CR checks.'
+        );
+      };
+      context.subscriptions.push(
+        vscode.commands.registerCommand('preCr.runPreCrCheck', explainTrust),
+        vscode.commands.registerCommand('preCr.fixSetup', explainTrust)
+      );
+    } catch (error) {
+      log(`Readiness setup failed in restricted mode: ${error}`, 'warn');
+    }
     context.subscriptions.push(
       vscode.workspace.onDidGrantWorkspaceTrust(() => {
         void vscode.commands.executeCommand('workbench.action.reloadWindow');
