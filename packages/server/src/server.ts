@@ -57,6 +57,7 @@ let hasWorkspaceFolderCapability = false;
 const sessionManager = new WorkspaceSessionManager();
 let activeSessionKey: string | null = null;
 let trustedExecution = false;
+let experimentalEnabled = false;
 
 function getActiveSession(): WorkspaceSession | null {
   return activeSessionKey ? sessionManager.get(activeSessionKey) : null;
@@ -157,6 +158,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     capabilities.workspace && !!capabilities.workspace.workspaceFolders
   );
   trustedExecution = hasTrustedExecution(params.initializationOptions);
+  experimentalEnabled = hasExperimentalFeatures(params.initializationOptions);
   const workspaceRoots = params.workspaceFolders && params.workspaceFolders.length > 0
     ? params.workspaceFolders.map((folder) => URI.parse(folder.uri).fsPath)
     : params.rootUri
@@ -201,6 +203,21 @@ function hasTrustedExecution(initializationOptions: unknown): boolean {
   return (initializationOptions as Record<string, unknown>).trustedExecution === true;
 }
 
+function hasExperimentalFeatures(initializationOptions: unknown): boolean {
+  if (typeof initializationOptions !== 'object' || initializationOptions === null) {
+    return false;
+  }
+
+  const options = initializationOptions as Record<string, unknown>;
+  if (options.experimentalEnabled === true) {
+    return true;
+  }
+
+  const experimental = options.experimental;
+  return typeof experimental === 'object' && experimental !== null &&
+    (experimental as Record<string, unknown>).enabled === true;
+}
+
 connection.onInitialized(() => {
   if (hasConfigurationCapability) {
     void connection.client.register(
@@ -232,6 +249,15 @@ connection.onInitialized(() => {
   }
 
   connection.console.info('Pre-CR Server initialized');
+
+  if (experimentalEnabled) {
+    registerChecklistRequests(connection, requestState);
+    registerDocgenRequests(connection, documents);
+    registerReviewRequests(connection, requestState);
+    registerContextRequests(connection);
+    registerDebugRequests(connection);
+    connection.console.info('Pre-CR experimental request surface enabled');
+  }
 });
 
 // ============================================================================
@@ -283,11 +309,6 @@ connection.onCodeLens((params: CodeLensParams): CodeLens[] => {
 // ============================================================================
 
 coverageController.registerBetaRequests();
-registerChecklistRequests(connection, requestState);
-registerDocgenRequests(connection, documents);
-registerReviewRequests(connection, requestState);
-registerContextRequests(connection);
-registerDebugRequests(connection);
 
 // ============================================================================
 // Start Server
