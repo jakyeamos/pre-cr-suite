@@ -2,8 +2,8 @@
 schemaVersion: 1
 healthScore: 95
 statusLabel: modernization_m6_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode keeps readiness controls available until trust is granted, security diagnostics have one server owner, and legacy VS Code tools are now opt-in behind preCr.experimental.enabled (commit a207de6)."
-nextStep: "Add extension-host lifecycle acceptance coverage, then remove or separately version remaining legacy experimental methods."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode keeps readiness controls available until trust is granted, security diagnostics have one server owner, and legacy VS Code/server tools are opt-in behind explicit experimental settings (commit 376d17e)."
+nextStep: "Add extension-host lifecycle acceptance coverage, then remove or separately version remaining legacy experimental core methods."
 blockers: []
 lastUpdated: "2026-07-11"
 quality:
@@ -52,6 +52,7 @@ engine and contract shape before the larger UI migration.
 
 ## Recent Documentation Updates
 
+- 2026-07-11: Isolated legacy server request registration behind `initializationOptions.experimental.enabled`, matching the VS Code opt-in setting; committed as `376d17e`.
 - 2026-07-11: Started M6 by gating legacy VS Code checklist/docs/review/context/debug/dashboard tools behind `preCr.experimental.enabled` (default false), with manifest regression tests; committed as `a207de6`.
 - 2026-07-11: Added a server request regression test proving security diagnostics are published through the LSP connection; committed as `e2a5185`.
 - 2026-07-11: Moved experimental security diagnostics to the server publisher and made VS Code navigation consume server diagnostics; committed as `4417a80`.

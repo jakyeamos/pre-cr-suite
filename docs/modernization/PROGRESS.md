@@ -15,7 +15,9 @@ editor requests now carry workspace identity and explicit staged/worktree scope,
 so multi-root routing and warning-state presentation use the same result.
 M6 has started: legacy VS Code tools are now opt-in behind
 `preCr.experimental.enabled` and their views, commands, keybindings, and quick
-actions stay hidden or disabled by default.
+actions stay hidden or disabled by default. The server now also registers its
+legacy request handlers only when `initializationOptions.experimental.enabled`
+is explicitly true.
 
 ## Completed
 
@@ -80,6 +82,8 @@ actions stay hidden or disabled by default.
 - Gated legacy VS Code checklist, documentation, review, context, debug, and
   dashboard registration behind an explicit experimental setting, with manifest
   tests covering the default-off surface.
+- Isolated the server's legacy checklist/docs/review/context/debug request
+  registration behind the same explicit experimental opt-in.
 
 ## Verified baseline
 
