@@ -59,7 +59,7 @@ Hook policy lives in `.pre-cr.json`:
 
 ## Public Beta Surface
 
-The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, the headless JSON gate, and command-only hook management. Broader checklist, docs, review, context, and debug methods are experimental and are not registered unless the client opts in with `initializationOptions.experimental.enabled: true`.
+The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, the headless JSON gate, and command-only hook management. Broader checklist, docs, review, context, and debug methods are experimental and are not registered unless the client opts in with `initializationOptions.experimental.enabled: true`. Their implementation imports the explicit `@pre-cr/core/experimental` entrypoint and is not part of the stable core package surface.
 
 ## Scope
 

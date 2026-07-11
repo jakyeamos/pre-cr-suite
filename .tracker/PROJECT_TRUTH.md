@@ -1,9 +1,9 @@
 ---
 schemaVersion: 1
-healthScore: 95
+healthScore: 96
 statusLabel: modernization_m6_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode keeps readiness controls available until trust is granted, security diagnostics have one server owner, legacy VS Code/server tools are opt-in behind explicit experimental settings, and activation lifecycle coverage now proves stable startup and recovery boundaries (commit 376d17e)."
-nextStep: "Run a real VS Code extension-host parity check, then remove or separately version remaining legacy experimental core methods."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode keeps readiness controls available until trust is granted, security diagnostics have one server owner, legacy VS Code/server tools are opt-in behind explicit experimental settings, activation lifecycle coverage proves stable startup and recovery boundaries, and legacy core helpers are isolated behind an explicit experimental package entrypoint (commit f8a299e)."
+nextStep: "Run a real VS Code extension-host parity check, then decide whether the isolated legacy core package should be removed or separately versioned."
 blockers: []
 lastUpdated: "2026-07-11"
 quality:
@@ -54,6 +54,7 @@ engine and contract shape before the larger UI migration.
 
 - 2026-07-11: Isolated legacy server request registration behind `initializationOptions.experimental.enabled`, matching the VS Code opt-in setting; committed as `376d17e`.
 - 2026-07-11: Added VS Code activation lifecycle coverage for stable startup, persisted readiness recovery, experimental opt-in, configuration reload, and restricted-mode setup/trust behavior.
+- 2026-07-11: Isolated checklist/docs/review/context/debug helpers behind `@pre-cr/core/experimental`; stable root exports and server imports now have regression coverage in `f8a299e`.
 - 2026-07-11: Started M6 by gating legacy VS Code checklist/docs/review/context/debug/dashboard tools behind `preCr.experimental.enabled` (default false), with manifest regression tests; committed as `a207de6`.
 - 2026-07-11: Added a server request regression test proving security diagnostics are published through the LSP connection; committed as `e2a5185`.
 - 2026-07-11: Moved experimental security diagnostics to the server publisher and made VS Code navigation consume server diagnostics; committed as `4417a80`.

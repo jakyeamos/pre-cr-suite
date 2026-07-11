@@ -20,6 +20,9 @@ legacy request handlers only when `initializationOptions.experimental.enabled`
 is explicitly true. A VS Code activation lifecycle harness now covers stable
 startup, persisted readiness recovery, explicit experimental opt-in, setting
 reload, and restricted-mode trust/setup guidance.
+The core package now exposes only the stable beta surface from `@pre-cr/core`;
+legacy checklist/docs/review/context/debug helpers are available only through
+the explicit `@pre-cr/core/experimental` subpath.
 
 ## Completed
 
@@ -89,13 +92,16 @@ reload, and restricted-mode trust/setup guidance.
 - Added VS Code activation lifecycle coverage for stable startup, readiness
   recovery, experimental opt-in, configuration reload, and restricted-mode
   setup/trust behavior.
+- Isolated legacy core helpers behind `@pre-cr/core/experimental`, updated
+  opt-in server handlers to use that entrypoint, and added stable/experimental
+  package export regression tests.
 
 ## Verified baseline
 
 | Check | Result |
 | --- | --- |
 | Build, lint, typecheck | Pass |
-| Unit tests | Pass, 439 tests |
+| Unit tests | Pass, 441 tests |
 | Neovim readiness smoke | Pass (or cleanly skips when Neovim is unavailable) |
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
@@ -109,8 +115,8 @@ reload, and restricted-mode trust/setup guidance.
 1. Client workflows still need real extension-host and end-to-end parity proof
    against the consolidated result contract; the activation harness covers the
    lifecycle boundary but does not replace a VS Code host run.
-2. The legacy server methods and core modules still need explicit isolation,
-   separate versioning, or removal.
+2. The legacy server methods and core modules are explicitly isolated now, but
+   still need a removal or separately versioned release decision.
 3. Experimental VS Code tools need a documented migration path before deletion.
 
 ## Proposed defaults pending product review
@@ -125,6 +131,7 @@ reload, and restricted-mode trust/setup guidance.
 
 ## Next step
 
-Continue M6 in coherent vertical slices: add VS Code extension-host coverage for
-trust/setup/recovery, then retire or explicitly isolate legacy server methods and
-core modules. Keep the application runnable at every milestone.
+Continue M6/M7 in coherent vertical slices: run a real VS Code extension-host
+parity check for trust/setup/recovery, then decide whether the isolated legacy
+package should be removed or separately versioned. Keep the application runnable
+at every milestone.
