@@ -1,4 +1,5 @@
 const fs = require('fs');
+const crypto = require('crypto');
 const os = require('os');
 const path = require('path');
 const { execFileSync, spawn } = require('child_process');
@@ -29,6 +30,14 @@ function fileUri(filePath) {
 function assertBuiltServer(serverPath, label) {
   if (!fs.existsSync(serverPath)) {
     throw new Error(`Missing ${label} server at ${serverPath}. Run pnpm build first.`);
+  }
+}
+
+function assertServerArtifactsMatch() {
+  const publishedHash = crypto.createHash('sha256').update(fs.readFileSync(publishedServerPath)).digest('hex');
+  const bundledHash = crypto.createHash('sha256').update(fs.readFileSync(vscodeBundledServerPath)).digest('hex');
+  if (publishedHash !== bundledHash) {
+    throw new Error(`Server artifact mismatch: published=${publishedHash} bundled=${bundledHash}`);
   }
 }
 
@@ -325,6 +334,7 @@ function assertBetaPromise(snapshot) {
 try {
   assertBuiltServer(vscodeBundledServerPath, 'VS Code bundled');
   assertBuiltServer(publishedServerPath, 'published');
+  assertServerArtifactsMatch();
 
   fs.cpSync(fixtureRoot, workspaceRoot, { recursive: true });
   runGit(['init']);

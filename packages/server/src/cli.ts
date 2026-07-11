@@ -5,7 +5,10 @@ import {
   formatUnsupportedSurfaceSetupGuidance,
   runWorkspacePreCrCheck,
   setLogger,
+  buildReadinessEnvelope,
+  type ReadinessGateDecision,
   type RunPreCrCheckResult,
+  type ReadinessScope,
   type RunWorkspacePreCrCheckOptions
 } from '@pre-cr/core';
 import { runHookCli } from './hooks/cli';
@@ -42,6 +45,7 @@ interface ParsedHeadlessArgs {
   command: 'run';
   json: boolean;
   workspaceRoot: string;
+  scope: ReadinessScope;
 }
 
 type CoverageTextResult = NonNullable<NonNullable<RunPreCrCheckResult['result']>['coverageCheck']>;
@@ -73,25 +77,32 @@ export async function runHeadlessCli(
 
   const runCheck = dependencies.runCheck ?? runWorkspacePreCrCheck;
   const result = await runCheck(parsed.workspaceRoot, {
-    changeScope: 'staged',
+    changeScope: parsed.scope,
     allowConfigExecution: true
   });
   const coveragePassed = result.result?.coverageCheck?.passed ?? false;
   const qualityAdaptersPassed = result.result?.qualityAdaptersPassed ?? true;
   const ok = Boolean(result.result && !result.error && coveragePassed && qualityAdaptersPassed);
   const branch = await (dependencies.currentBranch ?? defaultCurrentBranch)(parsed.workspaceRoot);
-  const gateDecision = ok ? 'block' : qualityGateDecision(branch);
+  const gateDecision: ReadinessGateDecision = ok ? 'pass' : qualityGateDecision(branch);
   const exitCode = ok || gateDecision === 'warn' ? 0 : 1;
   if (!ok) {
     await safeAppendAuditEvent(
       parsed.workspaceRoot,
-      buildPreCrAuditEvent(parsed.workspaceRoot, result, { branch, decision: gateDecision }),
+      buildPreCrAuditEvent(parsed.workspaceRoot, result, {
+        branch,
+        decision: gateDecision === 'warn' ? 'warn' : 'block'
+      }),
       dependencies.audit ?? defaultQualityGateAuditAppender
     );
   }
 
   if (parsed.json) {
-    const payload = ok ? { ok, ...result } : { ok, gateDecision, ...result };
+    const payload = buildReadinessEnvelope(result, {
+      scope: parsed.scope,
+      ok,
+      gateDecision
+    });
     return {
       exitCode,
       stdout: `${JSON.stringify(payload, null, 2)}\n`,
@@ -101,7 +112,11 @@ export async function runHeadlessCli(
 
   return {
     exitCode,
-    stdout: formatTextResult(result),
+    stdout: formatTextResult(result, buildReadinessEnvelope(result, {
+      scope: parsed.scope,
+      ok,
+      gateDecision
+    })),
     stderr: result.error ? `${result.error}\n` : ''
   };
 }
@@ -155,6 +170,7 @@ function parseHeadlessArgs(argv: string[], cwd: string): ParsedHeadlessArgs | nu
 
   let json = false;
   let workspaceRoot = cwd;
+  let scope: ReadinessScope = 'staged';
 
   for (let index = 1; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -173,13 +189,24 @@ function parseHeadlessArgs(argv: string[], cwd: string): ParsedHeadlessArgs | nu
       continue;
     }
 
+    if (arg === '--scope') {
+      const value = argv[index + 1];
+      if (value !== 'staged' && value !== 'worktree') {
+        return null;
+      }
+      scope = value;
+      index += 1;
+      continue;
+    }
+
     return null;
   }
 
   return {
     command: 'run',
     json,
-    workspaceRoot
+    workspaceRoot,
+    scope
   };
 }
 
@@ -195,7 +222,10 @@ function formatQualityAdapterSummary(result: RunPreCrCheckResult): string[] {
   });
 }
 
-function formatTextResult(result: RunPreCrCheckResult): string {
+function formatTextResult(
+  result: RunPreCrCheckResult,
+  envelope: ReturnType<typeof buildReadinessEnvelope>
+): string {
   if (!result.result) {
     return '';
   }
@@ -205,7 +235,13 @@ function formatTextResult(result: RunPreCrCheckResult): string {
     return 'Pre-CR check did not produce a coverage result.\n';
   }
 
-  const status = coverage.passed ? 'passed' : 'failed';
+  const status = envelope.state === 'ready'
+    ? 'passed'
+    : envelope.state === 'warning'
+      ? 'warning'
+      : envelope.state === 'setup-needed'
+        ? 'setup needed'
+        : 'blocked';
   const reason = coverage.unsupportedFiles.length > 0
     ? `; ${coverage.unsupportedFiles.length} unsupported surface file${coverage.unsupportedFiles.length === 1 ? '' : 's'} need${coverage.unsupportedFiles.length === 1 ? 's' : ''} setup guidance`
     : '';
@@ -255,7 +291,7 @@ function elapsedSeconds(startedAt: number): number {
 
 function usage(): string {
   return [
-    'Usage: pre-cr run [--json] [--workspace <path>]',
+    'Usage: pre-cr run [--json] [--scope staged|worktree] [--workspace <path>]',
     '       pre-cr hook install [--manager auto|native|husky|lefthook|pre-commit|all] [--hook pre-commit|pre-push] [--force]',
     '       pre-cr hook status [--json]',
     '       pre-cr hook uninstall [--manager auto|native|husky|lefthook|pre-commit|all]',

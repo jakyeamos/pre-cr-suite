@@ -2,11 +2,11 @@
 
 ## Current state
 
-M0, M1, and M2 are complete on isolated branch `codex/gpt56-modernization-audit`.
+M0, M1, M2, and M3 are complete on isolated branch `codex/gpt56-modernization-audit`.
 The original checkout remains untouched because it had unrelated untracked
 files. M1 establishes the safe execution and changed-line correctness boundary;
 M2 adds the shared stable contract registry and canonical workspace-session
-engine that the runtime consolidation will build on.
+engine that the runtime consolidation now uses.
 
 ## Completed
 
@@ -49,13 +49,21 @@ engine that the runtime consolidation will build on.
   handling.
 - Removed coverage basename fallback and migrated the server, VS Code, Neovim,
   and parity smoke stable calls to explicit contract identifiers.
+- Added the versioned CLI readiness envelope with explicit staged/worktree scope,
+  state, gate decision, and structured remediation; hooks expose the same engine
+  result when they run Pre-CR.
+- Made `@pre-cr/server/dist/server.js` the only portable server artifact. The
+  VS Code package copies it directly and the parity/package checks require hash
+  identity between published and bundled artifacts.
+- Added package export maps and release-facing CLI/config documentation for the
+  stable contract.
 
 ## Verified baseline
 
 | Check | Result |
 | --- | --- |
 | Build, lint, typecheck | Pass |
-| Unit tests | Pass, 423 tests |
+| Unit tests | Pass, 424 tests |
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
 | VSIX package | Pass |
@@ -69,8 +77,8 @@ engine that the runtime consolidation will build on.
    or removed as the v2 contract is introduced.
 2. Client workflows still need end-to-end parity proof against the consolidated
    result contract.
-3. The current server and bundled artifact still contain duplicate ownership that
-   M3 must collapse.
+3. VS Code and Neovim still need readiness-first presentation and durable
+   recovery around the consolidated result.
 
 ## Proposed defaults pending product review
 
@@ -84,6 +92,6 @@ engine that the runtime consolidation will build on.
 
 ## Next step
 
-Implement M3 in a coherent vertical slice: consolidate the server runtime and
-packaged artifact around the shared contract and workspace-session engine. Keep
-the application runnable at every milestone.
+Implement M4 in a coherent vertical slice: rebuild the VS Code experience around
+the readiness result while keeping the existing beta commands as compatibility
+aliases. Keep the application runnable at every milestone.

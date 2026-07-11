@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { PreCrProjectConfig, RunPreCrCheckResult, RunWorkspacePreCrCheckOptions } from '@pre-cr/core';
-import { loadProjectConfig, runWorkspacePreCrCheck } from '@pre-cr/core';
+import { buildReadinessEnvelope, loadProjectConfig, runWorkspacePreCrCheck } from '@pre-cr/core';
 
 import { appendHookAuditEvents } from './audit';
 import { stagedFiles, stagedPaths } from './git';
@@ -32,15 +32,21 @@ export async function runHook(options: HookRunOptions, dependencies: HookRunDepe
     const findings = evaluateHookRules(files, policy);
     await appendHookAuditEvents(options.workspaceRoot, auditConfig(configExists ? loadProjectConfig(options.workspaceRoot).config : null), findings);
     return {
+      schemaVersion: 1,
+      scope: 'staged',
+      state: readinessState(!findings.some((finding) => finding.severity === 'block'), findings),
+      gateDecision: readinessDecision(findings),
       ok: !findings.some((finding) => finding.severity === 'block'),
       skipped: true,
-      findings
+      findings,
+      remediation: readinessRemediation(findings)
     };
   }
 
   const loadedConfig = loadProjectConfig(options.workspaceRoot);
   const policy = configExists ? loadedConfig.config.hook.rules : DEFAULT_HOOK_RULE_POLICY;
   const findings: HookFinding[] = [];
+  let readiness: ReturnType<typeof buildReadinessEnvelope> | undefined;
 
   if (!configExists) {
     const finding = findingForRule(
@@ -79,13 +85,51 @@ export async function runHook(options: HookRunOptions, dependencies: HookRunDepe
         findings.push(finding);
       }
     }
+    const decision = findings.some((finding) => finding.severity === 'block')
+      ? 'block'
+      : findings.length > 0 || !ok
+        ? 'warn'
+        : 'pass';
+    readiness = buildReadinessEnvelope(result, {
+      scope: 'staged',
+      ok: !findings.some((finding) => finding.severity === 'block') && ok,
+      gateDecision: decision
+    });
   }
 
   await appendHookAuditEvents(options.workspaceRoot, auditConfig(configExists ? loadedConfig.config : null), findings);
+  const ok = !findings.some((finding) => finding.severity === 'block');
   return {
-    ok: !findings.some((finding) => finding.severity === 'block'),
-    findings
+    schemaVersion: 1,
+    scope: 'staged',
+    state: readinessState(ok, findings),
+    gateDecision: readinessDecision(findings),
+    ok,
+    findings,
+    remediation: readinessRemediation(findings),
+    readiness
   };
+}
+
+function readinessDecision(findings: HookFinding[]): 'pass' | 'warn' | 'block' {
+  if (findings.some((finding) => finding.severity === 'block')) {
+    return 'block';
+  }
+  return findings.length > 0 ? 'warn' : 'pass';
+}
+
+function readinessState(ok: boolean, findings: HookFinding[]): 'ready' | 'warning' | 'blocked' | 'setup-needed' {
+  if (!ok) {
+    return findings.some((finding) => finding.rule === 'pre-cr-required') ? 'setup-needed' : 'blocked';
+  }
+  return findings.length > 0 ? 'warning' : 'ready';
+}
+
+function readinessRemediation(findings: HookFinding[]): Array<{ code: string; message: string }> {
+  return findings.map((finding) => ({
+    code: finding.rule,
+    message: finding.message
+  }));
 }
 
 function auditConfig(config: PreCrProjectConfig | null): PreCrProjectConfig['hook']['audit'] {

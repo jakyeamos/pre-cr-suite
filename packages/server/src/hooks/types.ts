@@ -1,4 +1,12 @@
-import type { PreCrHookName, PreCrHookRuleSeverity } from '@pre-cr/core';
+import type {
+  PreCrHookName,
+  PreCrHookRuleSeverity,
+  ReadinessGateDecision,
+  ReadinessRemediation,
+  ReadinessResultEnvelope,
+  ReadinessScope,
+  ReadinessState
+} from '@pre-cr/core';
 
 export type HookName = PreCrHookName;
 export type HookSeverity = PreCrHookRuleSeverity;
@@ -38,7 +46,13 @@ export interface HookAuditConfig {
 }
 
 export interface HookRunResult {
+  schemaVersion: 1;
+  scope: ReadinessScope;
+  state: ReadinessState;
+  gateDecision: ReadinessGateDecision;
   ok: boolean;
   skipped?: boolean;
   findings: HookFinding[];
+  remediation: ReadinessRemediation[];
+  readiness?: ReadinessResultEnvelope;
 }

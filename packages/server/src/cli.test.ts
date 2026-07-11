@@ -34,10 +34,33 @@ describe('runHeadlessCli', () => {
     }]);
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: 1,
+      state: 'ready',
+      gateDecision: 'pass',
+      scope: 'staged',
       ok: true,
-      ...makeRunResult('/repo')
+      result: makeRunResult('/repo').result,
+      remediation: []
     });
     expect(result.stderr).toBe('');
+  });
+
+  it('passes an explicit worktree scope to the shared engine', async () => {
+    let scope: string | undefined;
+    const result = await runHeadlessCli(['run', '--json', '--scope', 'worktree', '--workspace', '/repo'], {
+      runCheck: async (workspaceRoot, options) => {
+        scope = options?.changeScope;
+        return makeRunResult(workspaceRoot);
+      }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(scope).toBe('worktree');
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      schemaVersion: 1,
+      state: 'ready',
+      scope: 'worktree'
+    });
   });
 
   it('prints surface counts and unsupported files as a text-mode failure', async () => {
@@ -63,7 +86,7 @@ describe('runHeadlessCli', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe([
-      'Pre-CR check failed: 100% changed-line coverage (threshold 80%); 2 unsupported surface files need setup guidance.',
+      'Pre-CR check blocked: 100% changed-line coverage (threshold 80%); 2 unsupported surface files need setup guidance.',
       '  Covered Surface Files: 4',
       '  Ignored Surface Files: 2',
       '  Unsupported Surface Files: 2',
@@ -99,7 +122,7 @@ describe('runHeadlessCli', () => {
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.stdout).toContain('Pre-CR check failed: 100% changed-line coverage (threshold 80%); 1 unsupported surface file needs setup guidance.');
+    expect(result.stdout).toContain('Pre-CR check blocked: 100% changed-line coverage (threshold 80%); 1 unsupported surface file needs setup guidance.');
     expect(result.stdout).toContain('Unsupported Surface Files: 1');
     expect(result.stdout).toContain('Unsupported Files');
     expect(result.stdout).toContain('  - python/app.py');
@@ -272,8 +295,13 @@ describe('runHeadlessCli', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: 1,
+      state: 'ready',
+      gateDecision: 'pass',
+      scope: 'staged',
       ok: true,
-      ...makeRunResult('/repo')
+      result: makeRunResult('/repo').result,
+      remediation: []
     });
     expect(result.stdout).not.toContain('Pre-CR');
     expect(stderr.join('')).toContain('[pre-cr] Running changed-line readiness for /repo');

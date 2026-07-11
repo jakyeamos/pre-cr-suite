@@ -6,9 +6,10 @@ import type {
   PreCrCheckResult,
   ProjectHealth
 } from '../protocol';
+import type { ReadinessState } from '../contracts/readiness';
 import type { WorkspaceCoverage } from '../types';
 
-export type WorkspaceSessionReadiness = 'ready' | 'warning' | 'blocked' | 'setup-needed';
+export type WorkspaceSessionReadiness = ReadinessState;
 
 export interface WorkspaceSession {
   readonly key: string;

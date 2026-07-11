@@ -12,3 +12,15 @@ export {
   isGetCoverageDecorationsParams,
   isGetCoverageParams
 } from './validators';
+export {
+  buildReadinessEnvelope,
+  buildReadinessRemediation,
+  buildReadinessState
+} from './readiness';
+export type {
+  ReadinessGateDecision,
+  ReadinessRemediation,
+  ReadinessResultEnvelope,
+  ReadinessScope,
+  ReadinessState
+} from './readiness';

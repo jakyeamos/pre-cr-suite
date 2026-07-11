@@ -57,4 +57,5 @@ pnpm --filter pre-cr-suite build
 pnpm --filter pre-cr-suite package
 ```
 
-The package command creates a VSIX that includes `dist/extension.js` and the bundled `dist/server.js`.
+The package command creates a VSIX that includes `dist/extension.js` and the
+same compiled `dist/server.js` artifact published by `@pre-cr/server`.

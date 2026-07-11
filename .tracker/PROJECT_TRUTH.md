@@ -1,9 +1,9 @@
 ---
 schemaVersion: 1
-healthScore: 90
-statusLabel: modernization_m3_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 now provides one stable beta method registry, runtime payload guards, and canonical multi-workspace session state (commit 1d0430e)."
-nextStep: "Start M3 by consolidating the server runtime and packaged artifact around the shared contract and workspace-session engine."
+healthScore: 92
+statusLabel: modernization_m4_in_progress
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 now gives CLI, hooks, published server, and VSIX one readiness envelope and one server artifact."
+nextStep: "Start M4 by rebuilding the VS Code experience around the readiness result while preserving documented beta command aliases."
 blockers: []
 lastUpdated: "2026-07-11"
 quality:
@@ -52,6 +52,7 @@ engine and contract shape before the larger UI migration.
 
 ## Recent Documentation Updates
 
+- 2026-07-11: Recorded M3 completion after adding CLI scope/state/remediation, hook readiness envelopes, package export maps, and published-to-VSIX server artifact identity checks.
 - 2026-07-11: Recorded M2 completion after adding the stable contract registry, runtime request guards, canonical workspace sessions, nested-workspace coverage routing, and client method migration.
 - 2026-07-11: Committed M2 implementation as `1d0430e`; serialized pre-pr and all beta/package quality gates pass.
 - 2026-07-11: Recorded M1 completion and the M2 starting point after trusted execution, containment, bounded process, Git attribution, and coverage hardening.
@@ -74,6 +75,7 @@ engine and contract shape before the larger UI migration.
 - 2026-07-10: Full local baseline and M0 reproducibility proof pass; CI separates compatibility from Node 20.18.1 release checks.
 - 2026-07-11: `pnpm pre-pr`, full tests/typecheck/lint/build, headless smoke, parity smoke, VSIX packaging, format, complexity, dead-code, secret, and dependency checks pass after M1.
 - 2026-07-11: Core, server, and VS Code tests/typechecks/lints pass after M2; new contract and nested-workspace session tests pass.
+- 2026-07-11: Serialized `pnpm pre-pr`, headless and parity smoke, artifact hash check, package export/build, VSIX packaging, format, complexity, dead-code, secret, and dependency checks pass after M3.
 
 ## QR Remediation Planning
 

@@ -2,6 +2,7 @@
 .turbo/**
 .vscode/**
 src/**
+scripts/**
 node_modules/**
 coverage/**
 tsconfig.json

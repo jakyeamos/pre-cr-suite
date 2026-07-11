@@ -18,9 +18,10 @@ This package exposes two commands:
 ```bash
 pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
+pre-cr run --scope worktree --json --workspace /path/to/repo
 ```
 
-The headless gate uses the same `.pre-cr.json` configuration and `@pre-cr/core` pipeline as the editor integrations.
+The headless gate uses the same `.pre-cr.json` configuration and `@pre-cr/core` pipeline as the editor integrations. `--scope staged` is the default; `--scope worktree` evaluates the current worktree. JSON responses expose `schemaVersion`, `state`, `gateDecision`, `scope`, and structured remediation.
 
 ## Git Hooks
 
