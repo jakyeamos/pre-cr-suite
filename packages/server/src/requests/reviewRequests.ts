@@ -1,5 +1,5 @@
-import { estimateReviewTime, FlakyTestDetective, parseJestResults, parseVitestResults } from '@pre-cr/core';
-import type { FileChange, FlakyTestReport, ReviewerInfo, ReviewTimeEstimate, TestRunResult } from '@pre-cr/core';
+import { estimateReviewTime, FlakyTestDetective, parseJestResults, parseVitestResults } from '@pre-cr/core/experimental';
+import type { FileChange, FlakyTestReport, ReviewerInfo, ReviewTimeEstimate, TestRunResult } from '@pre-cr/core/experimental';
 import type { Connection } from 'vscode-languageserver/node';
 import * as fs from 'fs';
 import type { ServerRequestState } from '../serverSettings';

@@ -1,6 +1,7 @@
-import { parseIstanbulFile, parseLcovFile, runChecklist } from '@pre-cr/core';
-import type { ChecklistConfig, ChecklistInput, ChecklistResult, FileChange, FileContent, SourceFile, WorkspaceCoverage } from '@pre-cr/core';
-import { DEFAULT_CHECKLIST_CONFIG } from '@pre-cr/core';
+import { parseIstanbulFile, parseLcovFile } from '@pre-cr/core';
+import { runChecklist, DEFAULT_CHECKLIST_CONFIG } from '@pre-cr/core/experimental';
+import type { ChecklistConfig, ChecklistInput, ChecklistResult, FileChange, FileContent, SourceFile } from '@pre-cr/core/experimental';
+import type { WorkspaceCoverage } from '@pre-cr/core';
 import type { Connection } from 'vscode-languageserver/node';
 import { DiagnosticSeverity } from 'vscode-languageserver/node';
 import * as fs from 'fs';
@@ -130,7 +131,7 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
       if (!state.workspaceRoot) {
         return { hasIssues: false, findings: [] };
       }
-      const { scanSecurity } = await import('@pre-cr/core');
+      const { scanSecurity } = await import('@pre-cr/core/experimental');
       const result = scanSecurity(params.files);
 
       for (const file of params.files) {
@@ -179,7 +180,7 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
       coverage: number;
       undocumented: Array<{ name: string; file: string; line: number; kind: string }>;
     }> => {
-      const { analyzeDocCoverage } = await import('@pre-cr/core');
+      const { analyzeDocCoverage } = await import('@pre-cr/core/experimental');
       const sourceFiles: SourceFile[] = params.files.map(f => ({
         path: f.path,
         content: f.content

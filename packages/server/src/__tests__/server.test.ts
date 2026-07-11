@@ -104,20 +104,14 @@ vi.mock('../beta/coverageController', () => ({
   })
 }));
 import {
-  // Checklist
   scanSecurity,
   analyzePRSize,
-
-  // Review
   FlakyTestDetective,
-
-  // Context
   ContextManager,
-
-  // Debug
   DebugSessionManager,
+} from '@pre-cr/core/experimental';
 
-  // Parsers
+import {
   parseLcovContent,
   parseIstanbulContent,
 } from '@pre-cr/core';
