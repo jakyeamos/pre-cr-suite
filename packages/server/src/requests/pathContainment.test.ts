@@ -15,6 +15,7 @@ type RequestHandler = (params: unknown) => unknown;
 
 interface TestConnection {
   connection: Connection;
+  diagnostics: ReturnType<typeof vi.fn>;
   request<Response>(method: string, params: unknown): Promise<Response>;
 }
 
@@ -28,6 +29,7 @@ function makeTemporaryDirectory(prefix: string): string {
 
 function createConnection(): TestConnection {
   const handlers = new Map<string, RequestHandler>();
+  const diagnostics = vi.fn();
   const connection = {
     onRequest(method: string, handler: unknown): void {
       handlers.set(method, handler as RequestHandler);
@@ -35,11 +37,13 @@ function createConnection(): TestConnection {
     console: {
       warn: vi.fn(),
       error: vi.fn()
-    }
+    },
+    sendDiagnostics: diagnostics
   } as unknown as Connection;
 
   return {
     connection,
+    diagnostics,
     async request<Response>(method: string, params: unknown): Promise<Response> {
       const handler = handlers.get(method);
       if (!handler) {
@@ -116,6 +120,26 @@ describe('workspace path containment for request handlers', () => {
     expect(fileResult.error).toContain('Rejected workspace path');
     expect(coverageResult.result).toBeNull();
     expect(coverageResult.error).toContain('Rejected workspace path');
+  });
+
+  it('publishes security diagnostics through the server connection', async () => {
+    const workspaceRoot = makeTemporaryDirectory('pre-cr-request-workspace-');
+    const testConnection = createConnection();
+    registerChecklistRequests(testConnection.connection, createState(workspaceRoot));
+
+    const result = await testConnection.request<{ hasIssues: boolean; findings: Array<{ pattern: string }> }>(
+      '$/preCr/quickSecurityScan',
+      { files: [{ path: 'src/example.ts', content: "eval('unsafe')\n" }] }
+    );
+
+    expect(result.hasIssues).toBe(true);
+    expect(result.findings[0]?.pattern).toBeTruthy();
+    expect(testConnection.diagnostics).toHaveBeenCalledWith(expect.objectContaining({
+      uri: expect.stringContaining('/src/example.ts'),
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({ source: 'Pre-CR Security' })
+      ])
+    }));
   });
 
   it('rejects checklist file paths that escape through a symlink', async () => {
