@@ -9,6 +9,8 @@ M2 adds the shared stable contract registry and canonical workspace-session
 engine that the runtime consolidation now uses.
 M4 is in progress: the first readiness slice now persists the last result,
 surfaces the state in VS Code, and leaves diagnostics owned by the server.
+M5 has started with the same durable readiness result and remediation buffer in
+Neovim, while preserving the existing commands and coverage overlays.
 
 ## Completed
 
@@ -62,6 +64,9 @@ surfaces the state in VS Code, and leaves diagnostics owned by the server.
 - Started the VS Code readiness migration with workspace-persisted state,
   `Ready`/`Warning`/`Blocked`/`Setup needed` status presentation, a dedicated
   Readiness view, and server-owned coverage diagnostics.
+- Started Neovim readiness parity with a per-workspace persisted snapshot,
+  `:PreCrReadiness` recovery buffer, shared state labels, and default keymaps
+  enabled by no-options `setup()`.
 
 ## Verified baseline
 
@@ -97,6 +102,7 @@ surfaces the state in VS Code, and leaves diagnostics owned by the server.
 
 ## Next step
 
-Continue M4 in a coherent vertical slice: finish the VS Code readiness flow and
-extension-host verification while keeping the existing beta commands as
-compatibility aliases. Keep the application runnable at every milestone.
+Continue M4/M5 in coherent vertical slices: finish VS Code extension-host and
+Neovim headless acceptance coverage around the shared readiness result while
+keeping existing beta commands as compatibility aliases. Keep the application
+runnable at every milestone.

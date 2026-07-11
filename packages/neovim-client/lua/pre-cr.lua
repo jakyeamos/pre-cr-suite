@@ -14,6 +14,7 @@
 
 local M = {}
 local last_coverage_check = nil
+local last_readiness = nil
 local stable_methods = {
   getProjectHealth = '$/preCr/getProjectHealth',
   runPreCrCheck = '$/preCr/runPreCrCheck',
@@ -150,6 +151,89 @@ local function format_coverage_failure_message(coverage_check)
   )
 end
 
+local function readiness_state_label(readiness)
+  local labels = {
+    ready = 'READY',
+    warning = 'WARNING',
+    blocked = 'BLOCKED',
+    ['setup-needed'] = 'SETUP NEEDED'
+  }
+  return labels[readiness and readiness.state] or 'NOT RUN'
+end
+
+local function readiness_store_path()
+  local root = vim.fn.getcwd()
+  local key = root:gsub('[^%w%-_]', '_')
+  local directory = vim.fn.stdpath('state') .. '/pre-cr'
+  vim.fn.mkdir(directory, 'p')
+  return directory .. '/' .. key .. '.json'
+end
+
+local function load_readiness()
+  local path = readiness_store_path()
+  if vim.fn.filereadable(path) == 0 then
+    return
+  end
+
+  local ok, decoded = pcall(vim.fn.json_decode, table.concat(vim.fn.readfile(path), '\n'))
+  if ok and type(decoded) == 'table' and type(decoded.state) == 'string' then
+    last_readiness = decoded
+  end
+end
+
+local function set_readiness(readiness)
+  if type(readiness) ~= 'table' then
+    return
+  end
+
+  last_readiness = readiness
+  local ok, encoded = pcall(vim.fn.json_encode, readiness)
+  if ok then
+    vim.fn.writefile({ encoded }, readiness_store_path())
+  end
+end
+
+local function open_readiness_buffer()
+  local readiness = last_readiness or {
+    state = 'setup-needed',
+    summary = 'Run :PreCrCheck to evaluate this workspace.',
+    remediation = {}
+  }
+  local lines = {
+    'Pre-CR Readiness — ' .. readiness_state_label(readiness),
+    '',
+    readiness.summary or 'No readiness summary is available.',
+    ''
+  }
+
+  if readiness.scope then
+    table.insert(lines, 'Scope: ' .. readiness.scope)
+  end
+  if readiness.lastRunAt then
+    table.insert(lines, 'Last run: ' .. os.date('%Y-%m-%d %H:%M:%S', math.floor(readiness.lastRunAt / 1000)))
+  end
+
+  local remediation = readiness.remediation or {}
+  if #remediation > 0 then
+    table.insert(lines, '')
+    table.insert(lines, 'Remediation')
+    for _, item in ipairs(remediation) do
+      table.insert(lines, string.format('- [%s] %s', item.code or 'action', item.message or 'Review setup'))
+      if item.hint then
+        table.insert(lines, '  ' .. item.hint)
+      end
+    end
+  end
+
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_name(bufnr, 'Pre-CR Readiness')
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  vim.bo[bufnr].buftype = 'nofile'
+  vim.bo[bufnr].bufhidden = 'wipe'
+  vim.bo[bufnr].modifiable = false
+  vim.api.nvim_set_current_buf(bufnr)
+end
+
 -- ============================================================================
 -- LSP Client Setup (Manual)
 -- ============================================================================
@@ -256,16 +340,34 @@ local function setup_commands()
 
     clients[1].request(stable_methods.runPreCrCheck, {}, function(err, result)
       if err then
+        set_readiness({
+          state = 'blocked',
+          gateDecision = 'block',
+          scope = 'staged',
+          summary = 'The readiness request failed before the server returned a result.',
+          remediation = {
+            { code = 'server-request-failed', message = err.message or tostring(err) }
+          },
+          lastRunAt = os.time() * 1000
+        })
         vim.notify('Pre-CR check failed: ' .. err.message, vim.log.levels.ERROR)
         return
       end
 
       if not result or not result.result then
+        if result and result.readiness then
+          result.readiness.lastRunAt = os.time() * 1000
+          set_readiness(result.readiness)
+        end
         vim.notify('Pre-CR check returned no result', vim.log.levels.WARN)
         return
       end
 
       local check = result.result
+      if result.readiness then
+        result.readiness.lastRunAt = os.time() * 1000
+        set_readiness(result.readiness)
+      end
       if check.coverageCheck then
         last_coverage_check = check.coverageCheck
         local lines = format_coverage_surface_lines(check.coverageCheck)
@@ -306,6 +408,16 @@ local function setup_commands()
       end
 
       local health = result.health
+      set_readiness({
+        state = (health.issues and #health.issues > 0) and 'setup-needed' or 'ready',
+        gateDecision = (health.issues and #health.issues > 0) and 'block' or 'pass',
+        scope = nil,
+        summary = (health.issues and #health.issues > 0)
+          and 'Project setup requires attention.'
+          or 'Project health is ready for the Pre-CR workflow.',
+        remediation = health.issues or {},
+        lastRunAt = os.time() * 1000
+      })
       local last_unsupported_files = last_coverage_check and last_coverage_check.unsupportedFiles or {}
       local has_last_unsupported_files = #last_unsupported_files > 0
       local lines = { 'Pre-CR Setup Health:' }
@@ -414,6 +526,10 @@ local function setup_commands()
       end
     end, bufnr)
   end, { desc = 'Show coverage summary' })
+
+  vim.api.nvim_create_user_command('PreCrReadiness', function()
+    open_readiness_buffer()
+  end, { desc = 'Show the persisted Pre-CR readiness result' })
 end
 
 -- ============================================================================
@@ -427,6 +543,7 @@ local function setup_keymaps()
   vim.keymap.set('n', '<leader>cr', ':PreCrRefresh<CR>', { desc = 'Refresh coverage' })
   vim.keymap.set('n', '<leader>ci', ':PreCrSummary<CR>', { desc = 'Coverage summary' })
   vim.keymap.set('n', '<leader>cf', ':PreCrFixSetup<CR>', { desc = 'Fix Pre-CR setup' })
+  vim.keymap.set('n', '<leader>cd', ':PreCrReadiness<CR>', { desc = 'Show Pre-CR readiness' })
 end
 
 -- ============================================================================
@@ -438,6 +555,8 @@ function M.setup(opts)
   if opts then
     M.config = vim.tbl_deep_extend('force', M.config, opts)
   end
+
+  load_readiness()
   
   -- Set up highlights
   setup_highlights()
@@ -446,7 +565,7 @@ function M.setup(opts)
   setup_commands()
   
   -- Set up keymaps (optional)
-  if opts and opts.keymaps ~= false then
+  if not opts or opts.keymaps ~= false then
     setup_keymaps()
   end
   
