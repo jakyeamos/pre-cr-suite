@@ -2,7 +2,7 @@
 schemaVersion: 1
 healthScore: 90
 statusLabel: modernization_m3_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 now provides one stable beta method registry, runtime payload guards, and canonical multi-workspace session state."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 now provides one stable beta method registry, runtime payload guards, and canonical multi-workspace session state (commit 1d0430e)."
 nextStep: "Start M3 by consolidating the server runtime and packaged artifact around the shared contract and workspace-session engine."
 blockers: []
 lastUpdated: "2026-07-11"
@@ -53,6 +53,7 @@ engine and contract shape before the larger UI migration.
 ## Recent Documentation Updates
 
 - 2026-07-11: Recorded M2 completion after adding the stable contract registry, runtime request guards, canonical workspace sessions, nested-workspace coverage routing, and client method migration.
+- 2026-07-11: Committed M2 implementation as `1d0430e`; serialized pre-pr and all beta/package quality gates pass.
 - 2026-07-11: Recorded M1 completion and the M2 starting point after trusted execution, containment, bounded process, Git attribution, and coverage hardening.
 - 2026-07-10: Added `docs/modernization/AUDIT.md`, `TARGET.md`, `EXEC_PLAN.md`, and `PROGRESS.md` for the protected v2 modernization phase.
 - 2026-07-10: Updated modernization progress after M0 made clean installs and release checks reproducible.
