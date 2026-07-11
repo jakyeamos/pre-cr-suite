@@ -2,8 +2,8 @@
 schemaVersion: 1
 healthScore: 92
 statusLabel: modernization_m4_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4 now persists and presents readiness in VS Code; M5 has started the same recovery flow in Neovim. Hook warnings now preserve their readiness state (commit c64f701)."
-nextStep: "Start M4 by rebuilding the VS Code experience around the readiness result while preserving documented beta command aliases."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4 now persists and presents readiness in VS Code; M5 has started the same recovery flow in Neovim. Hook warnings and Neovim LSP errors now preserve safe readiness handling (commit 6599fa7)."
+nextStep: "Finish M4/M5 acceptance hardening around the shared readiness result, then begin legacy experimental-surface retirement."
 blockers: []
 lastUpdated: "2026-07-11"
 quality:
@@ -57,6 +57,8 @@ engine and contract shape before the larger UI migration.
 - 2026-07-11: Started M5 with Neovim persisted readiness, recovery buffer, shared labels, and default keymap behavior; headless Lua load/setup checks pass.
 - 2026-07-11: Committed the M5 Neovim recovery slice as `256868e`; Lua load/setup checks pass alongside the TypeScript gates.
 - 2026-07-11: Preserved warning-state envelopes through hook policy handling in `c64f701`; focused CLI/hook tests pass.
+- 2026-07-11: Hardened Neovim LSP error rendering so string and structured errors produce safe recovery messages; headless setup check passes.
+- 2026-07-11: Committed Neovim error normalization as `6599fa7`; focused server and headless checks pass.
 - 2026-07-11: Committed the M4 readiness slice as `ef58bfd`; client state/presentation tests and package typechecks pass.
 - 2026-07-11: Committed M3 implementation as `c075a88`; serialized pre-pr, artifact, smoke, and packaging gates pass.
 - 2026-07-11: Recorded M2 completion after adding the stable contract registry, runtime request guards, canonical workspace sessions, nested-workspace coverage routing, and client method migration.
