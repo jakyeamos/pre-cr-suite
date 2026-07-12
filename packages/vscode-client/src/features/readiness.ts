@@ -11,6 +11,7 @@ export function registerReadinessFeature(context: vscode.ExtensionContext): void
     vscode.window.registerTreeDataProvider('preCr.readiness', provider),
     vscode.commands.registerCommand('preCr.showReadiness', () => {
       void vscode.commands.executeCommand('workbench.view.extension.preCrSuite');
+      return state.get('readiness');
     }),
     state.subscribe('readiness', () => provider.refresh())
   );

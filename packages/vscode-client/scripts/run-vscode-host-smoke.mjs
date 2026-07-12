@@ -9,51 +9,68 @@ import { runTests } from '@vscode/test-electron';
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageRoot, '../..');
 const fixtureRoot = join(repoRoot, 'fixtures', 'headless-beta-gate');
-const workspaceRoot = mkdtempSync(join(tmpdir(), 'pre-cr-vscode-host-'));
-const testProfileRoot = join(tmpdir(), 'pre-cr-vscode-test-profile');
-const workspaceSettingsDirectory = join(workspaceRoot, '.vscode');
+const scenarios = (process.env.PRE_CR_EXTENSION_HOST_SCENARIOS ?? 'pass,warning,blocked').split(',');
 
-try {
-  cpSync(fixtureRoot, workspaceRoot, { recursive: true });
-  await mkdir(workspaceSettingsDirectory, { recursive: true });
-  writeFileSync(
-    join(workspaceSettingsDirectory, 'settings.json'),
-    JSON.stringify({ 'preCr.experimental.enabled': false })
-  );
+async function runScenario(scenario) {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), `pre-cr-vscode-host-${scenario}-`));
+  const testProfileRoot = mkdtempSync(join(tmpdir(), `p-${scenario}-`));
+  const workspaceSettingsDirectory = join(workspaceRoot, '.vscode');
 
-  const runGit = (args) => execFileSync('git', args, { cwd: workspaceRoot, stdio: 'pipe' });
-  runGit(['init']);
-  runGit(['config', 'user.email', 'smoke@example.com']);
-  runGit(['config', 'user.name', 'VS Code Host Smoke']);
-  runGit(['config', 'core.hooksPath', '/dev/null']);
-  runGit(['add', '.']);
-  runGit(['commit', '-m', 'fixture baseline']);
-  const sourcePath = join(workspaceRoot, 'src', 'app.js');
-  const source = await import('node:fs/promises').then(({ readFile }) => readFile(sourcePath, 'utf8'));
-  writeFileSync(sourcePath, source.replace('return 1;', 'return 2;'));
-  appendFileSync(sourcePath, '\n');
-  runGit(['add', 'src/app.js']);
+  try {
+    cpSync(fixtureRoot, workspaceRoot, { recursive: true });
+    await mkdir(workspaceSettingsDirectory, { recursive: true });
+    writeFileSync(
+      join(workspaceSettingsDirectory, 'settings.json'),
+      JSON.stringify({ 'preCr.experimental.enabled': false })
+    );
 
-  const vscodeExecutablePath = process.env.VSCODE_EXECUTABLE_PATH;
-  const exitCode = await runTests({
-    ...(vscodeExecutablePath ? { vscodeExecutablePath } : {}),
-    cachePath: join(tmpdir(), 'pre-cr-vscode-test-cache'),
-    extensionDevelopmentPath: packageRoot,
-    extensionTestsPath: join(packageRoot, 'test', 'extensionHostSmoke.mjs'),
-    extensionTestsEnv: {
-      PRE_CR_EXTENSION_HOST_MODE: 'trusted'
-    },
-    launchArgs: [
-      `--extensions-dir=${join(testProfileRoot, 'extensions')}`,
-      `--user-data-dir=${join(testProfileRoot, 'user-data')}`,
-      workspaceRoot,
-      '--disable-extensions'
-    ]
-  });
+    if (scenario === 'blocked') {
+      writeFileSync(join(workspaceRoot, 'scripts', 'test-ok.js'), 'process.exitCode = 1;\n');
+    }
 
-  if (exitCode !== 0) {
-    process.exitCode = exitCode;
+    const runGit = (args) => execFileSync('git', args, { cwd: workspaceRoot, stdio: 'pipe' });
+    runGit(['init']);
+    runGit(['config', 'user.email', 'smoke@example.com']);
+    runGit(['config', 'user.name', 'VS Code Host Smoke']);
+    runGit(['config', 'core.hooksPath', '/dev/null']);
+    runGit(['add', '.']);
+    runGit(['commit', '-m', 'fixture baseline']);
+
+    if (scenario !== 'warning') {
+      const sourcePath = join(workspaceRoot, 'src', 'app.js');
+      const source = await import('node:fs/promises').then(({ readFile }) => readFile(sourcePath, 'utf8'));
+      writeFileSync(sourcePath, source.replace('return 1;', 'return 2;'));
+      appendFileSync(sourcePath, '\n');
+      runGit(['add', 'src/app.js']);
+    }
+
+    const vscodeExecutablePath = process.env.VSCODE_EXECUTABLE_PATH;
+    const exitCode = await runTests({
+      ...(vscodeExecutablePath ? { vscodeExecutablePath } : {}),
+      cachePath: join(tmpdir(), 'pre-cr-vscode-test-cache'),
+      extensionDevelopmentPath: packageRoot,
+      extensionTestsPath: join(packageRoot, 'test', 'extensionHostSmoke.mjs'),
+      extensionTestsEnv: {
+        PRE_CR_EXTENSION_HOST_MODE: 'trusted',
+        PRE_CR_EXTENSION_HOST_SCENARIO: scenario
+      },
+      launchArgs: [
+        `--extensions-dir=${join(testProfileRoot, 'e')}`,
+        `--user-data-dir=${join(testProfileRoot, 'u')}`,
+        workspaceRoot,
+        '--disable-extensions'
+      ]
+    });
+
+    if (exitCode !== 0) {
+      throw new Error(`VS Code host smoke failed for ${scenario} scenario with exit code ${exitCode}.`);
+    }
+  } finally {
+    rmSync(workspaceRoot, { recursive: true, force: true });
+    rmSync(testProfileRoot, { recursive: true, force: true });
   }
-} finally {
-  rmSync(workspaceRoot, { recursive: true, force: true });
+}
+
+for (const scenario of scenarios) {
+  await runScenario(scenario);
 }

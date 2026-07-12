@@ -25,12 +25,30 @@ export async function run() {
     assert.ok(commands.includes(command), `Stable command ${command} must be contributed.`);
   }
 
-  await vscode.commands.executeCommand('preCr.showReadiness');
-  await vscode.commands.executeCommand('preCr.fixSetup');
-  await vscode.commands.executeCommand('preCr.runPreCrCheck');
-  await vscode.commands.executeCommand('preCr.showReadiness');
-  await vscode.commands.executeCommand('preCr.quickCoverageCheck');
-  await vscode.commands.executeCommand('preCr.runPreCrCheck');
+  const scenario = process.env.PRE_CR_EXTENSION_HOST_SCENARIO;
+  assert.ok(['pass', 'warning', 'blocked'].includes(scenario), `Unknown host smoke scenario: ${scenario}`);
+
+  const showReadiness = () => vscode.commands.executeCommand('preCr.showReadiness');
+  await showReadiness();
+  if (scenario === 'warning') {
+    await vscode.commands.executeCommand('preCr.fixSetup');
+    await vscode.commands.executeCommand('preCr.runPreCrCheck');
+    const readiness = await showReadiness();
+    assert.equal(readiness.state, 'warning', 'No staged changes must produce warning readiness.');
+  } else if (scenario === 'blocked') {
+    await vscode.commands.executeCommand('preCr.runPreCrCheck');
+    const readiness = await showReadiness();
+    assert.equal(readiness.state, 'blocked', 'A failing test command must block readiness.');
+  } else {
+    await vscode.commands.executeCommand('preCr.fixSetup');
+    await vscode.commands.executeCommand('preCr.runPreCrCheck');
+    const firstReadiness = await showReadiness();
+    assert.equal(firstReadiness.state, 'ready', 'A passing staged change must produce ready readiness.');
+    await vscode.commands.executeCommand('preCr.quickCoverageCheck');
+    await vscode.commands.executeCommand('preCr.runPreCrCheck');
+    const finalReadiness = await showReadiness();
+    assert.equal(finalReadiness.state, 'ready', 'Rerunning after coverage refresh must remain ready.');
+  }
   await assert.rejects(
     vscode.commands.executeCommand('preCr.showDashboard'),
     /command .*preCr\.showDashboard.*not found/i,

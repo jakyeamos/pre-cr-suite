@@ -24,7 +24,9 @@ The core package now exposes only the stable beta surface from `@pre-cr/core`;
 legacy checklist/docs/review/context/debug helpers are available only through
 the explicit `@pre-cr/core/experimental` subpath. A real VS Code development
 host now starts the bundled server and proves the Setup → Run → Diagnose →
-Rerun flow with the experimental command surface disabled by default.
+Rerun flow with the experimental command surface disabled by default. The host
+fixture now also exercises warning and blocked readiness outcomes in disposable
+trusted workspaces.
 
 ## Completed
 
@@ -99,8 +101,8 @@ Rerun flow with the experimental command surface disabled by default.
   opt-in server handlers to use that entrypoint, and added stable/experimental
   package export regression tests.
 - Added a standalone server-artifact bundle and a real VS Code host smoke that
-  verifies the disposable Git/coverage fixture through Setup → Run → Diagnose
-  → Rerun, plus default-off experimental commands.
+  verifies disposable pass, warning, and blocked Git/test fixtures through
+  Setup → Run → Diagnose → Rerun, plus default-off experimental commands.
 
 ## Verified baseline
 
@@ -112,16 +114,16 @@ Rerun flow with the experimental command surface disabled by default.
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
 | VSIX package | Pass |
-| VS Code extension-host smoke | Pass (trusted host, Setup → Run → Diagnose → Rerun) |
+| VS Code extension-host smoke | Pass (trusted pass/warning/blocked fixtures, default-off experimental surface) |
 | Format, validation, dead-code, complexity gates | Pass |
 | Secret and high/critical dependency scan | Pass |
 | Fresh external install | Pass with pnpm 11.7.0 and no local symlink |
 
 ## Primary risks to resolve first
 
-1. The real host smoke now covers the primary stable workflow; release hardening
-   still needs representative warning/blocked fixtures and explicit rollback
-   evidence for the isolated experimental package.
+1. The real host smoke covers pass, warning, and blocked stable workflows;
+   release hardening still needs explicit rollback evidence for the isolated
+   experimental package.
 2. The legacy server methods and core modules are explicitly isolated now, but
    still need a removal or separately versioned release decision.
 3. Experimental VS Code tools need a documented migration path before deletion.
@@ -138,6 +140,6 @@ Rerun flow with the experimental command surface disabled by default.
 
 ## Next step
 
-Continue M7 in coherent vertical slices: add warning/blocked host fixtures and
-decide whether the isolated legacy package should be removed or separately
-versioned. Keep the application runnable at every milestone.
+Continue M7 in coherent vertical slices: decide whether the isolated legacy
+package should be removed or separately versioned, then finish rollback and
+release-candidate evidence. Keep the application runnable at every milestone.
