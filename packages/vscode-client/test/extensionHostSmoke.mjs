@@ -35,15 +35,18 @@ export async function run() {
     await vscode.commands.executeCommand('preCr.runPreCrCheck');
     const readiness = await showReadiness();
     assert.equal(readiness.state, 'warning', 'No staged changes must produce warning readiness.');
+    assert.match(readiness.summary, /No staged changes found/i, 'Warning readiness must explain the missing staged scope.');
   } else if (scenario === 'blocked') {
     await vscode.commands.executeCommand('preCr.runPreCrCheck');
     const readiness = await showReadiness();
     assert.equal(readiness.state, 'blocked', 'A failing test command must block readiness.');
+    assert.match(readiness.summary, /Tests failed/i, 'Blocked readiness must explain the failed test command.');
   } else {
     await vscode.commands.executeCommand('preCr.fixSetup');
     await vscode.commands.executeCommand('preCr.runPreCrCheck');
     const firstReadiness = await showReadiness();
     assert.equal(firstReadiness.state, 'ready', 'A passing staged change must produce ready readiness.');
+    assert.match(firstReadiness.summary, /changed-line coverage/i, 'Ready readiness must include its coverage summary.');
     await vscode.commands.executeCommand('preCr.quickCoverageCheck');
     await vscode.commands.executeCommand('preCr.runPreCrCheck');
     const finalReadiness = await showReadiness();

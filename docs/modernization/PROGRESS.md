@@ -26,7 +26,9 @@ the explicit `@pre-cr/core/experimental` subpath. A real VS Code development
 host now starts the bundled server and proves the Setup → Run → Diagnose →
 Rerun flow with the experimental command surface disabled by default. The host
 fixture now also exercises warning and blocked readiness outcomes in disposable
-trusted workspaces.
+trusted workspaces, with readiness summaries that explain empty staged scope,
+failed tests, and missing coverage instead of collapsing them into a generic
+setup warning.
 
 ## Completed
 
@@ -103,6 +105,9 @@ trusted workspaces.
 - Added a standalone server-artifact bundle and a real VS Code host smoke that
   verifies disposable pass, warning, and blocked Git/test fixtures through
   Setup → Run → Diagnose → Rerun, plus default-off experimental commands.
+- Made VS Code readiness notifications and the Readiness view explain the
+  concrete incomplete-check cause, including no staged changes, failed tests,
+  failed quality checks, and missing coverage reports.
 
 ## Verified baseline
 
@@ -114,16 +119,16 @@ trusted workspaces.
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
 | VSIX package | Pass |
-| VS Code extension-host smoke | Pass (trusted pass/warning/blocked fixtures, default-off experimental surface) |
+| VS Code extension-host smoke | Pass (trusted pass/warning/blocked fixtures with actionable summaries, default-off experimental surface) |
 | Format, validation, dead-code, complexity gates | Pass |
 | Secret and high/critical dependency scan | Pass |
 | Fresh external install | Pass with pnpm 11.7.0 and no local symlink |
 
 ## Primary risks to resolve first
 
-1. The real host smoke covers pass, warning, and blocked stable workflows;
-   release hardening still needs explicit rollback evidence for the isolated
-   experimental package.
+1. The real host smoke covers pass, warning, and blocked stable workflows with
+   actionable summaries; release hardening still needs explicit rollback
+   evidence for the isolated experimental package.
 2. The legacy server methods and core modules are explicitly isolated now, but
    still need a removal or separately versioned release decision.
 3. Experimental VS Code tools need a documented migration path before deletion.

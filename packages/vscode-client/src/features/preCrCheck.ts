@@ -9,6 +9,17 @@ import * as statusBar from '../utils/statusBar';
 import { state } from '../utils/state';
 import { sendBetaRequestWithNotify } from '../utils/lsp';
 import * as webview from '../utils/webview';
+import {
+  formatCoverageFailureMessage,
+  formatCoverageSurfaceLines,
+  formatIncompleteCheckMessage
+} from './preCrCheckMessages';
+
+export {
+  formatCoverageFailureMessage,
+  formatCoverageSurfaceLines,
+  formatIncompleteCheckMessage
+} from './preCrCheckMessages';
 
 let outputChannel: vscode.OutputChannel;
 let isRunning = false;
@@ -22,8 +33,6 @@ async function refreshCoveragePresentation(client: LanguageClient): Promise<void
   const coverage = await import('./coverage');
   await coverage.refreshCoverageDecorations(client);
 }
-
-type CoverageSurfaceFields = Pick<CoverageCheckResult, 'surfaceSummary' | 'unsupportedFiles'>;
 
 function findProjectRoot(startPath: string): string {
   let current = startPath;
@@ -148,6 +157,22 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
 
     if (response.result.coverageCheck) {
       const summary = response.result.coverageCheck;
+      const readinessBlocked = response.readiness?.gateDecision === 'block' || !response.result.qualityAdaptersPassed;
+      if (readinessBlocked && summary.passed) {
+        const action = await notify.showWarning(
+          formatIncompleteCheckMessage(response.result),
+          undefined,
+          'Fix Setup',
+          'Show Details'
+        );
+        if (action === 'Fix Setup') {
+          await showProjectHealth(client, true, summary);
+        } else if (action === 'Show Details') {
+          outputChannel.show(true);
+        }
+        return;
+      }
+
       const message = summary.passed
         ? `Coverage ${summary.coveragePercent.toFixed(1)}% on changed lines`
         : formatCoverageFailureMessage(summary);
@@ -177,7 +202,12 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
       return;
     }
 
-    const action = await notify.showWarning('Pre-CR check could not complete. Review project health for setup issues.', undefined, 'Fix Setup', 'Show Details');
+    const action = await notify.showWarning(
+      formatIncompleteCheckMessage(response.result),
+      undefined,
+      'Fix Setup',
+      'Show Details'
+    );
     if (action === 'Fix Setup') {
       await showProjectHealth(client, true, response.result.coverageCheck ?? undefined);
     } else if (action === 'Show Details') {
@@ -381,41 +411,6 @@ function renderCheckOutput(result: PreCrCheckResult): void {
   }
 }
 
-export function formatCoverageSurfaceLines(coverage: CoverageSurfaceFields): string[] {
-  const lines = [
-    `  Covered Surface Files: ${coverage.surfaceSummary.coveredFiles}`,
-    `  Ignored Surface Files: ${coverage.surfaceSummary.ignoredFiles}`,
-    `  Unsupported Surface Files: ${coverage.surfaceSummary.unsupportedFiles}`
-  ];
-
-  if (coverage.unsupportedFiles.length === 0) {
-    return lines;
-  }
-
-  lines.push('', 'Unsupported Files');
-  for (const file of coverage.unsupportedFiles.slice(0, 10)) {
-    lines.push(`  - ${file}`);
-  }
-
-  const remaining = coverage.unsupportedFiles.length - 10;
-  if (remaining > 0) {
-    lines.push(`  ... and ${remaining} more`);
-  }
-
-  lines.push('', ...formatUnsupportedSurfaceSetupGuidance(coverage));
-
-  return lines;
-}
-
-export function formatCoverageFailureMessage(coverage: Pick<CoverageCheckResult, 'coveragePercent' | 'threshold' | 'unsupportedFiles'>): string {
-  if (coverage.unsupportedFiles.length > 0) {
-    const suffix = coverage.unsupportedFiles.length === 1 ? 'file needs' : 'files need';
-    return `${coverage.unsupportedFiles.length} unsupported surface ${suffix} setup guidance`;
-  }
-
-  return `Coverage ${coverage.coveragePercent.toFixed(1)}% is below ${coverage.threshold}%`;
-}
-
 function applyCoverageState(result: PreCrCheckResult): void {
   if (!result.coverageCheck) {
     return;
@@ -431,15 +426,19 @@ function applyCoverageState(result: PreCrCheckResult): void {
 
 function applyReadinessState(readiness: ReadinessResultEnvelope): void {
   const coverage = readiness.result?.coverageCheck;
+  const summary = coverage
+    ? `${coverage.coveragePercent.toFixed(1)}% changed-line coverage (threshold ${coverage.threshold}%).`
+    : readiness.result
+      ? formatIncompleteCheckMessage(readiness.result)
+      : readiness.state === 'setup-needed'
+        ? 'Project setup is required before the readiness check can run.'
+        : 'Pre-CR readiness result received.';
+
   state.setReadiness({
     state: readiness.state,
     gateDecision: readiness.gateDecision,
     scope: readiness.scope,
-    summary: coverage
-      ? `${coverage.coveragePercent.toFixed(1)}% changed-line coverage (threshold ${coverage.threshold}%).`
-      : readiness.state === 'setup-needed'
-        ? 'Project setup is required before the readiness check can run.'
-        : 'Pre-CR readiness result received.',
+    summary,
     remediation: readiness.remediation,
     lastRunAt: Date.now()
   });

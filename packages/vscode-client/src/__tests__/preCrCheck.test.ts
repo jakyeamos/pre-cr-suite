@@ -26,7 +26,7 @@ vi.mock('vscode', () => ({
 
 vi.mock('vscode-languageclient/node', () => ({}));
 
-import { buildProjectConfigTemplate, formatCoverageFailureMessage, formatCoverageSurfaceLines } from '../features/preCrCheck';
+import { buildProjectConfigTemplate, formatCoverageFailureMessage, formatCoverageSurfaceLines, formatIncompleteCheckMessage } from '../features/preCrCheck';
 
 describe('buildProjectConfigTemplate', () => {
   it('enables every check in new project configs', () => {
@@ -103,5 +103,45 @@ describe('formatCoverageFailureMessage', () => {
       threshold: 80,
       unsupportedFiles: []
     })).toBe('Coverage 72.5% is below 80%');
+  });
+});
+
+describe('formatIncompleteCheckMessage', () => {
+  const health = (issues: Array<{ code: 'no-changes' | 'missing-config'; severity: 'warning' | 'error'; message: string }>) => ({ issues });
+
+  it('explains when the staged scope is empty', () => {
+    expect(formatIncompleteCheckMessage({
+      health: health([{ code: 'no-changes', severity: 'warning', message: 'No changed files.' }]),
+      testRun: null,
+      coveragePath: null,
+      qualityAdapters: []
+    })).toBe('No staged changes found. Stage your changes before running the Pre-CR check.');
+  });
+
+  it('directs failed test runs to the output details', () => {
+    expect(formatIncompleteCheckMessage({
+      health: health([]),
+      testRun: { success: false, exitCode: 1 },
+      coveragePath: null,
+      qualityAdapters: []
+    })).toBe('Tests failed (exit code 1). Show Details to inspect the test output.');
+  });
+
+  it('explains missing coverage after successful tests', () => {
+    expect(formatIncompleteCheckMessage({
+      health: health([]),
+      testRun: { success: true, exitCode: 0 },
+      coveragePath: null,
+      qualityAdapters: []
+    })).toBe('Tests passed, but no coverage report was produced. Review project health for coverage setup.');
+  });
+
+  it('identifies a failed quality check', () => {
+    expect(formatIncompleteCheckMessage({
+      health: health([]),
+      testRun: { success: true, exitCode: 0 },
+      coveragePath: 'build/coverage.lcov',
+      qualityAdapters: [{ name: 'lint', success: false, skipped: false }]
+    })).toBe('Quality check "lint" failed. Show Details to inspect the command output.');
   });
 });
