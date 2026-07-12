@@ -722,6 +722,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:vscode-host": "corepack pnpm run build && node scripts/run-vscode-host-smoke.mjs",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
@@ -733,6 +734,7 @@
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^2.22.0",
     "esbuild": "^0.28.1",
     "eslint": "^8.54.0",

@@ -21,6 +21,7 @@
     "test": "node scripts/run-turbo-with-pinned-pnpm.mjs run test",
     "test:headless-beta": "corepack pnpm run build:core && corepack pnpm run build:server && node scripts/smoke-headless-beta-gate.js",
     "test:neovim-readiness": "node scripts/smoke-neovim-readiness.js",
+    "test:vscode-host": "corepack pnpm --filter pre-cr-suite test:vscode-host",
     "test:beta-parity": "corepack pnpm run build:core && corepack pnpm run build:server && corepack pnpm run build:vscode && node scripts/smoke-cross-client-beta-parity.js",
     "server-artifact:check": "node scripts/verify-server-artifact.mjs",
     "lint": "node scripts/run-turbo-with-pinned-pnpm.mjs run lint",

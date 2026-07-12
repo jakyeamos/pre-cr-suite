@@ -3,6 +3,7 @@
 .vscode/**
 src/**
 scripts/**
+test/**
 node_modules/**
 coverage/**
 tsconfig.json
