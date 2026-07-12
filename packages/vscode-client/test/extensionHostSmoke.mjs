@@ -26,6 +26,10 @@ export async function run() {
   }
 
   await vscode.commands.executeCommand('preCr.showReadiness');
+  await vscode.commands.executeCommand('preCr.fixSetup');
+  await vscode.commands.executeCommand('preCr.runPreCrCheck');
+  await vscode.commands.executeCommand('preCr.showReadiness');
+  await vscode.commands.executeCommand('preCr.quickCoverageCheck');
   await vscode.commands.executeCommand('preCr.runPreCrCheck');
   await assert.rejects(
     vscode.commands.executeCommand('preCr.showDashboard'),
