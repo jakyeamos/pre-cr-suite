@@ -228,7 +228,7 @@ legacy implementation left underneath it.
   update package versions according to the public contract impact, and replace
   stale architecture/audit documents.
 - **Verification:** clean-clone release rehearsal; full CI matrix; packaged VSIX
-  extension-host check; Neovim headless check; CLI/hook workflow; security and
+  extension-host check (`pnpm test:vscode-host`); Neovim headless check; CLI/hook workflow; security and
   performance boundary tests; diff/dependency/export/command inventory; manual
   accessibility review of the readiness view.
 - **Migration/rollback:** config migration runs as preview + explicit write and
@@ -255,4 +255,3 @@ legacy implementation left underneath it.
 4. Publish the server package and VSIX from the same verified commit.
 5. Keep the previous versions available for rollback; do not auto-rewrite a
    user's config or hooks.
-

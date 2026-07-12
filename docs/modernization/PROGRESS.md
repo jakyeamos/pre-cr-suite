@@ -22,7 +22,9 @@ startup, persisted readiness recovery, explicit experimental opt-in, setting
 reload, and restricted-mode trust/setup guidance.
 The core package now exposes only the stable beta surface from `@pre-cr/core`;
 legacy checklist/docs/review/context/debug helpers are available only through
-the explicit `@pre-cr/core/experimental` subpath.
+the explicit `@pre-cr/core/experimental` subpath. A real VS Code development
+host now starts the bundled server and proves stable activation with the
+experimental command surface disabled by default.
 
 ## Completed
 
@@ -69,8 +71,9 @@ the explicit `@pre-cr/core/experimental` subpath.
   state, gate decision, and structured remediation; hooks expose the same engine
   result when they run Pre-CR.
 - Made `@pre-cr/server/dist/server.js` the only portable server artifact. The
-  VS Code package copies it directly and the parity/package checks require hash
-  identity between published and bundled artifacts.
+  build bundles its runtime dependencies, the VS Code package copies it
+  directly, and the parity/package checks require hash identity between
+  published and bundled artifacts.
 - Added package export maps and release-facing CLI/config documentation for the
   stable contract.
 - Started the VS Code readiness migration with workspace-persisted state,
@@ -95,6 +98,9 @@ the explicit `@pre-cr/core/experimental` subpath.
 - Isolated legacy core helpers behind `@pre-cr/core/experimental`, updated
   opt-in server handlers to use that entrypoint, and added stable/experimental
   package export regression tests.
+- Added a standalone server-artifact bundle and a real VS Code host smoke that
+  verifies activation, stable readiness commands, and default-off experimental
+  commands.
 
 ## Verified baseline
 
@@ -106,15 +112,16 @@ the explicit `@pre-cr/core/experimental` subpath.
 | Headless beta smoke | Pass |
 | Bundled/published server parity smoke | Pass |
 | VSIX package | Pass |
+| VS Code extension-host smoke | Pass (trusted development host, server starts) |
 | Format, validation, dead-code, complexity gates | Pass |
 | Secret and high/critical dependency scan | Pass |
 | Fresh external install | Pass with pnpm 11.7.0 and no local symlink |
 
 ## Primary risks to resolve first
 
-1. Client workflows still need real extension-host and end-to-end parity proof
-   against the consolidated result contract; the activation harness covers the
-   lifecycle boundary but does not replace a VS Code host run.
+1. The real host smoke proves activation and command gating, but the complete
+   Setup → Run → Diagnose → Fix → Rerun workflow still needs end-to-end parity
+   assertions against the consolidated result contract.
 2. The legacy server methods and core modules are explicitly isolated now, but
    still need a removal or separately versioned release decision.
 3. Experimental VS Code tools need a documented migration path before deletion.
@@ -131,7 +138,7 @@ the explicit `@pre-cr/core/experimental` subpath.
 
 ## Next step
 
-Continue M6/M7 in coherent vertical slices: run a real VS Code extension-host
-parity check for trust/setup/recovery, then decide whether the isolated legacy
-package should be removed or separately versioned. Keep the application runnable
-at every milestone.
+Continue M7 in coherent vertical slices: add end-to-end VS Code host assertions
+for Setup → Run → Diagnose → Fix → Rerun, then decide whether the isolated
+legacy package should be removed or separately versioned. Keep the application
+runnable at every milestone.

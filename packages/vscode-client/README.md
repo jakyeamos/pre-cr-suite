@@ -57,7 +57,10 @@ pnpm install
 pnpm --filter @pre-cr/core build
 pnpm --filter pre-cr-suite build
 pnpm --filter pre-cr-suite package
+pnpm test:vscode-host
 ```
 
 The package command creates a VSIX that includes `dist/extension.js` and the
 same compiled `dist/server.js` artifact published by `@pre-cr/server`.
+`pnpm test:vscode-host` launches a pinned VS Code development host and verifies
+activation, stable readiness commands, and default-off experimental commands.

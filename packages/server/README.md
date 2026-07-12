@@ -87,6 +87,11 @@ This README documents the `server` subproject inside `pre-cr-suite-lsp/packages`
 Runtime dependencies include `@pre-cr/core`, `js-yaml`, `vscode-languageserver`, `vscode-languageserver-textdocument`, `vscode-uri`.
 Use `pnpm` from the containing workspace to install dependencies and run scripts.
 
+The build emits a standalone `dist/server.js` artifact with its runtime
+dependencies bundled. The published server and VS Code extension copy are
+verified byte-for-byte identical, so the editor host does not depend on a
+workspace `node_modules` tree.
+
 ## Verification
 
 Run the relevant test script listed above before changing behavior.
