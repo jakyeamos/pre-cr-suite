@@ -2,8 +2,8 @@
 schemaVersion: 1
 healthScore: 96
 statusLabel: modernization_m6_in_progress
-summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode keeps readiness controls available until trust is granted, security diagnostics have one server owner, legacy VS Code/server tools are opt-in behind explicit experimental settings, activation lifecycle coverage proves stable startup and recovery boundaries, legacy core helpers are isolated behind an explicit experimental package entrypoint, and the standalone server artifact now starts in a real VS Code host smoke (commit dee6aa5)."
-nextStep: "Add end-to-end VS Code host assertions for Setup → Run → Diagnose → Fix → Rerun, then decide whether the isolated legacy core package should be removed or separately versioned."
+summary: "M0 made installs and release checks reproducible. M1 hardened process, trust, containment, Git, and changed-line coverage. M2 added the stable contract/session boundary. M3 unified CLI, hooks, published server, and VSIX. M4/M5 route workspace-scoped readiness with explicit scope, warning states, stale-coverage cleanup, durable VS Code/Neovim recovery, and Neovim headless acceptance coverage. Restricted VS Code mode keeps readiness controls available until trust is granted, security diagnostics have one server owner, legacy VS Code/server tools are opt-in behind explicit experimental settings, activation lifecycle coverage proves stable startup and recovery boundaries, legacy core helpers are isolated behind an explicit experimental package entrypoint, and the standalone server artifact now passes a real VS Code Setup → Run → Diagnose → Rerun smoke (commit 1fffaf2)."
+nextStep: "Add warning/blocked VS Code host fixtures and decide whether the isolated legacy core package should be removed or separately versioned."
 blockers: []
 lastUpdated: "2026-07-11"
 quality:
@@ -56,7 +56,7 @@ engine and contract shape before the larger UI migration.
 - 2026-07-11: Added VS Code activation lifecycle coverage for stable startup, persisted readiness recovery, experimental opt-in, configuration reload, and restricted-mode setup/trust behavior.
 - 2026-07-11: Isolated checklist/docs/review/context/debug helpers behind `@pre-cr/core/experimental`; stable root exports and server imports now have regression coverage in `f8a299e`.
 - 2026-07-11: Added package `typesVersions` coverage for the experimental subpath so the server resolves the isolated entrypoint under the repository's CommonJS TypeScript settings; committed as `dee6aa5`.
-- 2026-07-12: Bundled runtime dependencies into the published server artifact, added a real VS Code development-host smoke, and moved its caches outside the repository.
+- 2026-07-12: Bundled runtime dependencies into the published server artifact, added a real VS Code Setup → Run → Diagnose → Rerun smoke, and moved its caches outside the repository.
 - 2026-07-11: Started M6 by gating legacy VS Code checklist/docs/review/context/debug/dashboard tools behind `preCr.experimental.enabled` (default false), with manifest regression tests; committed as `a207de6`.
 - 2026-07-11: Added a server request regression test proving security diagnostics are published through the LSP connection; committed as `e2a5185`.
 - 2026-07-11: Moved experimental security diagnostics to the server publisher and made VS Code navigation consume server diagnostics; committed as `4417a80`.
