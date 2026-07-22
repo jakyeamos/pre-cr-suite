@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pre-CR Suite"
+  short_description: "Use the Pre-CR Suite monorepo packages and CLI safely"
+  default_prompt: "Use the Pre-CR Suite skill for coverage gates, .pre-cr.json, LSP, CLI, and client integrations."

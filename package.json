@@ -20,10 +20,11 @@
     "typecheck": "node scripts/run-turbo-with-pinned-pnpm.mjs run typecheck",
     "test": "node scripts/run-turbo-with-pinned-pnpm.mjs run test",
     "test:headless-beta": "corepack pnpm run build:core && corepack pnpm run build:server && node scripts/smoke-headless-beta-gate.js",
+    "test:beta-parity": "corepack pnpm run build:core && corepack pnpm run build:server && corepack pnpm run build:vscode && node scripts/smoke-cross-client-beta-parity.js",
     "lint": "node scripts/run-turbo-with-pinned-pnpm.mjs run lint",
     "package": "corepack pnpm run build && corepack pnpm --filter pre-cr-suite package",
     "secret:scan": "node scripts/secret-scan.mjs",
-    "dependency:security": "pnpm audit --audit-level high",
+    "dependency:security": "node scripts/dependency-security.mjs",
     "clean": "pnpm -r run clean && rm -rf node_modules",
     "dev": "node scripts/run-turbo-with-pinned-pnpm.mjs run dev --parallel",
     "format:check": "node scripts/aios-adoption-gates.mjs format",
@@ -41,5 +42,5 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@11.7.0"
 }
