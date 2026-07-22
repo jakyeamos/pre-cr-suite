@@ -296,7 +296,7 @@ describe('runHeadlessCli', () => {
     const workspaceRoot = makeHookRepo();
     fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), '{"version":1}\n');
     fs.writeFileSync(path.join(workspaceRoot, 'README.md'), 'docs only\n');
-    execFileSync('git', ['add', '.pre-cr.json', 'README.md'], { cwd: workspaceRoot });
+    execFileSync('git', ['add', '-f', '.pre-cr.json', 'README.md'], { cwd: workspaceRoot });
     let called = false;
 
     const result = await runHeadlessCli(['hook', 'run', '--json', '--workspace', workspaceRoot], {
@@ -325,7 +325,7 @@ describe('runHeadlessCli', () => {
       }
     }));
     fs.writeFileSync(path.join(workspaceRoot, 'src.ts'), 'const value: any = 1;\n');
-    execFileSync('git', ['add', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
+    execFileSync('git', ['add', '-f', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
 
     const result = await runHeadlessCli(['hook', 'run', '--json', '--workspace', workspaceRoot], {
       runCheck: async () => makeRunResult(workspaceRoot)
@@ -354,7 +354,7 @@ describe('runHeadlessCli', () => {
       }
     }));
     fs.writeFileSync(path.join(workspaceRoot, 'src.ts'), 'export const value = 1;\n');
-    execFileSync('git', ['add', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
+    execFileSync('git', ['add', '-f', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
 
     const result = await runHeadlessCli(['hook', 'run', '--json', '--workspace', workspaceRoot], {
       runCheck: async () => {
