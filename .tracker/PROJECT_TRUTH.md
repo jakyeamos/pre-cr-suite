@@ -2,16 +2,16 @@
 schemaVersion: 1
 healthScore: 96
 statusLabel: adopted_runtime_certified
-summary: "AIOS adoption docs, published package guidance, server simplification gates, pinned pnpm runtime behavior, fixture test harness isolation, and cross-client beta parity verification are current; final runtime smoke and Turbo tests now pass in this Codex shell. dependency:security now runs scripts/dependency-security.mjs (fails only on real high/critical advisories, skips on registry/network errors) so the offline commit gate no longer false-blocks."
-nextStep: "Continue release-hardening from the public beta roadmap, with lint warning cleanup and the new beta parity gate as ongoing drift prevention."
+summary: "The full-audit Pre-CR fold is validated on top of dev: lint, typecheck, 376 tests across core/server/client, builds, headless and cross-client beta parity, secret scan, dependency security, format, validation, dead-code, complexity, and VSIX 0.1.0 packaging all pass. The lockfile pins patched js-yaml and brace-expansion releases, and hook fixtures force-add the intentionally ignored local .pre-cr.json."
+nextStep: "Push the verified fold to dev, then reconcile the 0.1.0 tag/release and package artifact before considering public release claims or main promotion."
 blockers: []
-lastUpdated: "2026-07-05"
+lastUpdated: "2026-07-22"
 quality:
   lint: warning
   types: pass
   tests: pass
   format: pass
-  deadCode: unknown
+  deadCode: pass
   structure: pass
   security: pass
 tags:
@@ -66,6 +66,7 @@ The main risk is parity drift between clients while experimental features contin
 - 2026-06-30: Direct `node packages/server/dist/cli.js run --json --workspace /Users/jakyeamos/projects/pre-cr-suite-lsp` confirms the loaded headless framework command resolves to `corepack pnpm --filter pre-cr-suite test -- --coverage`; with no staged changes at the time of that check, it returned the expected no-changes warning-only result.
 - 2026-07-04: `pnpm lint`, `pnpm typecheck`, and `pnpm test` passed after the README package-install documentation update; lint still reports only the existing TypeScript support warning banner from `@typescript-eslint/typescript-estree`.
 - 2026-07-04: Added `fixtures/cross-client-beta-parity` and `pnpm test:beta-parity` to verify the public beta workflow across the VS Code bundled server artifact and the published `@pre-cr/server`/Neovim-style server entrypoint from the same `.pre-cr.json`. `pnpm test:beta-parity` and `pnpm test:headless-beta` pass.
+- 2026-07-22: Full-audit fold validation passed on `codex/full-audit-fold-pre-cr` after merging `codex/beta-parity-fixture` (`9a7202d`) into dev ancestry (`3dc0713`), including patched dependency resolution, global-ignore-safe hook fixtures, and VSIX `pre-cr-suite-0.1.0.vsix` packaging. The fold remediation is committed as `cc826d5`; no GitHub release, tag, or Marketplace claim is made yet.
 
 ## QR Remediation Planning
 
