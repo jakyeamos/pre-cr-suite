@@ -3,7 +3,7 @@ schemaVersion: 1
 healthScore: 96
 statusLabel: adopted_runtime_certified
 summary: "The full-audit Pre-CR fold is release-ready at 0.1.0: the lockfile resolves eslint-plugin-anti-slop from the public 0.5.0 artifact, frozen clean-clone installation succeeds, and uncached lint, typecheck, 376 tests across core/server/client, builds, secret scan, dependency security, format, validation, dead-code, complexity, and VSIX packaging all pass."
-nextStep: "Push the verified fold to dev, then reconcile the existing 0.1.0 tag with a GitHub release and independently verify the npm and Marketplace artifacts before main promotion."
+nextStep: "Reconcile the immutable v0.1.0 tag with a GitHub release, verify the published @pre-cr/core and @pre-cr/server 0.1.0 consumers plus the VS Code Marketplace artifact, then decide whether the dev-only reproducibility fix warrants a new patch release before main promotion."
 blockers: []
 lastUpdated: "2026-07-22"
 quality:
