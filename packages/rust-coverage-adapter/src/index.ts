@@ -80,6 +80,9 @@ export function parseCliArgs(argv: string[]): RustCoverageCliOptions | null {
     }
 
     const argument = argv[index];
+    if (argument === undefined) {
+      throw new RustCoverageError('Argument parsing reached an invalid empty option.');
+    }
     if (argument === '--help' || argument === '-h') {
       return null;
     }
@@ -134,9 +137,14 @@ export function parseCliArgs(argv: string[]): RustCoverageCliOptions | null {
     throw new RustCoverageError('A command is required after "--". Use --help for usage.');
   }
 
+  const command = argv[commandSeparator + 1];
+  if (!command) {
+    throw new RustCoverageError('A command is required after "--". Use --help for usage.');
+  }
+
   return {
     ...options,
-    command: argv[commandSeparator + 1],
+    command,
     commandArgs: argv.slice(commandSeparator + 2)
   };
 }
@@ -191,6 +199,9 @@ export function mergeLcovReports(reports: string[]): string {
       }
 
       const [lineNumberText, hitCountText] = line.slice(3).split(',', 3);
+      if (lineNumberText === undefined || hitCountText === undefined) {
+        continue;
+      }
       const lineNumber = Number.parseInt(lineNumberText, 10);
       const hitCount = Number.parseInt(hitCountText, 10);
       if (!Number.isInteger(lineNumber) || !Number.isFinite(hitCount)) {
@@ -314,7 +325,8 @@ export function extractCoverageObjects(commandOutput: string): string[] {
   const objectPattern = /\(([^()\r\n]*[\\/]debug[\\/]deps[\\/][^()\r\n]+)\)/g;
   let match: RegExpExecArray | null;
   while ((match = objectPattern.exec(commandOutput)) !== null) {
-    objects.add(match[1]);
+    const objectPath = match[1];
+    if (objectPath !== undefined) objects.add(objectPath);
   }
   return [...objects];
 }
@@ -447,9 +459,13 @@ async function exportLcov(
     `-instr-profile=${profileDataPath}`,
     ...(ignoreFilenameRegex ? [`-ignore-filename-regex=${ignoreFilenameRegex}`] : [])
   ];
+  const firstObjectPath = objectPaths[0];
+  if (!firstObjectPath) {
+    throw new RustCoverageError('No instrumented object paths were found for llvm-cov export.');
+  }
   const allObjectsResult = await runCaptured(
     llvmCov,
-    [...commonArgs, objectPaths[0], ...objectPaths.slice(1).flatMap((objectPath) => ['-object', objectPath])],
+    [...commonArgs, firstObjectPath, ...objectPaths.slice(1).flatMap((objectPath) => ['-object', objectPath])],
     workspaceRoot,
     environment
   );

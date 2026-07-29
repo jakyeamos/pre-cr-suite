@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18, 20]
+        node-version: [20, 22]
 
     steps:
       - uses: actions/checkout@v4
@@ -27,19 +27,31 @@ jobs:
           cache: pnpm
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: corepack pnpm build
 
       - name: Lint
-        run: pnpm lint
+        run: corepack pnpm lint
 
       - name: Test
-        run: pnpm test
+        run: corepack pnpm test
+
+      - name: Coverage
+        run: corepack pnpm run coverage
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: corepack pnpm typecheck
+
+      - name: Environment contract
+        run: node scripts/check_environment_contract.mjs
+
+      - name: Security scan
+        run: corepack pnpm secret:scan
+
+      - name: Dependency security
+        run: corepack pnpm dependency:security
 
   release:
     runs-on: ubuntu-latest
@@ -82,4 +94,4 @@ jobs:
         run: pnpm test:beta-parity
 
       - name: Package
-        run: pnpm package
+        run: corepack pnpm package

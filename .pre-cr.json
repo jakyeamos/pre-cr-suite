@@ -1,8 +1,10 @@
 {
   "version": 1,
-  "testCommand": "pnpm --filter pre-cr-suite test -- --coverage",
+  "testCommand": "corepack pnpm run coverage",
   "coveragePaths": [
-    "packages/vscode-client/coverage/coverage-final.json"
+    "packages/vscode-client/coverage/coverage-final.json",
+    "packages/core/coverage/coverage-final.json",
+    "packages/server/coverage/coverage-final.json"
   ],
   "coverageFormat": "istanbul",
   "qualityAdapters": [],
@@ -11,5 +13,28 @@
     "coverage": true,
     "security": true,
     "checklist": true
-  }
+  },
+  "surfaces": {
+    "covered": ["packages/**"],
+    "ignored": [
+      ".agents/context/**",
+      ".github/**",
+      ".planning/**",
+      ".tracker/**",
+      "docs/**",
+      "fixtures/**",
+      "scripts/**",
+      "*.md",
+      "*.json",
+      "*.yaml"
+    ],
+    "unsupported": []
+  },
+  "qualityAdapters": [
+    {
+      "name": "environment-contract",
+      "command": "node scripts/check_environment_contract.mjs",
+      "required": true
+    }
+  ]
 }

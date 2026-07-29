@@ -6,8 +6,12 @@ dist/
 *.log
 .env
 .env.local
+.env.*
+!.env.example
 coverage/
 packages/*/coverage/
+.pre-cr/
+!.pre-cr.json
 .aios/audit/
 
 .quality-runner/
@@ -17,4 +21,6 @@ packages/*/coverage/
 .firecrawl/
 .pytest_cache/
 __pycache__/
-.agents/
+.agents/*
+!.agents/context/
+!.agents/context/**

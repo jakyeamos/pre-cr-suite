@@ -232,6 +232,25 @@ packages/
 - [packages/vscode-client/README.md](packages/vscode-client/README.md)
 - [packages/neovim-client/README.md](packages/neovim-client/README.md)
 
+## Environment contract
+
+The repository is designed to be legible to coding agents without requiring a
+whole-repository context dump. Start with [`AGENTS.md`](AGENTS.md), then route
+through [`.agents/context/README.md`](.agents/context/README.md). The index
+links to focused packets for architecture, commands, conventions, security,
+failure modes, examples, done criteria, and deployment.
+
+The executable contract is checked with:
+
+```bash
+node scripts/check_environment_contract.mjs
+```
+
+It verifies context freshness and links, strict package compiler settings,
+quality command surfaces, protected paths, Pre-CR/CI integration, Quality
+Runner ownership, and tracked secret-like paths. Missing evidence fails the
+contract; it is never treated as an optimistic pass.
+
 ## License
 
 MIT

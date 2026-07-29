@@ -1,0 +1,18 @@
+[[quality_runner.gates]]
+id = "security_dependency_audit"
+command = "corepack pnpm dependency:security"
+ecosystem = "node"
+source = "pnpm-lock.yaml"
+owner = "platform"
+required = true
+severity = "blocker"
+
+[[quality_runner.gates]]
+id = "environment_contract"
+command = "node scripts/check_environment_contract.mjs"
+ecosystem = "node"
+source = "scripts/check_environment_contract.mjs"
+owner = "repository"
+required = true
+severity = "blocker"
+mutating_risk = "safe"
