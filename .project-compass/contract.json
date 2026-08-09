@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "project": {
+    "name": "pre-cr-suite-lsp",
+    "identity": "A coverage-first pre-PR readiness tool for VS Code and Neovim with a shared configuration workflow across editor and headless use.",
+    "audience": "Developers who want repository checks and readiness evidence before opening a code review, whether working in an editor or headless environment.",
+    "core_loop": "Load repository configuration, run supported readiness checks, show coverage and failures, fix or review the result, and use the same evidence before a pull request.",
+    "north_star": "A developer sees the important pre-PR risks early through the same inspectable workflow in the editor and headless environments.",
+    "not_this": ["A code-review replacement", "A silent auto-fixer that hides failed checks", "An editor-only feature with no headless parity"]
+  },
+  "targets": {
+    "mvp": {"definition": "The tool runs the supported pre-PR checks from one configuration in VS Code, Neovim, and headless mode with clear coverage and failure output."},
+    "complete_product": {"definition": "The suite provides reliable, coverage-first pre-PR readiness across supported editors and headless workflows with shared configuration, actionable failures, and release-quality compatibility."}
+  },
+  "pillars": [
+    {"id": "coverage-first-readiness", "name": "Coverage-first readiness", "outcomes": [{"id": "same-checks-before-pr", "name": "Supported checks and their coverage are visible before a pull request, regardless of the supported client surface.", "targets": ["mvp", "complete_product"], "maturity": 50, "confidence": "medium", "layers": {"intended": "Developers understand what was checked and what was not before review.", "planned": "The beta promise centres one configuration across VS Code, Neovim, and headless use.", "implemented": "The repository provides the LSP and pre-PR readiness surface.", "verified": "Repository docs establish the promise; editor/headless compatibility was not rerun here."}, "evidence": [{"ref": "README.md", "note": "Defines coverage-first pre-PR readiness and the editor/headless beta promise.", "observed_at": "2026-08-02T13:25:04Z"}, {"ref": ".agents/context/README.md", "note": "Provides repository context and workflow boundaries.", "observed_at": "2026-08-02T13:25:04Z"}], "blockers": [{"kind": "verification", "summary": "Supported editor, headless, and representative repository coverage needs executable compatibility evidence."}]}]},
+    {"id": "actionable-failures", "name": "Actionable failures", "outcomes": [{"id": "reviewable-readiness-result", "name": "A readiness run distinguishes passed, failed, skipped, unavailable, and out-of-scope checks with a next safe action.", "targets": ["complete_product"], "maturity": 50, "confidence": "medium", "layers": {"intended": "A failed gate helps the developer decide what to fix or review rather than appearing as unexplained noise.", "planned": "The project describes coverage-first and cross-surface operation.", "implemented": "The repository contains the readiness tool and client integration surfaces.", "verified": "No full readiness matrix was executed in this bootstrap."}, "evidence": [{"ref": "README.md", "note": "Describes pre-PR readiness and coverage behavior.", "observed_at": "2026-08-02T13:25:04Z"}], "blockers": [{"kind": "verification", "summary": "Failure classification and next-action parity across clients remain to be verified."}]}]}
+  ],
+  "source_layers": {"intended": [{"ref": "README.md", "note": "Product identity and beta promise.", "observed_at": "2026-08-02T13:25:04Z"}], "planned": [{"ref": ".agents/context/README.md", "note": "Repository context and supported surfaces.", "observed_at": "2026-08-02T13:25:04Z"}], "implemented": [{"ref": "README.md", "note": "Current LSP and readiness scope.", "observed_at": "2026-08-02T13:25:04Z"}], "verified": [{"ref": "README.md", "note": "Documented claims only; no editor/headless matrix here.", "observed_at": "2026-08-02T13:25:04Z"}]},
+  "drift": [{"kind": "verification-gap", "summary": "The shared editor/headless readiness outcome is documented but not freshly verified across supported clients and representative repositories.", "status": "open", "observed_at": "2026-08-02T13:25:04Z", "evidence": [{"ref": "README.md", "note": "Defines the compatibility promise without a current matrix.", "observed_at": "2026-08-02T13:25:04Z"}]}],
+  "updated_at": "2026-08-02T13:25:04Z"
+}
