@@ -7,6 +7,7 @@ const ignoredDirs = new Set([
   'coverage',
   'dist',
   'node_modules',
+  '.quality-runner',
   'test',
   'tests',
 ])

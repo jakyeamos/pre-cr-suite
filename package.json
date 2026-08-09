@@ -31,7 +31,7 @@
     "validation": "node scripts/aios-adoption-gates.mjs validation",
     "dead-code": "node scripts/aios-adoption-gates.mjs dead-code",
     "complexity:check": "node scripts/aios-adoption-gates.mjs complexity",
-    "pre-pr": "corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test && corepack pnpm build && node scripts/aios-adoption-gates.mjs validation",
+    "pre-pr": "corepack pnpm lint && corepack pnpm build && corepack pnpm typecheck && corepack pnpm test && node scripts/aios-adoption-gates.mjs validation",
     "thermo-nuclear-simplification": "node scripts/aios-adoption-gates.mjs thermo"
   },
   "devDependencies": {

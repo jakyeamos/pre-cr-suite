@@ -12,6 +12,7 @@ const skipDirs = new Set([
   ".github",
   ".next",
   ".planning",
+  ".quality-runner",
   ".turbo",
   "AIOS-backfill",
   "build",
