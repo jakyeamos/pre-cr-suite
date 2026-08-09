@@ -382,6 +382,7 @@ describe('runHeadlessCli', () => {
 function makeHookRepo(): string {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pre-cr-hook-cli-'));
   execFileSync('git', ['init'], { cwd: workspaceRoot, stdio: 'ignore' });
+  execFileSync('git', ['config', 'core.excludesfile', '/dev/null'], { cwd: workspaceRoot });
   execFileSync('git', ['config', 'core.hooksPath', '/dev/null'], { cwd: workspaceRoot });
   return workspaceRoot;
 }
