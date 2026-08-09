@@ -1,0 +1,207 @@
+{
+  "schema": "mac-control-task-manifest/v1",
+  "repository_id": "repo-612840a9706a58cf",
+  "repository_name": "pre-cr-suite-lsp",
+  "applicability": "applicable",
+  "applicability_reason": "pre-cr-suite-lsp exposes supported VS Code extension command and dashboard surface; this manifest records its supported user-facing workflow catalog while live and measured evidence remain outstanding.",
+  "app": {
+    "name": "Pre-CR Suite VS Code extension"
+  },
+  "criteria": {
+    "stable_identity": true,
+    "correct_semantics": true,
+    "observable_state": true,
+    "useful_hierarchy": true,
+    "efficient_navigation": true,
+    "verifiable_outcomes": true,
+    "route_flexibility": true,
+    "stable_change_behavior": true
+  },
+  "tasks": [
+    {
+      "task_id": "run-pre-cr-check",
+      "stable_target_id": "pre-cr-suite.command.check",
+      "hierarchy": "pre-cr-suite > command > check",
+      "semantic_action": "invoke ⌘⇧T",
+      "observable_postcondition": "Check result and issues are readable in editor or output",
+      "observable_states": [
+        "enabled",
+        "focused",
+        "selected",
+        "expanded",
+        "visible",
+        "loading",
+        "completed"
+      ],
+      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
+      "eligible_routes": [
+        "accessibility",
+        "keyboard",
+        "scrolling"
+      ],
+      "selected_route": "keyboard",
+      "change_states": [
+        "loading",
+        "modal",
+        "disabled",
+        "permission_unavailable"
+      ],
+      "accessibility": {
+        "identifier": "pre-cr-suite.command.check",
+        "label": "Pre-CR Check",
+        "role": "AXMenuItem",
+        "required_actions": [
+          "AXPress"
+        ]
+      }
+    },
+    {
+      "task_id": "toggle-coverage",
+      "stable_target_id": "pre-cr-suite.command.coverage",
+      "hierarchy": "pre-cr-suite > command > coverage",
+      "semantic_action": "invoke ⌘⇧O",
+      "observable_postcondition": "Coverage mode and current state are readable",
+      "observable_states": [
+        "enabled",
+        "focused",
+        "selected",
+        "expanded",
+        "visible",
+        "loading",
+        "completed"
+      ],
+      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
+      "eligible_routes": [
+        "accessibility",
+        "keyboard",
+        "scrolling"
+      ],
+      "selected_route": "keyboard",
+      "change_states": [
+        "loading",
+        "modal",
+        "disabled",
+        "permission_unavailable"
+      ],
+      "accessibility": {
+        "identifier": "pre-cr-suite.command.coverage",
+        "label": "Toggle Coverage",
+        "role": "AXMenuItem",
+        "required_actions": [
+          "AXPress"
+        ]
+      }
+    },
+    {
+      "task_id": "next-uncovered-issue",
+      "stable_target_id": "pre-cr-suite.command.next-issue",
+      "hierarchy": "pre-cr-suite > command > next-issue",
+      "semantic_action": "invoke F8",
+      "observable_postcondition": "Next issue is focused or no-more-issues state is readable",
+      "observable_states": [
+        "enabled",
+        "focused",
+        "selected",
+        "expanded",
+        "visible",
+        "loading",
+        "completed"
+      ],
+      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
+      "eligible_routes": [
+        "accessibility",
+        "keyboard",
+        "scrolling"
+      ],
+      "selected_route": "keyboard",
+      "change_states": [
+        "loading",
+        "modal",
+        "disabled",
+        "permission_unavailable"
+      ],
+      "accessibility": {
+        "identifier": "pre-cr-suite.command.next-issue",
+        "label": "Next Issue",
+        "role": "AXMenuItem",
+        "required_actions": [
+          "AXPress"
+        ]
+      }
+    },
+    {
+      "task_id": "open-pre-cr-dashboard",
+      "stable_target_id": "pre-cr-suite.command.dashboard",
+      "hierarchy": "pre-cr-suite > command > dashboard",
+      "semantic_action": "invoke ⌘⇧B",
+      "observable_postcondition": "Dashboard and coverage state are readable",
+      "observable_states": [
+        "enabled",
+        "focused",
+        "selected",
+        "expanded",
+        "visible",
+        "loading",
+        "completed"
+      ],
+      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
+      "eligible_routes": [
+        "accessibility",
+        "keyboard",
+        "scrolling"
+      ],
+      "selected_route": "keyboard",
+      "change_states": [
+        "loading",
+        "modal",
+        "disabled",
+        "permission_unavailable"
+      ],
+      "accessibility": {
+        "identifier": "pre-cr-suite.command.dashboard",
+        "label": "Dashboard",
+        "role": "AXMenuItem",
+        "required_actions": [
+          "AXPress"
+        ]
+      }
+    },
+    {
+      "task_id": "open-output-panel",
+      "stable_target_id": "pre-cr-suite.output-panel",
+      "hierarchy": "pre-cr-suite > output-panel",
+      "semantic_action": "focus the Pre-CR Suite output channel",
+      "observable_postcondition": "Latest check result is readable",
+      "observable_states": [
+        "enabled",
+        "focused",
+        "selected",
+        "expanded",
+        "visible",
+        "loading",
+        "completed"
+      ],
+      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
+      "eligible_routes": [
+        "accessibility",
+        "keyboard",
+        "scrolling"
+      ],
+      "selected_route": "keyboard",
+      "change_states": [
+        "loading",
+        "modal",
+        "disabled",
+        "permission_unavailable"
+      ],
+      "accessibility": {
+        "identifier": "pre-cr-suite.output-panel",
+        "label": "Pre-CR Suite",
+        "role": "AXTextArea",
+        "required_actions": [
+          "AXFocus"
+        ]
+      }
+    }
+  ]
+}
