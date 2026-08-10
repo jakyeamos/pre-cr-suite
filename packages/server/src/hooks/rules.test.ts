@@ -75,6 +75,17 @@ describe('evaluateHookRules', () => {
     ]));
   });
 
+  it('does not classify executable Python fixture sources as weak tests', () => {
+    const findings = evaluateHookRules([
+      {
+        path: 'tests/fixtures/debug-executable/routes.py',
+        text: 'def normalize_route(value):\n    return value.lower()\n'
+      }
+    ], DEFAULT_HOOK_RULE_POLICY);
+
+    expect(findings).toEqual([]);
+  });
+
   it('honors configured rule policy overrides', () => {
     const findings = evaluateHookRules([
       { path: 'src/app.ts', text: 'const value: any = 1;\n' }

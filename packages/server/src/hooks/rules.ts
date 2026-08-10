@@ -217,7 +217,11 @@ function findOversizedSource(file: HookFile, policy: HookRulePolicy): HookFindin
 }
 
 function findWeakPythonTest(file: HookFile, policy: HookRulePolicy): HookFinding[] {
-  if (path.extname(file.path).toLowerCase() !== '.py' || !isTestPath(file.path)) {
+  if (
+    path.extname(file.path).toLowerCase() !== '.py' ||
+    !isTestPath(file.path) ||
+    isFixtureSourcePath(file.path)
+  ) {
     return [];
   }
   if (/\bassert\b|pytest\.raises|self\.assert|unittest\./.test(file.text)) {
@@ -323,6 +327,12 @@ function pushFinding(
 
 function isTestPath(filePath: string): boolean {
   return filePath.split(/[\\/]/).some((part) => TEST_PATH_PARTS.has(part.toLowerCase())) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(filePath);
+}
+
+function isFixtureSourcePath(filePath: string): boolean {
+  const parts = filePath.split(/[\\/]/).map((part) => part.toLowerCase());
+  const fixtureIndex = parts.indexOf('fixtures');
+  return fixtureIndex > 0 && parts[fixtureIndex - 1] === 'tests';
 }
 
 function isGeneratedPath(filePath: string): boolean {
