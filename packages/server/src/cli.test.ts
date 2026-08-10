@@ -31,6 +31,22 @@ describe('runHeadlessCli', () => {
     expect(result.stderr).toBe('');
   });
 
+  it('passes a successful test run when changed-line coverage is disabled', async () => {
+    const result = await runHeadlessCli(['run', '--json', '--workspace', '/repo'], {
+      runCheck: async (workspaceRoot) => {
+        const runResult = makeRunResult(workspaceRoot);
+        if (runResult.result) {
+          runResult.result.health.config.checks.coverage = false;
+          runResult.result.coverageCheck = null;
+        }
+        return runResult;
+      }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: true });
+  });
+
   it('prints surface counts and unsupported files as a text-mode failure', async () => {
     const result = await runHeadlessCli(['run', '--workspace', '/repo'], {
       runCheck: async (workspaceRoot) => {
@@ -341,6 +357,30 @@ describe('runHeadlessCli', () => {
         }
       ]
     });
+  });
+
+  it('lets the hook pass when tests succeed and changed-line coverage is disabled', async () => {
+    const workspaceRoot = makeHookRepo();
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      checks: { coverage: false }
+    }));
+    fs.writeFileSync(path.join(workspaceRoot, 'src.ts'), 'export const value = 1;\n');
+    execFileSync('git', ['add', '-f', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
+
+    const result = await runHeadlessCli(['hook', 'run', '--json', '--workspace', workspaceRoot], {
+      runCheck: async () => {
+        const runResult = makeRunResult(workspaceRoot);
+        if (runResult.result) {
+          runResult.result.health.config.checks.coverage = false;
+          runResult.result.coverageCheck = null;
+        }
+        return runResult;
+      }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: true });
   });
 
   it('follows hook policy for failed Pre-CR readiness', async () => {

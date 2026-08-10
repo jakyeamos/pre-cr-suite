@@ -61,7 +61,8 @@ export async function runHook(options: HookRunOptions, dependencies: HookRunDepe
   if (!findings.some((finding) => finding.severity === 'block') && configExists) {
     const runCheck = dependencies.runCheck ?? runWorkspacePreCrCheck;
     const result = await runCheck(options.workspaceRoot, { changeScope: 'staged' });
-    const coveragePassed = result.result?.coverageCheck?.passed ?? false;
+    const coverageRequired = result.result?.health.config.checks.coverage ?? true;
+    const coveragePassed = !coverageRequired || (result.result?.coverageCheck?.passed ?? false);
     const qualityAdaptersPassed = result.result?.qualityAdaptersPassed ?? true;
     const ok = Boolean(result.result && !result.error && coveragePassed && qualityAdaptersPassed);
     if (!ok) {

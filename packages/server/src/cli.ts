@@ -72,7 +72,8 @@ export async function runHeadlessCli(
 
   const runCheck = dependencies.runCheck ?? runWorkspacePreCrCheck;
   const result = await runCheck(parsed.workspaceRoot, { changeScope: 'staged' });
-  const coveragePassed = result.result?.coverageCheck?.passed ?? false;
+  const coverageRequired = result.result?.health.config.checks.coverage ?? true;
+  const coveragePassed = !coverageRequired || (result.result?.coverageCheck?.passed ?? false);
   const qualityAdaptersPassed = result.result?.qualityAdaptersPassed ?? true;
   const ok = Boolean(result.result && !result.error && coveragePassed && qualityAdaptersPassed);
   const branch = await (dependencies.currentBranch ?? defaultCurrentBranch)(parsed.workspaceRoot);
