@@ -62,6 +62,7 @@ const HANDLER_PATTERNS = [
 ];
 const SEND_PATTERNS = ['.postMessage(', 'postMessage('];
 const ALLOW_HANDLER_MARKER = 'quality-gate: allow handler-before-send';
+const ALLOW_PACKAGE_MANAGER_MARKER = 'quality-gate: allow package-manager: non-executable';
 const ALLOW_SECRET_MARKER = 'quality-gate: allow secret';
 const ALLOW_STATIC_UI_TEST_MARKER = 'quality-gate: allow static-ui-test';
 const SECRET_RE =
@@ -155,11 +156,22 @@ function findPackageManagerViolations(file: HookFile, policy: HookRulePolicy): H
   }
 
   file.text.split(/\r?\n/).forEach((line, index) => {
+    if (isNonExecutablePackageManagerExample(line)) {
+      return;
+    }
     if (PACKAGE_MANAGER_RE.test(line)) {
       pushFinding(findings, policy, file.path, index + 1, 'package-manager', 'use pnpm instead of npm/yarn commands');
     }
   });
   return findings;
+}
+
+function isNonExecutablePackageManagerExample(line: string): boolean {
+  const exampleField = /^\s*["'](?:detection_terms|good_example)["']\s*:/;
+  const executionSyntax = /\b(?:subprocess|child_process|os\.(?:system|popen)|(?:spawn|exec|run|check_call|check_output|Popen))\s*\(/;
+  return line.includes(ALLOW_PACKAGE_MANAGER_MARKER)
+    && exampleField.test(line)
+    && !executionSyntax.test(line);
 }
 
 function findTypescriptAny(file: HookFile, policy: HookRulePolicy): HookFinding[] {

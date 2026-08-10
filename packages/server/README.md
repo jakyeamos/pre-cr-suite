@@ -56,6 +56,12 @@ Hook policy lives in `.pre-cr.json`:
 }
 ```
 
+When a staged line contains a non-executable package-manager example used by a
+detector, fixture, or contract, document the narrow exception inline with
+`quality-gate: allow package-manager: non-executable`. The marker is accepted
+only on `detection_terms` or `good_example` fields without process-launch
+syntax; executable commands remain blocking.
+
 ## Public Beta Surface
 
 The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, the headless JSON gate, and command-only hook management. Broader checklist, docs, review, context, and debug methods are experimental.

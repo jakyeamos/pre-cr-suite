@@ -87,6 +87,12 @@ Use `--json` for automation. The CLI checks staged changes and returns non-zero 
 
 For explicit hook changes only, use `pre-cr hook install|status|run|uninstall`; supported managers are `native`, `husky`, `lefthook`, `pre-commit`, `auto`, and `all`, with `pre-commit` as the default hook.
 
+If a staged source line contains package-manager text only as non-executable
+detector or fixture data, document the narrow exception inline with
+`quality-gate: allow package-manager: non-executable`. The hook validates that
+the line is a `detection_terms` or `good_example` field without process-launch
+syntax; executable npm or Yarn commands remain blocking.
+
 ## Preferred APIs and idioms
 
 - Use `parseLcovFile`/`parseLcovContent` or `parseIstanbulFile`/`parseIstanbulContent` for coverage; inspect `ParseResult.success`, `errors`, and `warnings`.

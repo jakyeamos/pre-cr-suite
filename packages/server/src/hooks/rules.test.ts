@@ -85,4 +85,17 @@ describe('evaluateHookRules', () => {
 
     expect(findings).toEqual([]);
   });
+
+  it('honors a documented package-manager exception for non-executable example text', () => {
+    const allowedLine = '"good_example": "Run npm ' + 'test -- --runInBand" # quality-gate: allow package-manager: non-executable';
+    const executableLine = 'subprocess.run("npm ' + 'test") # quality-gate: allow package-manager: non-executable';
+
+    const findings = evaluateHookRules([
+      { path: 'src/catalog.py', text: [allowedLine, executableLine].join('\n') }
+    ], DEFAULT_HOOK_RULE_POLICY);
+
+    expect(findings).toEqual([
+      expect.objectContaining({ path: 'src/catalog.py', line: 2, rule: 'package-manager', severity: 'block' })
+    ]);
+  });
 });
