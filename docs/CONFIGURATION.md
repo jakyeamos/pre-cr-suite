@@ -274,6 +274,34 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
 
 During beta, `.pre-cr.json` owns project behavior. Editor settings should be used for presentation only.
 
+### Rust LLVM adapter
+
+Rust projects can install the reusable adapter and make it the configured test
+command. This keeps Rust's instrumentation and report generation in a
+versioned package while leaving repository-specific test selection in
+`.pre-cr.json`:
+
+```bash
+pnpm add --save-dev @pre-cr/rust-coverage-adapter
+rustup component add llvm-tools-preview --toolchain stable
+```
+
+```json
+{
+  "version": 1,
+  "testCommand": "pnpm exec pre-cr-rust-coverage --output coverage/lcov.info -- cargo test --workspace",
+  "coveragePaths": ["coverage/lcov.info"],
+  "coverageFormat": "lcov",
+  "threshold": 80
+}
+```
+
+The adapter executes the command after `--` without a shell, adds
+`-C instrument-coverage`, uses the selected toolchain's matching LLVM tools,
+merges all generated raw profiles, and emits line-based LCOV. It does not
+install Rust toolchains or `llvm-tools-preview` automatically. Use
+`--target-dir` or repeat `--object` when Cargo uses a non-standard layout.
+
 ### Headless Gate
 
 Use the packaged CLI when automation needs JSON without speaking LSP over stdio:

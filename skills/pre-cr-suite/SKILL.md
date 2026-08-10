@@ -7,7 +7,7 @@ description: Use when coding with the Pre-CR Suite monorepo—@pre-cr/core, @pre
 
 ## Package metadata
 
-- Package family: `@pre-cr/core`, `@pre-cr/server`, `pre-cr-suite` (VS Code), and the Neovim Lua client.
+- Package family: `@pre-cr/core`, `@pre-cr/server`, `@pre-cr/rust-coverage-adapter`, `pre-cr-suite` (VS Code), and the Neovim Lua client.
 - Current repository/package version: `0.1.0` (public beta; no semver range is declared).
 - Ecosystem: TypeScript/Node.js library + LSP server/CLI, VS Code extension, Lua client.
 - Runtime: Node `>=18.0.0`; VS Code `^1.85.0` for the extension; pnpm `11.7.0` at the workspace root.
@@ -23,7 +23,7 @@ Use it for implementation, debugging, configuration, test integration, CLI autom
 
 `.pre-cr.json` at the workspace root is the canonical project behavior shared by VS Code, Neovim, hooks, and the headless CLI. `@pre-cr/core` is editor-independent and exports coverage parsers, config/protocol types, validation, and orchestration helpers. `@pre-cr/server` owns LSP requests, workspace checks, hooks, and CLI commands. VS Code bundles the server; Neovim starts the published server and uses the Lua client.
 
-The supported gate runs tests/coverage, loads LCOV or Istanbul data, evaluates changed-line coverage against `threshold`, and may run configured quality adapters. `surfaces` separates covered, ignored, and unsupported files; unsupported files need explicit repo setup rather than wrapper-side guesses.
+The supported gate runs tests/coverage, loads LCOV or Istanbul data, evaluates changed-line coverage against `threshold`, and may run configured quality adapters. `@pre-cr/rust-coverage-adapter` provides the reusable Rust/LLVM instrumentation-to-LCOV command for repositories whose native test runner does not emit a compatible report. `surfaces` separates covered, ignored, and unsupported files; unsupported files need explicit repo setup rather than wrapper-side guesses.
 
 ## Installation, imports, and setup
 
@@ -60,6 +60,21 @@ Create `.pre-cr.json` with `version: 1`, an ordered `coveragePaths` list, `cover
   "checks": { "coverage": true, "security": true, "checklist": true }
 }
 ```
+
+For Rust repositories, install `@pre-cr/rust-coverage-adapter` and use a
+command such as:
+
+```json
+{
+  "testCommand": "pnpm exec pre-cr-rust-coverage --output coverage/lcov.info -- cargo test --workspace",
+  "coveragePaths": ["coverage/lcov.info"],
+  "coverageFormat": "lcov"
+}
+```
+
+The adapter uses the matching `llvm-tools-preview` component from the selected
+rustup toolchain. It does not install toolchains or components automatically;
+see the package README for setup and explicit object-selection options.
 
 Run the same gate used by editor clients:
 

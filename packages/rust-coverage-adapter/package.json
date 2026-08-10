@@ -1,0 +1,48 @@
+{
+  "name": "@pre-cr/rust-coverage-adapter",
+  "version": "0.1.0",
+  "description": "LLVM instrumentation coverage adapter for Rust projects",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "pre-cr-rust-coverage": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src --ext ts",
+    "clean": "rm -rf dist coverage"
+  },
+  "keywords": [
+    "rust",
+    "coverage",
+    "llvm",
+    "lcov",
+    "pre-cr"
+  ],
+  "author": "Jakye Amos <jakyejobs@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakyeamos/pre-cr-suite",
+    "directory": "packages/rust-coverage-adapter"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.6"
+  }
+}

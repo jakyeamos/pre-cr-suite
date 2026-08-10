@@ -29,6 +29,7 @@ Published npm packages:
 
 - [`@pre-cr/core`](https://www.npmjs.com/package/@pre-cr/core) provides the shared coverage, config, and gate logic.
 - [`@pre-cr/server`](https://www.npmjs.com/package/@pre-cr/server) provides the LSP server and `pre-cr` headless CLI.
+- [`@pre-cr/rust-coverage-adapter`](https://www.npmjs.com/package/@pre-cr/rust-coverage-adapter) runs Rust tests with LLVM instrumentation and emits LCOV for changed-line gates.
 
 The VS Code Marketplace listing is pending verification. Until that is confirmed, use a built VSIX or local extension package for VS Code installs.
 
@@ -129,6 +130,32 @@ Notes:
 - `surfaces` lets repos declare covered, ignored, and unsupported directories in repo config.
 - Editor settings are for presentation only: colors, notifications, and experimental visibility.
 
+### Rust coverage
+
+Rust repositories can use the reusable LLVM adapter as their configured test
+command:
+
+```bash
+pnpm add --save-dev @pre-cr/rust-coverage-adapter
+rustup component add llvm-tools-preview --toolchain stable
+```
+
+```json
+{
+  "version": 1,
+  "testCommand": "pnpm exec pre-cr-rust-coverage --output coverage/lcov.info -- cargo test --workspace",
+  "coveragePaths": ["coverage/lcov.info"],
+  "coverageFormat": "lcov",
+  "threshold": 80
+}
+```
+
+The adapter uses the selected Rust toolchain's matching `llvm-profdata` and
+`llvm-cov`, preserves existing `RUSTFLAGS`, and writes unique raw profiles
+before merging them into the configured LCOV path. See
+[`packages/rust-coverage-adapter/README.md`](packages/rust-coverage-adapter/README.md)
+for non-standard target directories and explicit object selection.
+
 ## Development
 
 ```bash
@@ -146,6 +173,7 @@ pnpm package
 packages/
   core/           Shared coverage, config, protocol, and pre-check logic
   server/         LSP server for beta and experimental methods
+  rust-coverage-adapter/  Rust/LLVM instrumentation-to-LCOV adapter
   vscode-client/  VS Code extension with bundled server artifact
   neovim-client/  Neovim client commands and setup
 ```
