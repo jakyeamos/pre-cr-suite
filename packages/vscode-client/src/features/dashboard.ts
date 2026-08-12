@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import { state, ExtensionState } from '../utils/state';
 import { escapeHtml, generateNonce } from '../utils/webview';
+import { publishMacControlState } from '../utils/macControlState';
 
 let dashboardPanel: vscode.WebviewPanel | undefined;
 let stateSubscription: vscode.Disposable | undefined;
@@ -34,6 +35,7 @@ export function registerDashboardFeature(
 function showDashboard(context: vscode.ExtensionContext, client: LanguageClient) {
   if (dashboardPanel) {
     dashboardPanel.reveal();
+    void publishMacControlState('preCr.showDashboard', 'dashboard_visible');
     return;
   }
 
@@ -46,6 +48,7 @@ function showDashboard(context: vscode.ExtensionContext, client: LanguageClient)
       retainContextWhenHidden: true
     }
   );
+  void publishMacControlState('preCr.showDashboard', 'dashboard_visible');
 
   // Update content initially
   updateDashboardContent(client);
@@ -116,7 +119,7 @@ function updateDashboardContent(_client: LanguageClient) {
 /**
  * Generate dashboard HTML
  */
-function getDashboardHtml(s: ExtensionState): string {
+export function getDashboardHtml(s: ExtensionState): string {
   const nonce = generateNonce();
 
   // Coverage card
@@ -376,14 +379,20 @@ function getDashboardHtml(s: ExtensionState): string {
     }
   </style>
 </head>
-<body>
+<body data-mac-control-id="pre-cr-suite.dashboard" data-task-state="dashboard_visible">
   <div class="header">
     <h1>
       <span>⚡</span>
       Pre-CR Suite
     </h1>
     <div class="header-actions">
-      <div class="lsp-status">
+      <div
+        class="lsp-status"
+        role="status"
+        aria-live="polite"
+        data-mac-control-id="pre-cr-suite.dashboard.status"
+        data-task-state="${s.isLspConnected ? 'lsp_connected' : 'lsp_disconnected'}"
+      >
         <span class="lsp-dot ${s.isLspConnected ? '' : 'disconnected'}"></span>
         LSP ${s.isLspConnected ? 'Connected' : 'Disconnected'}
       </div>

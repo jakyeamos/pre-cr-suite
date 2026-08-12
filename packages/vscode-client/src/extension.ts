@@ -28,6 +28,7 @@ import { registerPreCrCheckFeature } from './features/preCrCheck';
 import * as notify from './utils/notifications';
 import * as statusBar from './utils/statusBar';
 import { initState, state } from './utils/state';
+import { publishMacControlState } from './utils/macControlState';
 
 let client: LanguageClient;
 
@@ -575,6 +576,7 @@ function registerUtilityCommands(context: vscode.ExtensionContext) {
     // Show output channel
     vscode.commands.registerCommand('preCr.showLogs', () => {
       outputChannel.show();
+      void publishMacControlState('preCr.showLogs', 'output_visible', outputChannel);
     }),
 
     // Show getting started walkthrough

@@ -8,6 +8,7 @@ import * as notify from '../utils/notifications';
 import { state } from '../utils/state';
 import { sendBetaRequestWithNotify } from '../utils/lsp';
 import * as webview from '../utils/webview';
+import { publishMacControlState } from '../utils/macControlState';
 
 let outputChannel: vscode.OutputChannel;
 let isRunning = false;
@@ -70,18 +71,22 @@ export function registerPreCrCheckFeature(
 
 async function runPreCrCheck(client: LanguageClient): Promise<void> {
   if (isRunning) {
+    await publishMacControlState('preCr.runPreCrCheck', 'check_already_running', outputChannel);
     notify.showWarning('Pre-CR Check is already running');
     return;
   }
 
   if (!getWorkspaceRoot()) {
+    await publishMacControlState('preCr.runPreCrCheck', 'check_workspace_unavailable', outputChannel);
     return;
   }
 
   isRunning = true;
+  let completionState = 'check_unavailable';
   outputChannel.clear();
   outputChannel.show(true);
   outputChannel.appendLine('== Pre-CR Check ==');
+  await publishMacControlState('preCr.runPreCrCheck', 'check_running', outputChannel);
 
   try {
     const response = await sendBetaRequestWithNotify(client, '$/preCr/runPreCrCheck', {}, 'Pre-CR check');
@@ -93,6 +98,7 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
     applyCoverageState(response.result);
 
     if (response.result.coverageCheck) {
+      completionState = response.result.coverageCheck.passed ? 'check_passed' : 'check_failed';
       await showUncoveredAsDiagnostics(response.result.coverageCheck.uncoveredDetails);
       const summary = response.result.coverageCheck;
       const message = summary.passed
@@ -124,6 +130,7 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
       return;
     }
 
+    completionState = 'check_incomplete';
     const action = await notify.showWarning('Pre-CR check could not complete. Review project health for setup issues.', undefined, 'Fix Setup', 'Show Details');
     if (action === 'Fix Setup') {
       await showProjectHealth(client, true, response.result.coverageCheck ?? undefined);
@@ -132,6 +139,7 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
     }
   } finally {
     isRunning = false;
+    await publishMacControlState('preCr.runPreCrCheck', completionState, outputChannel);
   }
 }
 

@@ -13,6 +13,7 @@ import { LanguageClient } from 'vscode-languageclient/node';
 import * as notify from '../utils/notifications';
 import * as git from '../utils/git';
 import * as webview from '../utils/webview';
+import { publishMacControlState } from '../utils/macControlState';
 
 // Store diagnostics collection globally so code actions can access it
 let securityDiagnostics: vscode.DiagnosticCollection;
@@ -140,6 +141,7 @@ export function registerChecklistFeatures(
 function navigateIssue(direction: 'next' | 'prev') {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
+    void publishMacControlState('preCr.nextIssue', 'issue_editor_unavailable');
     notify.showInfo('No active editor');
     return;
   }
@@ -148,6 +150,7 @@ function navigateIssue(direction: 'next' | 'prev') {
   const diagnostics = securityDiagnostics.get(uri) || [];
 
   if (diagnostics.length === 0) {
+    void publishMacControlState('preCr.nextIssue', 'issue_none');
     notify.showInfo('No security issues in this file');
     return;
   }
@@ -176,6 +179,7 @@ function navigateIssue(direction: 'next' | 'prev') {
   }
 
   if (target) {
+    void publishMacControlState('preCr.nextIssue', 'issue_focused');
     const position = new vscode.Position(target.range.start.line, 0);
     editor.selection = new vscode.Selection(position, position);
     editor.revealRange(target.range, vscode.TextEditorRevealType.InCenter);

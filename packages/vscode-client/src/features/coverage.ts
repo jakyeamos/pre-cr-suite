@@ -18,6 +18,7 @@ import * as git from '../utils/git';
 import { state } from '../utils/state';
 import { sendBetaRequestWithNotify } from '../utils/lsp';
 import * as webview from '../utils/webview';
+import { publishMacControlState } from '../utils/macControlState';
 
 // Decoration types for coverage
 let coveredDecoration: vscode.TextEditorDecorationType;
@@ -163,12 +164,17 @@ function toggleCoverageOverlay(client: LanguageClient) {
   const coverage = state.get('coverage');
 
   if (!coverage.isLoaded) {
+    void publishMacControlState('preCr.toggleCoverageOverlay', 'coverage_unavailable');
     notify.showInfo('No coverage data loaded. Load coverage first.');
     return;
   }
 
   const nowVisible = !coverage.isVisible;
   state.setCoverage({ isVisible: nowVisible });
+  void publishMacControlState(
+    'preCr.toggleCoverageOverlay',
+    nowVisible ? 'coverage_visible' : 'coverage_hidden'
+  );
 
   if (nowVisible) {
     // Show decorations
