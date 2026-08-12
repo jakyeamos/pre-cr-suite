@@ -1,206 +1,1075 @@
 {
-  "schema": "mac-control-task-manifest/v1",
+  "schema": "mac-control-task-manifest/v4",
   "repository_id": "repo-612840a9706a58cf",
   "repository_name": "pre-cr-suite-lsp",
   "applicability": "applicable",
-  "applicability_reason": "pre-cr-suite-lsp exposes supported VS Code extension command and dashboard surface; this manifest records its supported user-facing workflow catalog while live and measured evidence remain outstanding.",
+  "applicability_reason": "The VS Code extension exposes stable command IDs, built-in keybindings, machine-readable context and output-channel task states, and a dashboard with explicit connection and visibility readbacks.",
   "app": {
     "name": "Pre-CR Suite VS Code extension"
   },
-  "criteria": {
-    "stable_identity": true,
-    "correct_semantics": true,
-    "observable_state": true,
-    "useful_hierarchy": true,
-    "efficient_navigation": true,
-    "verifiable_outcomes": true,
-    "route_flexibility": true,
-    "stable_change_behavior": true
-  },
+  "criteria": {},
   "tasks": [
     {
+      "surface_kind": "native_app_ui",
+      "focus_policy": "foreground",
+      "foreground_postcondition": "target_foreground",
+      "fallback_policy": "fresh_state_handoff",
+      "change_states": [
+        "loading"
+      ],
+      "change_state_exemptions": {
+        "modal": "The check streams status to an output channel and does not own a modal.",
+        "disabled": "Unavailable workspace and already-running states are reported with exact task-state records.",
+        "permission_unavailable": "VS Code workspace or extension-host failures are surfaced before command execution."
+      },
+      "navigation_strategy": "direct_semantic",
+      "route_candidates": [
+        {
+          "id": "vscode-command-palette",
+          "provider": "mac_control",
+          "method": "accessibility",
+          "interaction_mode": "semantic"
+        },
+        {
+          "id": "vscode-keybinding",
+          "provider": "mac_control",
+          "method": "shortcut",
+          "interaction_mode": "keyboard"
+        },
+        {
+          "id": "computer-pointer",
+          "provider": "computer_use",
+          "method": "pointer",
+          "interaction_mode": "pointer"
+        }
+      ],
+      "shortcut_acceleration": {
+        "disposition": "built_in_verified",
+        "command_id": "preCr.runPreCrCheck",
+        "chord": "cmd+shift+t",
+        "conflict_policy": "system_resolved",
+        "contextual_availability": true
+      },
       "task_id": "run-pre-cr-check",
-      "stable_target_id": "pre-cr-suite.command.check",
-      "hierarchy": "pre-cr-suite > command > check",
-      "semantic_action": "invoke ⌘⇧T",
-      "observable_postcondition": "Check result and issues are readable in editor or output",
+      "stable_target_id": "preCr.runPreCrCheck",
+      "hierarchy": "VS Code > Command Palette > Pre-CR: Run Pre-CR Check",
+      "semantic_action": "invoke_command",
+      "observable_postcondition": "Pre-CR Check output records check_passed, check_failed, check_incomplete, or an exact unavailable state",
       "observable_states": [
         "enabled",
         "focused",
-        "selected",
-        "expanded",
         "visible",
         "loading",
         "completed"
       ],
-      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
-      "eligible_routes": [
-        "accessibility",
-        "keyboard",
-        "scrolling"
-      ],
-      "selected_route": "keyboard",
-      "change_states": [
-        "loading",
-        "modal",
-        "disabled",
-        "permission_unavailable"
-      ],
+      "state_exemptions": {
+        "selected": "The command is invoked rather than persistently selected.",
+        "expanded": "The command owns no expandable disclosure."
+      },
       "accessibility": {
-        "identifier": "pre-cr-suite.command.check",
-        "label": "Pre-CR Check",
-        "role": "AXMenuItem",
-        "required_actions": [
-          "AXPress"
-        ]
+        "identifier": "preCr.runPreCrCheck",
+        "label": "Pre-CR: Run Pre-CR Check",
+        "role": "menuitem"
+      },
+      "verification_oracle": {
+        "oracle_id": "run-pre-cr-check.task-state",
+        "kind": "task_state",
+        "expected_state": "check_passed",
+        "independent_readback": true
+      },
+      "semantic_evidence": {
+        "stable_identity": {
+          "level": "source_grounded",
+          "claims": {
+            "selector_kind": "command_id",
+            "selector_value": "preCr.runPreCrCheck",
+            "scope": "pre-cr-suite",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.runPreCrCheck\",\n        \"title\": \"Run Pre-CR Check\",\n        \"category\": \"Pre-CR\"",
+              "evidence_tokens": [
+                "preCr.runPreCrCheck",
+                "Run Pre-CR Check",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "correct_semantics": {
+          "level": "source_grounded",
+          "claims": {
+            "role": "menuitem",
+            "accessible_name": "Pre-CR: Run Pre-CR Check",
+            "action": "invoke_command"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.runPreCrCheck\",\n        \"title\": \"Run Pre-CR Check\",\n        \"category\": \"Pre-CR\"",
+              "evidence_tokens": [
+                "preCr.runPreCrCheck",
+                "Run Pre-CR Check",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "observable_state": {
+          "level": "source_grounded",
+          "claims": {
+            "property": "output_record",
+            "unavailable_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/preCrCheck.ts",
+              "anchor": "publishMacControlState('preCr.runPreCrCheck', 'check_running'",
+              "evidence_tokens": [
+                "check_already_running",
+                "check_workspace_unavailable"
+              ]
+            }
+          ]
+        },
+        "useful_hierarchy": {
+          "level": "source_grounded",
+          "claims": {
+            "container": "pre-cr-suite",
+            "relationship": "VS Code > Command Palette > Pre-CR: Run Pre-CR Check",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.runPreCrCheck\",\n        \"title\": \"Run Pre-CR Check\",\n        \"category\": \"Pre-CR\"",
+              "evidence_tokens": [
+                "preCr.runPreCrCheck",
+                "Run Pre-CR Check",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "efficient_navigation": {
+          "level": "source_grounded",
+          "claims": {
+            "strategy": "direct_semantic",
+            "entry_point": "preCr.runPreCrCheck"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.runPreCrCheck\",\n        \"title\": \"Run Pre-CR Check\",\n        \"category\": \"Pre-CR\"",
+              "evidence_tokens": [
+                "preCr.runPreCrCheck",
+                "Run Pre-CR Check",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "verifiable_outcomes": {
+          "level": "source_grounded",
+          "claims": {
+            "readback_provider": "mac_control",
+            "property": "output_record",
+            "operator": "equals",
+            "expected": "check_passed"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/preCrCheck.ts",
+              "anchor": "completionState = response.result.coverageCheck.passed",
+              "evidence_tokens": [
+                "check_passed",
+                "check_failed"
+              ]
+            }
+          ]
+        },
+        "route_flexibility": {
+          "level": "source_grounded",
+          "claims": {
+            "primary_provider": "mac_control",
+            "secondary_provider": "computer_use",
+            "fallback_policy": "fresh_state_handoff"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"mac\": \"cmd+shift+t\"",
+              "evidence_tokens": [
+                "preCr.runPreCrCheck",
+                "cmd+shift+t"
+              ]
+            }
+          ]
+        },
+        "stable_change_behavior": {
+          "level": "source_grounded",
+          "claims": {
+            "scenarios": "loading,modal,disabled,permission_unavailable",
+            "failure_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/preCrCheck.ts",
+              "anchor": "publishMacControlState('preCr.runPreCrCheck', 'check_running'",
+              "evidence_tokens": [
+                "check_already_running",
+                "check_workspace_unavailable"
+              ]
+            }
+          ]
+        }
       }
     },
     {
+      "surface_kind": "native_app_ui",
+      "focus_policy": "foreground",
+      "foreground_postcondition": "target_foreground",
+      "fallback_policy": "fresh_state_handoff",
+      "change_states": [
+        "disabled"
+      ],
+      "change_state_exemptions": {
+        "loading": "Overlay visibility changes synchronously against already-loaded coverage.",
+        "modal": "The command uses editor decorations and a notification, not a modal.",
+        "permission_unavailable": "The extension host owns editor decoration access."
+      },
+      "navigation_strategy": "direct_semantic",
+      "route_candidates": [
+        {
+          "id": "vscode-command-palette",
+          "provider": "mac_control",
+          "method": "accessibility",
+          "interaction_mode": "semantic"
+        },
+        {
+          "id": "vscode-keybinding",
+          "provider": "mac_control",
+          "method": "shortcut",
+          "interaction_mode": "keyboard"
+        },
+        {
+          "id": "computer-pointer",
+          "provider": "computer_use",
+          "method": "pointer",
+          "interaction_mode": "pointer"
+        }
+      ],
+      "shortcut_acceleration": {
+        "disposition": "built_in_verified",
+        "command_id": "preCr.toggleCoverageOverlay",
+        "chord": "cmd+shift+o",
+        "conflict_policy": "system_resolved",
+        "contextual_availability": true
+      },
       "task_id": "toggle-coverage",
-      "stable_target_id": "pre-cr-suite.command.coverage",
-      "hierarchy": "pre-cr-suite > command > coverage",
-      "semantic_action": "invoke ⌘⇧O",
-      "observable_postcondition": "Coverage mode and current state are readable",
+      "stable_target_id": "preCr.toggleCoverageOverlay",
+      "hierarchy": "VS Code > Command Palette > Pre-CR Coverage: Toggle Coverage Overlay",
+      "semantic_action": "invoke_command",
+      "observable_postcondition": "preCr.macControl.preCr.toggleCoverageOverlay reports coverage_visible, coverage_hidden, or coverage_unavailable",
       "observable_states": [
         "enabled",
         "focused",
-        "selected",
-        "expanded",
         "visible",
-        "loading",
         "completed"
       ],
-      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
-      "eligible_routes": [
-        "accessibility",
-        "keyboard",
-        "scrolling"
-      ],
-      "selected_route": "keyboard",
-      "change_states": [
-        "loading",
-        "modal",
-        "disabled",
-        "permission_unavailable"
-      ],
+      "state_exemptions": {
+        "selected": "The target is a momentary action or read-only surface rather than a selectable item.",
+        "expanded": "The target does not own an expandable disclosure.",
+        "loading": "The selected provider owns navigation progress; the app exposes the resulting task state."
+      },
       "accessibility": {
-        "identifier": "pre-cr-suite.command.coverage",
-        "label": "Toggle Coverage",
-        "role": "AXMenuItem",
-        "required_actions": [
-          "AXPress"
-        ]
+        "identifier": "preCr.toggleCoverageOverlay",
+        "label": "Pre-CR Coverage: Toggle Coverage Overlay",
+        "role": "menuitem"
+      },
+      "verification_oracle": {
+        "oracle_id": "toggle-coverage.task-state",
+        "kind": "task_state",
+        "expected_state": "coverage_visible",
+        "independent_readback": true
+      },
+      "semantic_evidence": {
+        "stable_identity": {
+          "level": "source_grounded",
+          "claims": {
+            "selector_kind": "command_id",
+            "selector_value": "preCr.toggleCoverageOverlay",
+            "scope": "pre-cr-suite",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Toggle Coverage Overlay\"",
+              "evidence_tokens": [
+                "preCr.toggleCoverageOverlay",
+                "Pre-CR Coverage"
+              ]
+            }
+          ]
+        },
+        "correct_semantics": {
+          "level": "source_grounded",
+          "claims": {
+            "role": "menuitem",
+            "accessible_name": "Pre-CR Coverage: Toggle Coverage Overlay",
+            "action": "invoke_command"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Toggle Coverage Overlay\"",
+              "evidence_tokens": [
+                "preCr.toggleCoverageOverlay",
+                "Pre-CR Coverage"
+              ]
+            }
+          ]
+        },
+        "observable_state": {
+          "level": "source_grounded",
+          "claims": {
+            "property": "context_key",
+            "unavailable_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/coverage.ts",
+              "anchor": "const nowVisible = !coverage.isVisible;",
+              "evidence_tokens": [
+                "coverage_visible",
+                "coverage_hidden"
+              ]
+            }
+          ]
+        },
+        "useful_hierarchy": {
+          "level": "source_grounded",
+          "claims": {
+            "container": "pre-cr-suite",
+            "relationship": "VS Code > Command Palette > Pre-CR Coverage: Toggle Coverage Overlay",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Toggle Coverage Overlay\"",
+              "evidence_tokens": [
+                "preCr.toggleCoverageOverlay",
+                "Pre-CR Coverage"
+              ]
+            }
+          ]
+        },
+        "efficient_navigation": {
+          "level": "source_grounded",
+          "claims": {
+            "strategy": "direct_semantic",
+            "entry_point": "preCr.toggleCoverageOverlay"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Toggle Coverage Overlay\"",
+              "evidence_tokens": [
+                "preCr.toggleCoverageOverlay",
+                "Pre-CR Coverage"
+              ]
+            }
+          ]
+        },
+        "verifiable_outcomes": {
+          "level": "source_grounded",
+          "claims": {
+            "readback_provider": "mac_control",
+            "property": "context_key",
+            "operator": "equals",
+            "expected": "coverage_visible"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/coverage.ts",
+              "anchor": "const nowVisible = !coverage.isVisible;",
+              "evidence_tokens": [
+                "coverage_visible",
+                "coverage_hidden"
+              ]
+            }
+          ]
+        },
+        "route_flexibility": {
+          "level": "source_grounded",
+          "claims": {
+            "primary_provider": "mac_control",
+            "secondary_provider": "computer_use",
+            "fallback_policy": "fresh_state_handoff"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"mac\": \"cmd+shift+o\"",
+              "evidence_tokens": [
+                "preCr.toggleCoverageOverlay",
+                "preCr.hasCoverage"
+              ]
+            }
+          ]
+        },
+        "stable_change_behavior": {
+          "level": "source_grounded",
+          "claims": {
+            "scenarios": "loading,modal,disabled,permission_unavailable",
+            "failure_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/coverage.ts",
+              "anchor": "const nowVisible = !coverage.isVisible;",
+              "evidence_tokens": [
+                "coverage_visible",
+                "coverage_hidden"
+              ]
+            }
+          ]
+        }
       }
     },
     {
+      "surface_kind": "native_app_ui",
+      "focus_policy": "foreground",
+      "foreground_postcondition": "target_foreground",
+      "fallback_policy": "fresh_state_handoff",
+      "change_states": [
+        "disabled"
+      ],
+      "change_state_exemptions": {
+        "loading": "Issue navigation is synchronous over the current diagnostic collection.",
+        "modal": "Navigation focuses the editor and uses a notification, not a modal.",
+        "permission_unavailable": "The extension host owns editor and diagnostic access."
+      },
+      "navigation_strategy": "direct_semantic",
+      "route_candidates": [
+        {
+          "id": "vscode-command-palette",
+          "provider": "mac_control",
+          "method": "accessibility",
+          "interaction_mode": "semantic"
+        },
+        {
+          "id": "vscode-keybinding",
+          "provider": "mac_control",
+          "method": "shortcut",
+          "interaction_mode": "keyboard"
+        },
+        {
+          "id": "computer-pointer",
+          "provider": "computer_use",
+          "method": "pointer",
+          "interaction_mode": "pointer"
+        }
+      ],
+      "shortcut_acceleration": {
+        "disposition": "built_in_verified",
+        "command_id": "preCr.nextIssue",
+        "chord": "f8",
+        "conflict_policy": "system_resolved",
+        "contextual_availability": true
+      },
       "task_id": "next-uncovered-issue",
-      "stable_target_id": "pre-cr-suite.command.next-issue",
-      "hierarchy": "pre-cr-suite > command > next-issue",
-      "semantic_action": "invoke F8",
-      "observable_postcondition": "Next issue is focused or no-more-issues state is readable",
+      "stable_target_id": "preCr.nextIssue",
+      "hierarchy": "VS Code > Command Palette > Pre-CR Security: Next Issue",
+      "semantic_action": "invoke_command",
+      "observable_postcondition": "preCr.macControl.preCr.nextIssue reports issue_focused, issue_none, or issue_editor_unavailable",
       "observable_states": [
         "enabled",
         "focused",
-        "selected",
-        "expanded",
         "visible",
-        "loading",
         "completed"
       ],
-      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
-      "eligible_routes": [
-        "accessibility",
-        "keyboard",
-        "scrolling"
-      ],
-      "selected_route": "keyboard",
-      "change_states": [
-        "loading",
-        "modal",
-        "disabled",
-        "permission_unavailable"
-      ],
+      "state_exemptions": {
+        "selected": "The target is a momentary action or read-only surface rather than a selectable item.",
+        "expanded": "The target does not own an expandable disclosure.",
+        "loading": "The selected provider owns navigation progress; the app exposes the resulting task state."
+      },
       "accessibility": {
-        "identifier": "pre-cr-suite.command.next-issue",
-        "label": "Next Issue",
-        "role": "AXMenuItem",
-        "required_actions": [
-          "AXPress"
-        ]
+        "identifier": "preCr.nextIssue",
+        "label": "Pre-CR Security: Next Issue",
+        "role": "menuitem"
+      },
+      "verification_oracle": {
+        "oracle_id": "next-uncovered-issue.task-state",
+        "kind": "task_state",
+        "expected_state": "issue_focused",
+        "independent_readback": true
+      },
+      "semantic_evidence": {
+        "stable_identity": {
+          "level": "source_grounded",
+          "claims": {
+            "selector_kind": "command_id",
+            "selector_value": "preCr.nextIssue",
+            "scope": "pre-cr-suite",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Next Issue\"",
+              "evidence_tokens": [
+                "preCr.nextIssue",
+                "Pre-CR Security"
+              ]
+            }
+          ]
+        },
+        "correct_semantics": {
+          "level": "source_grounded",
+          "claims": {
+            "role": "menuitem",
+            "accessible_name": "Pre-CR Security: Next Issue",
+            "action": "invoke_command"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Next Issue\"",
+              "evidence_tokens": [
+                "preCr.nextIssue",
+                "Pre-CR Security"
+              ]
+            }
+          ]
+        },
+        "observable_state": {
+          "level": "source_grounded",
+          "claims": {
+            "property": "context_key",
+            "unavailable_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/checklist.ts",
+              "anchor": "publishMacControlState('preCr.nextIssue', 'issue_editor_unavailable'",
+              "evidence_tokens": [
+                "issue_none",
+                "issue_focused"
+              ]
+            }
+          ]
+        },
+        "useful_hierarchy": {
+          "level": "source_grounded",
+          "claims": {
+            "container": "pre-cr-suite",
+            "relationship": "VS Code > Command Palette > Pre-CR Security: Next Issue",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Next Issue\"",
+              "evidence_tokens": [
+                "preCr.nextIssue",
+                "Pre-CR Security"
+              ]
+            }
+          ]
+        },
+        "efficient_navigation": {
+          "level": "source_grounded",
+          "claims": {
+            "strategy": "direct_semantic",
+            "entry_point": "preCr.nextIssue"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Next Issue\"",
+              "evidence_tokens": [
+                "preCr.nextIssue",
+                "Pre-CR Security"
+              ]
+            }
+          ]
+        },
+        "verifiable_outcomes": {
+          "level": "source_grounded",
+          "claims": {
+            "readback_provider": "mac_control",
+            "property": "context_key",
+            "operator": "equals",
+            "expected": "issue_focused"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/checklist.ts",
+              "anchor": "publishMacControlState('preCr.nextIssue', 'issue_focused'",
+              "evidence_tokens": [
+                "editor.selection",
+                "revealRange"
+              ]
+            }
+          ]
+        },
+        "route_flexibility": {
+          "level": "source_grounded",
+          "claims": {
+            "primary_provider": "mac_control",
+            "secondary_provider": "computer_use",
+            "fallback_policy": "fresh_state_handoff"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"key\": \"f8\"",
+              "evidence_tokens": [
+                "preCr.nextIssue",
+                "editorTextFocus"
+              ]
+            }
+          ]
+        },
+        "stable_change_behavior": {
+          "level": "source_grounded",
+          "claims": {
+            "scenarios": "loading,modal,disabled,permission_unavailable",
+            "failure_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/checklist.ts",
+              "anchor": "publishMacControlState('preCr.nextIssue', 'issue_editor_unavailable'",
+              "evidence_tokens": [
+                "issue_none",
+                "issue_focused"
+              ]
+            }
+          ]
+        }
       }
     },
     {
+      "surface_kind": "native_app_ui",
+      "focus_policy": "foreground",
+      "foreground_postcondition": "target_foreground",
+      "fallback_policy": "fresh_state_handoff",
+      "change_states": [],
+      "change_state_exemptions": {
+        "loading": "The task uses a synchronous local surface; navigation progress is owned and reported by the selected provider.",
+        "modal": "The task does not own a modal overlay.",
+        "disabled": "The read-only target remains available whenever its containing surface is present.",
+        "permission_unavailable": "The task requires no additional app-level permission; provider permission failures are reported before dispatch."
+      },
+      "navigation_strategy": "direct_semantic",
+      "route_candidates": [
+        {
+          "id": "vscode-command-palette",
+          "provider": "mac_control",
+          "method": "accessibility",
+          "interaction_mode": "semantic"
+        },
+        {
+          "id": "vscode-keybinding",
+          "provider": "mac_control",
+          "method": "shortcut",
+          "interaction_mode": "keyboard"
+        },
+        {
+          "id": "computer-pointer",
+          "provider": "computer_use",
+          "method": "pointer",
+          "interaction_mode": "pointer"
+        }
+      ],
+      "shortcut_acceleration": {
+        "disposition": "built_in_verified",
+        "command_id": "preCr.showDashboard",
+        "chord": "cmd+shift+b",
+        "conflict_policy": "system_resolved",
+        "contextual_availability": true
+      },
       "task_id": "open-pre-cr-dashboard",
-      "stable_target_id": "pre-cr-suite.command.dashboard",
-      "hierarchy": "pre-cr-suite > command > dashboard",
-      "semantic_action": "invoke ⌘⇧B",
-      "observable_postcondition": "Dashboard and coverage state are readable",
+      "stable_target_id": "preCr.showDashboard",
+      "hierarchy": "VS Code > Command Palette > Pre-CR: Show Dashboard",
+      "semantic_action": "invoke_command",
+      "observable_postcondition": "pre-cr-suite.dashboard reports dashboard_visible and its status region reports LSP connection state",
       "observable_states": [
         "enabled",
         "focused",
-        "selected",
-        "expanded",
         "visible",
-        "loading",
         "completed"
       ],
-      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
-      "eligible_routes": [
-        "accessibility",
-        "keyboard",
-        "scrolling"
-      ],
-      "selected_route": "keyboard",
-      "change_states": [
-        "loading",
-        "modal",
-        "disabled",
-        "permission_unavailable"
-      ],
+      "state_exemptions": {
+        "selected": "The target is a momentary action or read-only surface rather than a selectable item.",
+        "expanded": "The target does not own an expandable disclosure.",
+        "loading": "The selected provider owns navigation progress; the app exposes the resulting task state."
+      },
       "accessibility": {
-        "identifier": "pre-cr-suite.command.dashboard",
-        "label": "Dashboard",
-        "role": "AXMenuItem",
-        "required_actions": [
-          "AXPress"
-        ]
+        "identifier": "preCr.showDashboard",
+        "label": "Pre-CR: Show Dashboard",
+        "role": "menuitem"
+      },
+      "verification_oracle": {
+        "oracle_id": "open-pre-cr-dashboard.task-state",
+        "kind": "task_state",
+        "expected_state": "dashboard_visible",
+        "independent_readback": true
+      },
+      "semantic_evidence": {
+        "stable_identity": {
+          "level": "source_grounded",
+          "claims": {
+            "selector_kind": "command_id",
+            "selector_value": "preCr.showDashboard",
+            "scope": "pre-cr-suite",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Show Dashboard\"",
+              "evidence_tokens": [
+                "preCr.showDashboard",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "correct_semantics": {
+          "level": "source_grounded",
+          "claims": {
+            "role": "menuitem",
+            "accessible_name": "Pre-CR: Show Dashboard",
+            "action": "invoke_command"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Show Dashboard\"",
+              "evidence_tokens": [
+                "preCr.showDashboard",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "observable_state": {
+          "level": "source_grounded",
+          "claims": {
+            "property": "data-task-state",
+            "unavailable_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/dashboard.ts",
+              "anchor": "data-mac-control-id=\"pre-cr-suite.dashboard.status\"",
+              "evidence_tokens": [
+                "lsp_connected",
+                "lsp_disconnected"
+              ]
+            }
+          ]
+        },
+        "useful_hierarchy": {
+          "level": "source_grounded",
+          "claims": {
+            "container": "pre-cr-suite",
+            "relationship": "VS Code > Command Palette > Pre-CR: Show Dashboard",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Show Dashboard\"",
+              "evidence_tokens": [
+                "preCr.showDashboard",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "efficient_navigation": {
+          "level": "source_grounded",
+          "claims": {
+            "strategy": "direct_semantic",
+            "entry_point": "preCr.showDashboard"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"title\": \"Show Dashboard\"",
+              "evidence_tokens": [
+                "preCr.showDashboard",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "verifiable_outcomes": {
+          "level": "source_grounded",
+          "claims": {
+            "readback_provider": "mac_control",
+            "property": "data-task-state",
+            "operator": "equals",
+            "expected": "dashboard_visible"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/dashboard.ts",
+              "anchor": "data-mac-control-id=\"pre-cr-suite.dashboard\"",
+              "evidence_tokens": [
+                "data-task-state=\"dashboard_visible\"",
+                "Pre-CR Suite"
+              ]
+            }
+          ]
+        },
+        "route_flexibility": {
+          "level": "source_grounded",
+          "claims": {
+            "primary_provider": "mac_control",
+            "secondary_provider": "computer_use",
+            "fallback_policy": "fresh_state_handoff"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"mac\": \"cmd+shift+b\"",
+              "evidence_tokens": [
+                "preCr.showDashboard",
+                "cmd+shift+b"
+              ]
+            }
+          ]
+        },
+        "stable_change_behavior": {
+          "level": "source_grounded",
+          "claims": {
+            "scenarios": "loading,modal,disabled,permission_unavailable",
+            "failure_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/features/dashboard.ts",
+              "anchor": "data-mac-control-id=\"pre-cr-suite.dashboard.status\"",
+              "evidence_tokens": [
+                "lsp_connected",
+                "lsp_disconnected"
+              ]
+            }
+          ]
+        }
       }
     },
     {
+      "surface_kind": "native_app_ui",
+      "focus_policy": "foreground",
+      "foreground_postcondition": "target_foreground",
+      "fallback_policy": "fresh_state_handoff",
+      "change_states": [],
+      "change_state_exemptions": {
+        "loading": "The task uses a synchronous local surface; navigation progress is owned and reported by the selected provider.",
+        "modal": "The task does not own a modal overlay.",
+        "disabled": "The read-only target remains available whenever its containing surface is present.",
+        "permission_unavailable": "The task requires no additional app-level permission; provider permission failures are reported before dispatch."
+      },
+      "navigation_strategy": "direct_semantic",
+      "route_candidates": [
+        {
+          "id": "mac-control-ax",
+          "provider": "mac_control",
+          "method": "accessibility",
+          "interaction_mode": "semantic"
+        },
+        {
+          "id": "computer-pointer",
+          "provider": "computer_use",
+          "method": "pointer",
+          "interaction_mode": "pointer"
+        }
+      ],
+      "shortcut_acceleration": {
+        "disposition": "not_applicable",
+        "reason": "No task-specific direct shortcut or reversible shortcut assignment surface is implemented."
+      },
       "task_id": "open-output-panel",
-      "stable_target_id": "pre-cr-suite.output-panel",
-      "hierarchy": "pre-cr-suite > output-panel",
-      "semantic_action": "focus the Pre-CR Suite output channel",
-      "observable_postcondition": "Latest check result is readable",
+      "stable_target_id": "preCr.showLogs",
+      "hierarchy": "VS Code > Command Palette > Pre-CR: Show Logs > Pre-CR Suite output channel",
+      "semantic_action": "invoke_command",
+      "observable_postcondition": "Pre-CR Suite output includes an output_visible Mac Control task-state record",
       "observable_states": [
         "enabled",
         "focused",
-        "selected",
-        "expanded",
         "visible",
-        "loading",
         "completed"
       ],
-      "navigation_strategy": "direct keyboard command or labeled focus target; use semantic list movement or scrolling when needed",
-      "eligible_routes": [
-        "accessibility",
-        "keyboard",
-        "scrolling"
-      ],
-      "selected_route": "keyboard",
-      "change_states": [
-        "loading",
-        "modal",
-        "disabled",
-        "permission_unavailable"
-      ],
+      "state_exemptions": {
+        "selected": "The target is a momentary action or read-only surface rather than a selectable item.",
+        "expanded": "The target does not own an expandable disclosure.",
+        "loading": "The selected provider owns navigation progress; the app exposes the resulting task state."
+      },
       "accessibility": {
-        "identifier": "pre-cr-suite.output-panel",
-        "label": "Pre-CR Suite",
-        "role": "AXTextArea",
-        "required_actions": [
-          "AXFocus"
-        ]
+        "identifier": "preCr.showLogs",
+        "label": "Pre-CR: Show Logs",
+        "role": "menuitem"
+      },
+      "verification_oracle": {
+        "oracle_id": "open-output-panel.task-state",
+        "kind": "task_state",
+        "expected_state": "output_visible",
+        "independent_readback": true
+      },
+      "semantic_evidence": {
+        "stable_identity": {
+          "level": "source_grounded",
+          "claims": {
+            "selector_kind": "command_id",
+            "selector_value": "preCr.showLogs",
+            "scope": "pre-cr-suite",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.showLogs\"",
+              "evidence_tokens": [
+                "Show Logs",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "correct_semantics": {
+          "level": "source_grounded",
+          "claims": {
+            "role": "menuitem",
+            "accessible_name": "Pre-CR: Show Logs",
+            "action": "invoke_command"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.showLogs\"",
+              "evidence_tokens": [
+                "Show Logs",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "observable_state": {
+          "level": "source_grounded",
+          "claims": {
+            "property": "output_record",
+            "unavailable_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/extension.ts",
+              "anchor": "publishMacControlState('preCr.showLogs', 'output_visible'",
+              "evidence_tokens": [
+                "outputChannel.show",
+                "output_visible"
+              ]
+            }
+          ]
+        },
+        "useful_hierarchy": {
+          "level": "source_grounded",
+          "claims": {
+            "container": "pre-cr-suite",
+            "relationship": "VS Code > Command Palette > Pre-CR: Show Logs > Pre-CR Suite output channel",
+            "uniqueness": "exactly_one"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.showLogs\"",
+              "evidence_tokens": [
+                "Show Logs",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "efficient_navigation": {
+          "level": "source_grounded",
+          "claims": {
+            "strategy": "direct_semantic",
+            "entry_point": "preCr.showLogs"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.showLogs\"",
+              "evidence_tokens": [
+                "Show Logs",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "verifiable_outcomes": {
+          "level": "source_grounded",
+          "claims": {
+            "readback_provider": "mac_control",
+            "property": "output_record",
+            "operator": "equals",
+            "expected": "output_visible"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/utils/macControlState.ts",
+              "anchor": "outputChannel?.appendLine(readback)",
+              "evidence_tokens": [
+                "formatMacControlState",
+                "setContext"
+              ]
+            }
+          ]
+        },
+        "route_flexibility": {
+          "level": "source_grounded",
+          "claims": {
+            "primary_provider": "mac_control",
+            "secondary_provider": "computer_use",
+            "fallback_policy": "fresh_state_handoff"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/package.json",
+              "anchor": "\"command\": \"preCr.showLogs\"",
+              "evidence_tokens": [
+                "Show Logs",
+                "Pre-CR"
+              ]
+            }
+          ]
+        },
+        "stable_change_behavior": {
+          "level": "source_grounded",
+          "claims": {
+            "scenarios": "loading,modal,disabled,permission_unavailable",
+            "failure_behavior": "block_and_explain"
+          },
+          "source_refs": [
+            {
+              "path": "packages/vscode-client/src/extension.ts",
+              "anchor": "publishMacControlState('preCr.showLogs', 'output_visible'",
+              "evidence_tokens": [
+                "outputChannel.show",
+                "output_visible"
+              ]
+            }
+          ]
+        }
       }
     }
   ]
