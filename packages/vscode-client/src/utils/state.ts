@@ -42,11 +42,20 @@ export interface ContextState {
   snapshotDescription: string | null;
 }
 
+export type SetupStatus = 'unknown' | 'ready' | 'attention' | 'blocked';
+
+export interface SetupState {
+  status: SetupStatus;
+  issueCount: number;
+  lastChecked: Date | null;
+}
+
 export interface ExtensionState {
   coverage: CoverageState;
   security: SecurityState;
   debug: DebugState;
   context: ContextState;
+  setup: SetupState;
   recentActions: string[];
   isLspConnected: boolean;
 }
@@ -79,6 +88,11 @@ const initialState: ExtensionState = {
     currentBranch: null,
     hasSnapshot: false,
     snapshotDescription: null
+  },
+  setup: {
+    status: 'unknown',
+    issueCount: 0,
+    lastChecked: null
   },
   recentActions: [],
   isLspConnected: false
@@ -165,6 +179,13 @@ class StateManager {
     const oldValue = { ...this.state.context };
     this.state.context = { ...this.state.context, ...updates };
     this.notifyListeners('context', this.state.context, oldValue);
+  }
+
+  /** Update setup/readiness state shown by the IDE shell. */
+  setSetup(updates: Partial<SetupState>) {
+    const oldValue = { ...this.state.setup };
+    this.state.setup = { ...this.state.setup, ...updates };
+    this.notifyListeners('setup', this.state.setup, oldValue);
   }
 
   /**

@@ -5,6 +5,7 @@ import { LanguageClient } from 'vscode-languageclient/node';
 import { formatUnsupportedSurfaceSetupGuidance, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth } from '@pre-cr/core';
 
 import * as notify from '../utils/notifications';
+import { validatePathInWorkspace } from '../utils/git';
 import { state } from '../utils/state';
 import { sendBetaRequestWithNotify } from '../utils/lsp';
 import * as webview from '../utils/webview';
@@ -183,8 +184,15 @@ async function showProjectHealth(
     return;
   }
 
+  const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error').length;
+  const totalIssues = result.health.issues.length;
+  state.setSetup({
+    status: blockingIssues > 0 ? 'blocked' : totalIssues > 0 ? 'attention' : 'ready',
+    issueCount: totalIssues,
+    lastChecked: new Date()
+  });
+
   if (!openPanel) {
-    const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error').length;
     if (blockingIssues === 0) {
       notify.showSuccess('Project health looks good', 4000);
       return;
@@ -431,21 +439,32 @@ function buildProjectHealthHtml(
 async function showUncoveredAsDiagnostics(details: Array<{ file: string; line: number }>): Promise<void> {
   const collection = vscode.languages.createDiagnosticCollection('preCr-coverage');
   const grouped = new Map<string, vscode.Diagnostic[]>();
+  const workspaceRoot = getWorkspaceRoot();
+
+  if (!workspaceRoot) {
+    return;
+  }
 
   for (const detail of details) {
     const existing = grouped.get(detail.file) ?? [];
-    existing.push(new vscode.Diagnostic(
+    const diagnostic = new vscode.Diagnostic(
       new vscode.Range(detail.line - 1, 0, detail.line - 1, 1000),
       'Line not covered by tests',
       vscode.DiagnosticSeverity.Warning
-    ));
+    );
+    diagnostic.source = 'Pre-CR Coverage';
+    diagnostic.code = 'uncovered-line';
+    existing.push(diagnostic);
     grouped.set(detail.file, existing);
   }
 
   for (const [file, diagnostics] of grouped) {
-    const matches = await vscode.workspace.findFiles(`**/${path.basename(file)}`, undefined, 1);
-    if (matches.length > 0) {
-      collection.set(matches[0], diagnostics);
+    const relativePath = path.isAbsolute(file)
+      ? path.relative(workspaceRoot, path.resolve(file))
+      : file;
+    const resolvedPath = validatePathInWorkspace(relativePath, workspaceRoot);
+    if (resolvedPath && fs.existsSync(resolvedPath)) {
+      collection.set(vscode.Uri.file(resolvedPath), diagnostics);
     }
   }
 

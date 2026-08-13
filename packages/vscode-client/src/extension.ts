@@ -22,6 +22,7 @@ import { registerChecklistFeatures } from './features/checklist';
 import { registerDocgenFeatures } from './features/docgen';
 import { registerReviewFeatures } from './features/review';
 import {
+  getCurrentEditorContext,
   persistContextSnapshots,
   registerContextFeatures
 } from './features/context';
@@ -621,20 +622,8 @@ function registerUtilityCommands(context: vscode.ExtensionContext) {
  * Get current editor context for snapshots
  */
 function getCurrentContext() {
-  const editors = vscode.window.visibleTextEditors;
-  const activeEditor = vscode.window.activeTextEditor;
-
   return {
-    files: editors.map(editor => ({
-      path: vscode.workspace.asRelativePath(editor.document.uri),
-      cursor: {
-        line: editor.selection.active.line,
-        character: editor.selection.active.character
-      },
-      scrollTop: editor.visibleRanges[0]?.start.line || 0,
-      isDirty: editor.document.isDirty,
-      isActive: editor === activeEditor
-    })),
+    ...getCurrentEditorContext(),
     git: {
       modifiedFiles: [],
       stagedFiles: [],

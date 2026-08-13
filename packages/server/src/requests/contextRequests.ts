@@ -110,6 +110,29 @@ export function registerContextRequests(connection: Connection): void {
     }
   );
 
+  // Get one snapshot by its stable ID. The client uses this after the user
+  // selects a summary so an older snapshot cannot be replaced by a newer
+  // snapshot from the same branch during restore.
+  connection.onRequest(
+    '$/preCr/getSnapshot',
+    async (params: { id: string }): Promise<{
+      snapshot: ContextSnapshot | null;
+      error?: string;
+    }> => {
+      try {
+        if (!contextManager) {
+          return { snapshot: null, error: 'Context manager not initialized' };
+        }
+
+        const snapshot = contextManager.getSnapshot(params.id);
+        return { snapshot: snapshot || null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        return { snapshot: null, error: errorMessage };
+      }
+    }
+  );
+
   // Handle branch switch
   connection.onRequest(
     '$/preCr/onBranchSwitch',

@@ -12,10 +12,13 @@ import { LanguageClient } from 'vscode-languageclient/node';
 import * as notify from '../utils/notifications';
 import * as statusBar from '../utils/statusBar';
 import * as git from '../utils/git';
+import { buildOpenFileStates, type OpenTextTabCandidate } from '../utils/contextSnapshot';
 
 interface ContextSummary {
   summary: string;
   quickActions: string[];
+  primaryFile?: string;
+  primaryLine?: number;
 }
 
 interface ContextSummaryResponse {
@@ -35,6 +38,11 @@ interface LatestSnapshotResponse {
   snapshot?: ContextSnapshot;
 }
 
+interface SnapshotByIdResponse {
+  snapshot?: ContextSnapshot;
+  error?: string;
+}
+
 interface ExportSnapshotsResponse {
   snapshots?: ContextSnapshot[];
   error?: string;
@@ -46,6 +54,7 @@ interface ImportSnapshotsResponse {
 }
 
 interface ContextSnapshotSummary {
+  id?: string;
   branch: string;
   description?: string;
   filesCount: number;
@@ -58,7 +67,11 @@ export interface ContextSnapshotFile {
     line: number;
     character: number;
   };
+  scrollTop?: number;
+  isDirty?: boolean;
   isActive?: boolean;
+  viewColumn?: number;
+  languageId?: string;
 }
 
 export interface ContextSnapshot {
@@ -69,6 +82,8 @@ export interface ContextSnapshot {
 
 export const CONTEXT_SNAPSHOT_STORAGE_KEY = 'preCr.contextSnapshots.v1';
 
+let contextTreeProvider: ContextTreeProvider | undefined;
+
 export function registerContextFeatures(
   context: vscode.ExtensionContext,
   client: LanguageClient
@@ -78,6 +93,13 @@ export function registerContextFeatures(
     vscode.commands.registerCommand('preCr.restoreContext', (snapshot?: ContextSnapshot) => restoreContext(client, snapshot)),
     vscode.commands.registerCommand('preCr.whereWasI', () => whereWasI(client))
   );
+
+  contextTreeProvider = new ContextTreeProvider(client);
+  if (typeof vscode.window.registerTreeDataProvider === 'function') {
+    context.subscriptions.push(
+      vscode.window.registerTreeDataProvider('preCr.context', contextTreeProvider)
+    );
+  }
 
   // Initialize context manager
   void initContextManager(context, client);
@@ -167,6 +189,7 @@ async function checkForExistingSnapshot(client: LanguageClient, branch: string) 
     } else {
       statusBar.clearSnapshot();
     }
+    contextTreeProvider?.refresh();
   } catch (error) {
     console.debug('Pre-CR: Operation failed:', error);
     // Ignore errors - snapshot check is optional
@@ -211,6 +234,7 @@ async function captureContext(
       await persistContextSnapshots(extensionContext, client);
       notify.showSuccess(`Context saved for "${branch}"`);
       statusBar.setSnapshot(branch);
+      contextTreeProvider?.refresh();
     } else {
       throw new Error(result.error);
     }
@@ -251,9 +275,13 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: Contex
     if (!selected) return;
 
     // Get full snapshot
-    const fullResult = await client.sendRequest<LatestSnapshotResponse>('$/preCr/getLatestSnapshot', {
-      branch: selected.snapshot.branch
-    });
+    const fullResult = selected.snapshot.id
+      ? await client.sendRequest<SnapshotByIdResponse>('$/preCr/getSnapshot', {
+        id: selected.snapshot.id
+      })
+      : await client.sendRequest<LatestSnapshotResponse>('$/preCr/getLatestSnapshot', {
+        branch: selected.snapshot.branch
+      });
     snapshot = fullResult.snapshot;
   }
 
@@ -359,6 +387,7 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: Contex
   } else {
     notify.showSuccess(formatRestoreOutcome(snapshot.branch, restoredCount, skippedCount));
   }
+  contextTreeProvider?.refresh();
 }
 
 export async function workspaceFileExists(uri: vscode.Uri): Promise<boolean> {
@@ -514,55 +543,135 @@ async function whereWasI(client: LanguageClient) {
  * Get current editor context
  */
 export function getCurrentEditorContext() {
-  const visibleEditors = new Map(
-    vscode.window.visibleTextEditors.map(editor => [editor.document.uri.toString(), editor])
-  );
+  const visibleEditors = vscode.window.visibleTextEditors;
   const openDocuments = new Map(
     vscode.workspace.textDocuments.map(document => [document.uri.toString(), document])
   );
   const activeEditor = vscode.window.activeTextEditor;
-  const files = new Map<string, {
-    path: string;
-    cursor: { line: number; character: number };
-    scrollTop: number;
-    isDirty: boolean;
-    isActive: boolean;
-  }>();
+  const candidates = new Map<string, OpenTextTabCandidate>();
 
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      const uri = tab.input instanceof vscode.TabInputText
-        ? tab.input.uri
-        : tab.input instanceof vscode.TabInputTextDiff
-          ? tab.input.modified
-          : undefined;
-      if (!uri) continue;
-      if (uri.scheme !== 'file' || !vscode.workspace.getWorkspaceFolder(uri)) continue;
+  const tabGroups = vscode.window.tabGroups;
+  if (tabGroups?.all) {
+    for (const group of tabGroups.all) {
+      for (const tab of group.tabs) {
+        const uri = tab.input instanceof vscode.TabInputText
+          ? tab.input.uri
+          : tab.input instanceof vscode.TabInputTextDiff
+            ? tab.input.modified
+            : undefined;
+        if (!uri || uri.scheme !== 'file' || !vscode.workspace.getWorkspaceFolder(uri)) continue;
 
-      const key = uri.toString();
-      const editor = visibleEditors.get(key);
-      const document = editor?.document || openDocuments.get(key);
-      const isActive = tab.isActive || editor === activeEditor;
-      const existing = files.get(key);
+        const key = `${uri.toString()}\u0000${group.viewColumn ?? ''}`;
+        const editor = visibleEditors.find(item => item.document.uri.toString() === uri.toString());
+        const document = editor?.document || openDocuments.get(uri.toString());
+        const candidate: OpenTextTabCandidate = {
+          path: vscode.workspace.asRelativePath(uri),
+          cursor: editor
+            ? {
+                line: editor.selection.active.line,
+                character: editor.selection.active.character
+              }
+            : undefined,
+          scrollTop: editor?.visibleRanges[0]?.start.line,
+          isDirty: tab.isDirty || document?.isDirty,
+          isActive: tab.isActive || editor === activeEditor,
+          viewColumn: group.viewColumn,
+          languageId: editor?.document.languageId || document?.languageId
+        };
 
-      if (existing && (!isActive || existing.isActive)) continue;
+        const existing = candidates.get(key);
+        if (!existing || (candidate.isActive && !existing.isActive)) {
+          candidates.set(key, candidate);
+        }
+      }
+    }
+  }
 
-      files.set(key, {
-        path: vscode.workspace.asRelativePath(uri),
-        cursor: editor
-          ? {
-              line: editor.selection.active.line,
-              character: editor.selection.active.character
-            }
-          : { line: 0, character: 0 },
-        scrollTop: editor?.visibleRanges[0]?.start.line || 0,
-        isDirty: document?.isDirty || false,
-        isActive
+  // Retain compatibility with older VS Code hosts and reduced test hosts.
+  if (candidates.size === 0) {
+    for (const editor of visibleEditors) {
+      candidates.set(editor.document.uri.toString(), {
+        path: vscode.workspace.asRelativePath(editor.document.uri),
+        cursor: {
+          line: editor.selection.active.line,
+          character: editor.selection.active.character
+        },
+        scrollTop: editor.visibleRanges[0]?.start.line,
+        isDirty: editor.document.isDirty,
+        isActive: editor === activeEditor,
+        languageId: editor.document.languageId
       });
     }
   }
 
   return {
-    files: [...files.values()]
+    files: buildOpenFileStates([...candidates.values()])
   };
+}
+
+class ContextTreeProvider implements vscode.TreeDataProvider<ContextTreeItem> {
+  private readonly changeEmitter = new vscode.EventEmitter<ContextTreeItem | undefined>();
+  readonly onDidChangeTreeData = this.changeEmitter.event;
+
+  constructor(private readonly client: LanguageClient) {}
+
+  refresh(): void {
+    this.changeEmitter.fire(undefined);
+  }
+
+  getTreeItem(element: ContextTreeItem): vscode.TreeItem {
+    return element;
+  }
+
+  async getChildren(): Promise<ContextTreeItem[]> {
+    const branch = await git.getCurrentBranch();
+    if (!branch || branch === 'HEAD') {
+      return [new ContextTreeItem(
+        'Open a named Git branch',
+        'Where Was I? uses branch-local context',
+        'preCr.captureContext',
+        'git-branch'
+      )];
+    }
+
+    try {
+      const result = await this.client.sendRequest('$/preCr/getContextSummary', { branch });
+      const summary = (result as { summary?: ContextSummary }).summary;
+      if (!summary) {
+        return [
+          new ContextTreeItem(`Branch: ${branch}`, 'No saved context yet', undefined, 'git-branch'),
+          new ContextTreeItem('Save current context', 'Capture open tabs and cursor position', 'preCr.captureContext', 'save'),
+          new ContextTreeItem('Where Was I?', 'Show the recovery prompt', 'preCr.whereWasI', 'history')
+        ];
+      }
+
+      const location = summary.primaryFile
+        ? `${summary.primaryFile}${summary.primaryLine ? `:${summary.primaryLine}` : ''}`
+        : 'No active file';
+      return [
+        new ContextTreeItem(`Branch: ${branch}`, location, undefined, 'git-branch'),
+        new ContextTreeItem(summary.summary, 'Where Was I?', 'preCr.whereWasI', 'location'),
+        new ContextTreeItem('Restore full context', 'Open all saved text tabs', 'preCr.restoreContext', 'folder-opened'),
+        new ContextTreeItem('Capture current context', 'Save this workspace state', 'preCr.captureContext', 'save')
+      ];
+    } catch {
+      return [new ContextTreeItem('Context unavailable', 'Use Show Logs for details', 'preCr.showLogs', 'warning')];
+    }
+  }
+}
+
+class ContextTreeItem extends vscode.TreeItem {
+  constructor(
+    label: string,
+    description: string,
+    commandId: string | undefined,
+    icon: string
+  ) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.description = description;
+    this.iconPath = new vscode.ThemeIcon(icon);
+    if (commandId) {
+      this.command = { command: commandId, title: label };
+    }
+  }
 }

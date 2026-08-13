@@ -1,8 +1,8 @@
 {
   "name": "pre-cr-suite",
   "displayName": "Pre-CR Suite",
-  "description": "Coverage-first pre-PR readiness for VS Code with a bundled Pre-CR server",
-  "version": "0.1.0",
+  "description": "Coverage-first pre-PR readiness and IDE continuity for VS Code with a bundled Pre-CR server",
+  "version": "0.2.0",
   "publisher": "jakye",
   "engines": {
     "vscode": "^1.85.0"
@@ -113,12 +113,12 @@
       {
         "command": "preCr.nextIssue",
         "title": "Next Issue",
-        "category": "Pre-CR Security"
+        "category": "Pre-CR Issues"
       },
       {
         "command": "preCr.prevIssue",
         "title": "Previous Issue",
-        "category": "Pre-CR Security"
+        "category": "Pre-CR Issues"
       },
       {
         "command": "preCr.openSettings",
@@ -348,12 +348,12 @@
         "preCr.context.autoCaptureOnBranchSwitch": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically capture context when switching branches"
+          "description": "Automatically capture open text tabs and cursor context when switching branches"
         },
         "preCr.context.autoRestoreOnBranchReturn": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically restore context when returning to a branch"
+          "description": "Offer to restore the saved IDE context when returning to a branch"
         },
         "preCr.debug.captureConsole": {
           "type": "boolean",
@@ -424,6 +424,10 @@
     "views": {
       "preCrSuite": [
         {
+          "id": "preCr.context",
+          "name": "Where Was I?"
+        },
+        {
           "id": "preCr.coverage",
           "name": "Coverage"
         },
@@ -443,12 +447,16 @@
     },
     "viewsWelcome": [
       {
+        "view": "preCr.context",
+        "contents": "No saved context for this branch yet.\n[Save Current Context](command:preCr.captureContext)\n\nPre-CR stores only local file paths and cursor metadata so you can recover your IDE state after switching branches or restarting VS Code."
+      },
+      {
         "view": "preCr.coverage",
-        "contents": "No coverage data loaded.\n[Load Coverage File](command:preCr.loadCoverage)\n\nRun your tests with coverage enabled, then load the report here."
+        "contents": "No coverage data loaded.\n[Refresh Coverage](command:preCr.quickCoverageCheck)\n\nRun tests with coverage enabled, then refresh to see overlays, diagnostics, and navigation."
       },
       {
         "view": "preCr.checklist",
-        "contents": "No checklist results yet.\n[Run PR Checklist](command:preCr.runChecklist)\n\nRun a checklist to see security, documentation, and code quality issues."
+        "contents": "No checklist results yet.\n[Run PR Checklist](command:preCr.runChecklist)\n\nThe server evaluates the shared repo contract; this view keeps the result close to the code."
       },
       {
         "view": "preCr.flakyTests",
@@ -497,6 +505,46 @@
       ],
       "commandPalette": [
         {
+          "command": "preCr.showQuickActions",
+          "when": "true"
+        },
+        {
+          "command": "preCr.showDashboard",
+          "when": "true"
+        },
+        {
+          "command": "preCr.runPreCrCheck",
+          "when": "true"
+        },
+        {
+          "command": "preCr.quickCoverageCheck",
+          "when": "true"
+        },
+        {
+          "command": "preCr.fixSetup",
+          "when": "true"
+        },
+        {
+          "command": "preCr.whereWasI",
+          "when": "true"
+        },
+        {
+          "command": "preCr.captureContext",
+          "when": "true"
+        },
+        {
+          "command": "preCr.restoreContext",
+          "when": "true"
+        },
+        {
+          "command": "preCr.toggleCoverageOverlay",
+          "when": "preCr.hasCoverage"
+        },
+        {
+          "command": "preCr.runChecklist",
+          "when": "true"
+        },
+        {
           "command": "preCr.startDebugCapture",
           "when": "!preCr.isCapturing"
         },
@@ -515,7 +563,7 @@
         "command": "preCr.showQuickActions",
         "key": "ctrl+shift+p ctrl+shift+p",
         "mac": "cmd+shift+r",
-        "when": "editorTextFocus"
+        "when": "true"
       },
       {
         "command": "preCr.showDashboard",
@@ -548,6 +596,11 @@
         "command": "preCr.whereWasI",
         "key": "ctrl+shift+w",
         "mac": "cmd+shift+w"
+      },
+      {
+        "command": "preCr.restoreContext",
+        "key": "ctrl+shift+alt+w",
+        "mac": "cmd+shift+alt+w"
       },
       {
         "command": "preCr.toggleCoverageOverlay",
@@ -596,14 +649,14 @@
       {
         "id": "preCr.gettingStarted",
         "title": "Get Started with Pre-CR Suite",
-        "description": "Set up the coverage-first beta workflow before you open a PR",
+        "description": "Orient the IDE, run the shared readiness workflow, and recover your work across branches",
         "steps": [
           {
             "id": "runPreCrCheck",
-            "title": "Run Pre-CR Check",
-            "description": "Run the main beta workflow on your current changes.\n\n[Run Pre-CR Check](command:preCr.runPreCrCheck)",
+            "title": "Run the shared readiness check",
+            "description": "Run the enforcement workflow on your current changes.\n\n[Run Pre-CR Check](command:preCr.runPreCrCheck)",
             "media": {
-              "markdown": "This runs tests with coverage, checks changed lines against the repo threshold, and reports whether the change is ready for review."
+              "markdown": "The LSP/CLI owns test execution, repo configuration, and changed-line evaluation. The IDE presents the result and keeps the recovery path visible."
             },
             "completionEvents": [
               "onCommand:preCr.runPreCrCheck"
@@ -611,10 +664,10 @@
           },
           {
             "id": "refreshCoverage",
-            "title": "Refresh Coverage",
+            "title": "Navigate coverage in the IDE",
             "description": "Load the configured coverage report without rerunning tests.\n\n[Refresh Coverage](command:preCr.quickCoverageCheck)",
             "media": {
-              "markdown": "Use this when coverage already exists and you want the latest overlays, diagnostics, and summary inside VS Code."
+              "markdown": "Use the sidebar, coverage overlay, summary, and issue navigation to move from a signal to the exact line that needs work."
             },
             "completionEvents": [
               "onCommand:preCr.quickCoverageCheck"
@@ -622,23 +675,25 @@
           },
           {
             "id": "fixSetup",
-            "title": "Fix Setup",
+            "title": "Check setup health",
             "description": "Check repo configuration, test-command detection, and coverage paths.\n\n[Fix Setup](command:preCr.fixSetup)",
             "media": {
-              "markdown": "Use the setup health panel when the repo is missing `.pre-cr.json`, coverage reports are not found, or test execution cannot be resolved."
+              "markdown": "Use setup health when the repo is missing `.pre-cr.json`, coverage reports are not found, or the test command cannot be resolved. Fixes remain explicit and user-controlled."
             },
             "completionEvents": [
               "onCommand:preCr.fixSetup"
             ]
           },
           {
-            "id": "experimentalFeatures",
-            "title": "Explore Experimental Features",
-            "description": "Checklist, docs, review, context, and debug features remain available as experimental tools.",
+            "id": "continuityAndRecovery",
+            "title": "Recover your IDE context",
+            "description": "Use Where Was I? and snapshots to return to a branch without losing your open text tabs.",
             "media": {
-              "markdown": "The beta promise is the shared coverage workflow. Everything else is still in the extension, but it is explicitly experimental until the typed/tested parity work is complete."
+              "markdown": "Snapshots store local file paths, cursor positions, and branch metadata—not document contents or telemetry. Full restore reports files that were skipped instead of claiming success.\n\n[Where Was I?](command:preCr.whereWasI)"
             },
-            "completionEvents": []
+            "completionEvents": [
+              "onCommand:preCr.whereWasI"
+            ]
           }
         ]
       }

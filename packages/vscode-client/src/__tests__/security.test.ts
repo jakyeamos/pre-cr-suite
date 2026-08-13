@@ -81,7 +81,17 @@ describe('Security Utilities', () => {
 
     it('should reject path traversal attempts', () => {
       const result = validatePathInWorkspace('../../../etc/passwd', workspaceRoot);
-      expect(result).toBe('/home/user/project/etc/passwd'); // Sanitized first
+      expect(result).toBeNull();
+    });
+
+    it('should reject absolute paths', () => {
+      expect(validatePathInWorkspace('/etc/passwd', workspaceRoot)).toBeNull();
+      expect(validatePathInWorkspace('C:/Windows/system.ini', workspaceRoot)).toBeNull();
+    });
+
+    it('should enforce the workspace path boundary', () => {
+      expect(validatePathInWorkspace('src/index.ts', '/home/user/pro')).toBe('/home/user/pro/src/index.ts');
+      expect(validatePathInWorkspace('../project-evil/file.ts', '/home/user/project')).toBeNull();
     });
 
     it('should handle nested paths', () => {
