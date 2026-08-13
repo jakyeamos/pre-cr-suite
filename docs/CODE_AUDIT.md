@@ -30,10 +30,11 @@
 **Security Utilities Added:**
 ```typescript
 // Path traversal prevention
-sanitizePath('../../../etc/passwd') // → 'etc/passwd'
+sanitizePath('../../../etc/passwd') // → 'etc/passwd' (normalization helper only)
 
 // Workspace boundary validation
 validatePathInWorkspace('src/file.ts', '/workspace') // → '/workspace/src/file.ts'
+validatePathInWorkspace('../../../etc/passwd', '/workspace') // → null (restore/open is blocked)
 
 // Shell injection prevention
 escapeShellArg("file; rm -rf /") // → "'file; rm -rf /'"

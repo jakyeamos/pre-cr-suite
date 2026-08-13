@@ -2,36 +2,30 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-10)
+See: .planning/PROJECT.md (updated 2026-08-12)
 
-**Core value:** A developer should be able to run the same pre-CR workflow with reliable parity in both VS Code and Neovim.
-**Current focus:** Phase 1 - Reconfirm Beta Contract
+**Core value:** Shared enforcement parity plus recoverable VS Code IDE work.
+**Current focus:** Upgrading to 5.6 — VS Code IDE modernization
 
 ## Current Position
 
-Phase: 1 of 3 (Reconfirm Beta Contract)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-04-10 - Initial GSD bootstrap created project planning docs
+Phase: 5.6 of 5 (IDE modernization)
+Plan: execution tracked in `docs/modernization/IDE_5_6_EXEC_PLAN.md`
+Status: Complete locally; Marketplace publishing remains owner-gated
+Last activity: 2026-08-12 - Rebuilt the final VSIX and directly verified three-file capture, Full Restore, and clean-restart persistence in VS Code 1.133.0
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed: 0
-- Average duration: -
-- Total execution time: 0.0 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
+- Average duration: not tracked for this modernization
+- Total execution time: not tracked
 
 **Recent Trend:**
-- Last 5 plans: none yet
-- Trend: Stable
+- Source, package, and installed evidence are aligned for the local 5.6 scope.
+- Trend: Complete locally; keep Marketplace publishing and cross-client parity as explicit follow-up gates.
 
 ## Accumulated Context
 
@@ -40,23 +34,24 @@ Progress: [░░░░░░░░░░] 0%
 - 2026-07-04: Phase 7 planned: QR remediation: pre-cr-suite-lsp from QR run qr-fleet-continue-20260704-pre-cr-suite-lsp.
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Bootstrap]: Initialized GSD planning state for this brownfield repo
+- [5.6]: VS Code owns interaction, continuity, presentation, and recovery; LSP/CLI owns enforcement.
+- [5.6]: Snapshot metadata is local workspace state and contains no document contents or telemetry.
 
 ### Pending Todos
 
-None yet.
+- Confirm Marketplace publisher/account and release authority before any external publish or update-channel action.
+- Add cross-client sample-repo evidence for the shared enforcement contract.
 
 ### Blockers/Concerns
 
-None yet.
+- Current generated worktree is not registered with Pronto; canonical parent route/doctor is Ready.
+- Frozen install is blocked by the lockfile's sibling-path dependency in this generated worktree; `pnpm install --lockfile=false` was used locally without changing the lockfile.
+- Marketplace publisher/release authority remains owner-gated; local packaging and installed proof are complete.
 
 ## Session Continuity
 
-Last session: 2026-04-10 00:00
-Stopped at: Planning baseline initialized
+Last session: 2026-08-12
+Stopped at: Final installed VSIX proof and project-truth closure
 Resume file: None
 
 ### AIOS Adoption Backfill Update - 2026-06-26

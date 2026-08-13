@@ -1,0 +1,64 @@
+{
+  "schema": "pre-cr-suite.ide-modernization",
+  "schemaVersion": 1,
+  "initiative": "Upgrading to 5.6",
+  "surface": "vscode-ide",
+  "status": "complete",
+  "integrationLane": {
+    "configuredTarget": "dev",
+    "canonicalRepository": "/Users/jakyeamos/projects/pre-cr-suite-lsp",
+    "isolatedWorktree": "/Users/jakyeamos/.codex/worktrees/59ba/pre-cr-suite-lsp",
+    "canonicalRouteDoctor": "ready",
+    "isolatedWorktreeRoute": "blocked-unregistered"
+  },
+  "productBoundary": {
+    "ideOwns": [
+      "orientation",
+      "continuity",
+      "setup-health",
+      "coverage-presentation",
+      "checklist-presentation",
+      "recovery",
+      "accessibility",
+      "local-state"
+    ],
+    "enforcementOwns": [
+      "repo-configuration",
+      "test-execution",
+      "coverage-evaluation",
+      "machine-readable-results"
+    ],
+    "telemetry": "none"
+  },
+  "phases": {
+    "truth-and-ownership": "completed",
+    "continuity-and-recovery": "completed",
+    "ide-shell": "completed",
+    "coverage-setup-checklist": "completed",
+    "privacy-packaging-docs": "completed"
+  },
+  "evidence": {
+    "baselineHead": "c872468",
+    "installedVsCode": "1.133.0",
+    "packagedVsix": "pre-cr-suite-0.2.0.vsix",
+    "snapshotTabEnumeration": "installed-captured-3-open-files",
+    "restartPersistence": "installed-after-clean-restart-two-snapshots-visible",
+    "fullRestore": "installed-reopened-saved-files",
+    "ideShell": "installed-quick-actions-status-bar-and-recovery-actions-visible",
+    "finalInstalledProof": [
+      "/private/tmp/pre-cr-suite-ide-5-6-final-exact-quick-actions.png",
+      "/private/tmp/pre-cr-suite-ide-5-6-final-exact-restore-picker.png",
+      "/private/tmp/pre-cr-suite-ide-5-6-final-exact-restore-mode.png",
+      "/private/tmp/pre-cr-suite-ide-5-6-final-exact-full-restore.png"
+    ],
+    "coverageNavigation": "deterministic-workspace-bound-path-tests-passed",
+    "releaseGates": "full-gates-passed-local-repair"
+  },
+  "ownerQuestions": [
+    {
+      "id": "OQ-01",
+      "status": "external-publish-only",
+      "decision": "Marketplace publisher/account and release authority"
+    }
+  ]
+}

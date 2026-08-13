@@ -157,6 +157,8 @@ All settings are prefixed with `preCr.` in VS Code settings.
 - **Default:** `true`
 - **Description:** Automatically restore context when returning to a branch.
 
+Snapshots are stored in VS Code workspace state. They contain branch names, workspace-relative file paths, cursor and scroll metadata, and dirty-tab metadata. They do not contain document contents or unsaved edits. A full restore reports skipped or missing files; it does not silently claim that the whole workspace was restored.
+
 ---
 
 ## Debug Settings
@@ -258,7 +260,7 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `version` | `1` | Config schema version for the public beta |
+| `version` | `1` | Config schema version |
 | `testCommand` | `string` | Custom command to run tests with coverage |
 | `coveragePaths` | `string[]` | Ordered list of coverage report paths |
 | `coveragePath` | `string` | Legacy alias accepted during beta; mapped to the first `coveragePaths` entry |
@@ -272,7 +274,7 @@ Create a `.pre-cr.json` file in your workspace root for project-specific behavio
 | `excludePatterns` | `string[]` | Files to exclude from coverage checks |
 | `checks` | `object` | Toggles for coverage/checklist/security flows |
 
-During beta, `.pre-cr.json` owns project behavior. Editor settings should be used for presentation only.
+`.pre-cr.json` owns project behavior. Editor settings should be used for presentation only.
 
 ### Rust LLVM adapter
 
@@ -321,19 +323,20 @@ The command runs the same gate used by VS Code and Neovim. It exits with `0` whe
 |---------|---------------|-------|-------------|
 | Pre-CR Check | `Ctrl+Shift+T` | `⌘⇧T` | Run tests and check coverage |
 | Toggle Coverage | `Ctrl+Shift+O` | `⌘⇧O` | Show/hide coverage overlay |
-| Next Issue | `F8` | `F8` | Jump to next uncovered line |
-| Previous Issue | `Shift+F8` | `⇧F8` | Jump to previous uncovered line |
-| Quick Actions | Click status bar | Click status bar | Open quick actions menu |
+| Next Issue | `F8` | `F8` | Jump to the next Pre-CR diagnostic, including uncovered lines |
+| Previous Issue | `Shift+F8` | `⇧F8` | Jump to the previous Pre-CR diagnostic |
+| Quick Actions | `Ctrl+Shift+P` twice | `⌘⇧R` | Open the Quick Actions menu |
 | Dashboard | `Ctrl+Shift+B` | `⌘⇧B` | Open Pre-CR dashboard |
+| Where Was I? | `Ctrl+Shift+W` | `⌘⇧W` | Open saved branch context |
+| Restore Snapshot | `Ctrl+Shift+Alt+W` | `⌘⇧⌥W` | Restore a saved snapshot |
 
 ---
 
-## Environment Variables
+## Telemetry and local state
 
-| Variable | Description |
-|----------|-------------|
-| `PRE_CR_LOG_LEVEL` | Set log level: `debug`, `info`, `warn`, `error` |
-| `PRE_CR_DISABLE_TELEMETRY` | Set to `1` to disable anonymous usage stats |
+Pre-CR Suite does not send telemetry. The VS Code client stores snapshot metadata in the current workspace's VS Code state. It does not store document contents. `PRE_CR_DISABLE_TELEMETRY` is not a supported setting.
+
+The `PRE_CR_LOG_LEVEL` environment variable is not read by the current VS Code client. Use the `Pre-CR: Show Logs` command and the `Pre-CR Suite` output channel for diagnostics.
 
 ---
 
@@ -341,9 +344,9 @@ The command runs the same gate used by VS Code and Neovim. It exits with `0` whe
 
 ### Extension not activating
 
-1. Ensure you have a supported file type open (TypeScript, JavaScript, Python, Go, Rust)
-2. Or ensure your workspace contains a `coverage/` folder
-3. Check Output panel → "Pre-CR Suite" for errors
+1. Open a workspace folder, even if no supported editor is open yet.
+2. Check Output panel → "Pre-CR Suite" for errors.
+3. If the server bundle is missing or failed to start, use the notification's `Show Logs` or `Reload Window` action, then reinstall the VSIX if needed.
 
 ### Coverage not loading
 
