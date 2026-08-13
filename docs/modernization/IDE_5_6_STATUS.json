@@ -52,7 +52,14 @@
       "/private/tmp/pre-cr-suite-ide-5-6-final-exact-full-restore.png"
     ],
     "coverageNavigation": "deterministic-workspace-bound-path-tests-passed",
-    "releaseGates": "full-gates-passed-local-repair"
+    "releaseGates": "full-gates-passed-local-repair",
+    "lintToolchain": {
+      "eslint": "9.39.5",
+      "config": "flat",
+      "typescriptEslint": "8.67.0",
+      "antiSlopPeer": "resolved",
+      "nodeEngineFloor": ">=18.18.0"
+    }
   },
   "ownerQuestions": [
     {

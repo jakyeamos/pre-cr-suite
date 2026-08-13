@@ -32,6 +32,7 @@ The 5.6 target is a coherent local workflow:
 | Source privacy contract | Observed | No telemetry or network sender exists in the client, but `docs/CONFIGURATION.md` advertised `PRE_CR_DISABLE_TELEMETRY`. This was a stale promise, not an implemented control. |
 | Source packaging | Observed | `.vscodeignore` already excludes source and build tooling and retains bundled `dist`, README, package metadata, and license. The package repository URL was stale (`jakye` rather than `jakyeamos`). |
 | Baseline validation | Observed | After the documented local dependency repair (`pnpm install --lockfile=false`), the final root build, typecheck, lint, test, and package gates passed. Lint produced warnings but no errors; the final workspace run was 202 core tests, 7 server tests, and 137 VS Code tests. |
+| Lint toolchain | Observed | Migrated package-local linting from ESLint 8 legacy configs to ESLint 9.39.5 flat configs with `@eslint/js@9.39.5` and `typescript-eslint@8.67.0`; `pnpm why eslint` now resolves the anti-slop peer to ESLint 9. The root Node engine floor is `>=18.18.0`. |
 | Installed behavior | Observed | Final `pre-cr-suite-0.2.0.vsix` installed in `/private/tmp/pre-cr-suite-ide-5-6-extensions` with an isolated profile. VS Code 1.133.0 captured three open text files, showed two persisted three-file snapshots after a clean restart, exposed Full Restore/Cursor Only, and visibly reopened the saved files. |
 | Installed IDE shell | Observed | The final installed package exposed Quick Actions with setup, dashboard, Where Was I?, save/restore, capture, settings, and logs; the status bar reported `Pre-CR · saved`. Native accessibility inspection reached the Code window and setup-health surface; webview contents remain a provider boundary. |
 | Coverage navigation | Observed | Coverage diagnostics now bind to validated workspace-relative paths instead of basename matches. Deterministic tests cover an in-workspace absolute path and an outside-workspace same-basename path. |
@@ -68,9 +69,11 @@ pnpm package
 
 The worktree-local frozen install was not portable because the lockfile referenced a sibling path outside this generated worktree (`eslint-plugin-anti-slop`). The bounded repair used for this audit was `pnpm install --lockfile=false`; it did not modify `pnpm-lock.yaml`. A fresh-clone release claim remains conditional until the dependency topology is repaired or verified in a canonical checkout.
 
+The follow-up ESLint migration closes the remaining local compatibility warning. Root and package linting now use ESLint 9.39.5 flat configs, `@eslint/js@9.39.5`, and `typescript-eslint@8.67.0`; package lint reports zero errors, and the anti-slop peer resolves to ESLint 9. The development-only client lint config is excluded from the VSIX.
+
 ## Installed proof record
 
-- Package: `packages/vscode-client/pre-cr-suite-0.2.0.vsix` (9 files, 4.73 MB), rebuilt after the final source change.
+- Package: `packages/vscode-client/pre-cr-suite-0.2.0.vsix` (9 files, approximately 4.72 MB), rebuilt after the final source change; the development-only lint config is excluded from the artifact.
 - VS Code: 1.133.0 arm64, isolated user data under `/private/tmp/pre-cr-suite-ide-5-6-user-data`.
 - Continuity: capture notification reported `Saved 3 open file(s)`; the restore picker showed two entries with `3 open file(s)`; Full Restore reopened the saved files; after a clean app restart, Quick Actions retained `Restore Snapshot` as a recent action and the picker still showed both entries.
 - Visual evidence: the final exact-package pass is recorded at `/private/tmp/pre-cr-suite-ide-5-6-final-exact-quick-actions.png`, `/private/tmp/pre-cr-suite-ide-5-6-final-exact-restore-picker.png`, `/private/tmp/pre-cr-suite-ide-5-6-final-exact-restore-mode.png`, and `/private/tmp/pre-cr-suite-ide-5-6-final-exact-full-restore.png`; earlier capture/restart evidence remains at `/private/tmp/pre-cr-suite-ide-5-6-installed-save-result-final.png`, `/private/tmp/pre-cr-suite-ide-5-6-full-restore-result.png`, and `/private/tmp/pre-cr-suite-ide-5-6-final-restart-snapshots.png`.

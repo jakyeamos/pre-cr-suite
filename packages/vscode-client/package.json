@@ -709,7 +709,7 @@
     "build:extension:dev": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
     "build:server-bundle:dev": "esbuild ../server/src/server.ts --bundle --outfile=dist/server.js --format=cjs --platform=node",
     "watch": "corepack pnpm run build:extension:dev -- --watch",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -723,12 +723,12 @@
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^6.13.0",
-    "@typescript-eslint/parser": "^6.13.0",
+    "@eslint/js": "^9.39.5",
     "@vscode/vsce": "^2.22.0",
     "esbuild": "^0.28.1",
-    "eslint": "^8.54.0",
+    "eslint": "^9.39.5",
     "typescript": "^5.3.2",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^3.2.6"
   }
 }
