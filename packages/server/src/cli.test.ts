@@ -288,6 +288,40 @@ describe('runHeadlessCli', () => {
     expect(stderr.join('')).toContain('[pre-cr] Finished changed-line readiness for /repo');
   });
 
+  it('emits immediate and periodic progress for hook runs while preserving JSON stdout', async () => {
+    const workspaceRoot = makeHookRepo();
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), '{"version":1}\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'src.ts'), 'export const value = 1;\n');
+    execFileSync('git', ['add', '-f', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
+    const stderr: string[] = [];
+
+    const result = await runHeadlessCliWithProgress(
+      ['hook', 'run', '--json', '--workspace', workspaceRoot, '--hook', 'pre-commit'],
+      {
+        runCheck: async (root) => {
+          await new Promise((resolve) => setTimeout(resolve, 25));
+          return makeRunResult(root);
+        }
+      },
+      {
+        heartbeatMs: 5,
+        stderr: {
+          write: (chunk: string) => {
+            stderr.push(chunk);
+            return true;
+          }
+        }
+      }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: true, findings: [] });
+    expect(stderr.join('')).toContain(`[pre-cr] Running pre-commit hook for ${workspaceRoot}`);
+    expect(stderr.join('')).toContain('[pre-cr] Still running pre-commit hook after');
+    expect(stderr.join('')).toContain(`[pre-cr] Finished pre-commit hook for ${workspaceRoot}`);
+  });
+
   it('runs hook checks, blocks missing config, and emits JSON findings', async () => {
     const workspaceRoot = makeHookRepo();
     fs.writeFileSync(path.join(workspaceRoot, 'src.ts'), 'export const value = 1;\n');

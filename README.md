@@ -71,6 +71,8 @@ pre-cr run --json --workspace /path/to/repo
 
 The CLI uses the same `@pre-cr/core` pipeline as the editor integrations and exits non-zero when the gate fails on `main`, `master`, `dev`, `develop`, `development`, or a branch connected to a dev environment through `AIOS_DEV_ENVIRONMENT`, `AIOS_DEV_ENV`, `QUALITY_GATE_DEV_ENV`, or `GATE_CONNECTED_DEV_ENV`. Failed checks on detected unprotected feature branches return exit code 0 with `gateDecision: "warn"` in JSON output. Unknown branches remain conservative and block. Human-readable output includes covered, ignored, and unsupported surface counts plus the unsupported file list. Use `--json` for the stable automation contract.
 
+Executable `run` and `hook run` commands write an immediate start message, a periodic heartbeat, and a terminal exit summary to stderr. JSON stdout remains machine-readable, so a long-running commit hook is observable without corrupting automation output.
+
 When the headless gate blocks, warns, or forces iteration, it appends an AIOS-compatible event to `.aios/audit/gate-events.jsonl` in the checked workspace and refreshes `.aios/audit/gate-summary.md` plus `.aios/audit/learning-lessons.md`. Audit write failures are non-blocking; the branch-aware Pre-CR exit code remains authoritative.
 
 ## Repo Configuration
