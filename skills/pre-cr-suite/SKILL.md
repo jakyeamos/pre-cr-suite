@@ -17,13 +17,20 @@ description: Use when coding with the Pre-CR Suite monorepo—@pre-cr/core, @pre
 
 ## When to use this skill
 
-Use it for implementation, debugging, configuration, test integration, CLI automation, LSP/client work, coverage parsing, or upgrading this package family. Prefer the beta workflow: repo configuration, changed-line coverage, setup health, refresh, and parity across clients. Treat checklist, docs, review, context, and debug helpers as experimental unless the task explicitly targets them.
+Use it for implementation, debugging, configuration, test integration, CLI automation, LSP/client work, coverage parsing, or upgrading this package family. Prefer the beta workflow: repo configuration, changed-line coverage, setup health, refresh, and parity across clients. The VS Code-only context continuity subset is a source-verified candidate with installed proof still open. Treat checklist, docs, review, and debug helpers as experimental unless the task explicitly targets them.
 
 ## Package mental model
 
 `.pre-cr.json` at the workspace root is the canonical project behavior shared by VS Code, Neovim, hooks, and the headless CLI. `@pre-cr/core` is editor-independent and exports coverage parsers, config/protocol types, validation, and orchestration helpers. `@pre-cr/server` owns LSP requests, workspace checks, hooks, and CLI commands. VS Code bundles the server; Neovim starts the published server and uses the Lua client.
 
 The supported gate runs tests/coverage, loads LCOV or Istanbul data, evaluates changed-line coverage against `threshold`, and may run configured quality adapters. `@pre-cr/rust-coverage-adapter` provides the reusable Rust/LLVM instrumentation-to-LCOV command for repositories whose native test runner does not emit a compatible report. `surfaces` separates covered, ignored, and unsupported files; unsupported files need explicit repo setup rather than wrapper-side guesses.
+
+VS Code context continuity uses `Save Snapshot`, `Where Was I?`, and `Restore
+Snapshot`. Snapshots are stored per workspace, re-imported after the bundled
+server restarts, and restore failures stay visible when files are missing or
+stale. Do not claim installed behavior until a packaged VSIX has passed the
+workflow in `docs/IDE_WORKFLOW.md`. This continuity contract is VS Code-specific
+and does not imply Neovim parity.
 
 ## Installation, imports, and setup
 

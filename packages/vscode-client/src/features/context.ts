@@ -35,6 +35,16 @@ interface LatestSnapshotResponse {
   snapshot?: ContextSnapshot;
 }
 
+interface ExportSnapshotsResponse {
+  snapshots?: ContextSnapshot[];
+  error?: string;
+}
+
+interface ImportSnapshotsResponse {
+  imported?: number;
+  error?: string;
+}
+
 interface ContextSnapshotSummary {
   branch: string;
   description?: string;
@@ -42,7 +52,7 @@ interface ContextSnapshotSummary {
   timestamp: string | number | Date;
 }
 
-interface ContextSnapshotFile {
+export interface ContextSnapshotFile {
   path: string;
   cursor: {
     line: number;
@@ -51,29 +61,35 @@ interface ContextSnapshotFile {
   isActive?: boolean;
 }
 
-interface ContextSnapshot {
+export interface ContextSnapshot {
   branch: string;
   files?: ContextSnapshotFile[];
+  [key: string]: unknown;
 }
+
+export const CONTEXT_SNAPSHOT_STORAGE_KEY = 'preCr.contextSnapshots.v1';
 
 export function registerContextFeatures(
   context: vscode.ExtensionContext,
   client: LanguageClient
 ) {
   context.subscriptions.push(
-    vscode.commands.registerCommand('preCr.captureContext', () => captureContext(client)),
+    vscode.commands.registerCommand('preCr.captureContext', () => captureContext(context, client)),
     vscode.commands.registerCommand('preCr.restoreContext', (snapshot?: ContextSnapshot) => restoreContext(client, snapshot)),
     vscode.commands.registerCommand('preCr.whereWasI', () => whereWasI(client))
   );
 
   // Initialize context manager
-  initContextManager(client);
+  void initContextManager(context, client);
 }
 
 /**
  * Initialize context manager
  */
-async function initContextManager(client: LanguageClient) {
+async function initContextManager(
+  context: vscode.ExtensionContext,
+  client: LanguageClient
+) {
   const config = vscode.workspace.getConfiguration('preCr.context');
 
   try {
@@ -84,6 +100,8 @@ async function initContextManager(client: LanguageClient) {
       }
     });
 
+    await importPersistedSnapshots(context, client);
+
     // Check if there's an existing snapshot for current branch
     const branch = await git.getCurrentBranch();
     if (branch) {
@@ -92,6 +110,48 @@ async function initContextManager(client: LanguageClient) {
   } catch (error) {
     console.error('Failed to initialize context manager:', error);
   }
+}
+
+/**
+ * Restore durable workspace snapshots into the new language-server process.
+ */
+export async function importPersistedSnapshots(
+  context: vscode.ExtensionContext,
+  client: Pick<LanguageClient, 'sendRequest'>
+): Promise<number> {
+  const snapshots = context.workspaceState.get<ContextSnapshot[]>(
+    CONTEXT_SNAPSHOT_STORAGE_KEY,
+    []
+  ) || [];
+
+  if (snapshots.length === 0) return 0;
+
+  const result = await client.sendRequest<ImportSnapshotsResponse>(
+    '$/preCr/importContextSnapshots',
+    { snapshots }
+  );
+
+  if (result.error) throw new Error(result.error);
+  return result.imported || 0;
+}
+
+/**
+ * Persist the server's complete snapshot set in VS Code workspace storage.
+ */
+export async function persistContextSnapshots(
+  context: vscode.ExtensionContext,
+  client: Pick<LanguageClient, 'sendRequest'>
+): Promise<number> {
+  const result = await client.sendRequest<ExportSnapshotsResponse>(
+    '$/preCr/exportContextSnapshots',
+    {}
+  );
+
+  if (result.error) throw new Error(result.error);
+
+  const snapshots = result.snapshots || [];
+  await context.workspaceState.update(CONTEXT_SNAPSHOT_STORAGE_KEY, snapshots);
+  return snapshots.length;
 }
 
 /**
@@ -116,7 +176,10 @@ async function checkForExistingSnapshot(client: LanguageClient, branch: string) 
 /**
  * Capture current context snapshot
  */
-async function captureContext(client: LanguageClient) {
+async function captureContext(
+  extensionContext: vscode.ExtensionContext,
+  client: LanguageClient
+) {
   const branch = await git.getCurrentBranch();
   if (!branch) {
     notify.showWarning('Could not determine current branch');
@@ -145,6 +208,7 @@ async function captureContext(client: LanguageClient) {
 
     const snapshot = result.snapshot;
     if (snapshot) {
+      await persistContextSnapshots(extensionContext, client);
       notify.showSuccess(`Context saved for "${branch}"`);
       statusBar.setSnapshot(branch);
     } else {
@@ -198,6 +262,12 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: Contex
     return;
   }
 
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
+  if (!workspaceRoot) {
+    notify.showWarning('Open a workspace before restoring context');
+    return;
+  }
+
   // Ask how to restore
   const restoreMode = await vscode.window.showQuickPick([
     {
@@ -221,10 +291,10 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: Contex
     let restoredCount = 0;
 
     for (const file of snapshot.files || []) {
-      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-      if (!workspaceRoot) continue;
+      const resolvedPath = git.validatePathInWorkspace(file.path, workspaceRoot.fsPath);
+      if (!resolvedPath) continue;
 
-      const fileUri = vscode.Uri.joinPath(workspaceRoot, file.path);
+      const fileUri = vscode.Uri.file(resolvedPath);
 
       // Find if file is already open
       const openEditor = vscode.window.visibleTextEditors.find(
@@ -232,25 +302,38 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: Contex
       );
 
       if (openEditor) {
-        const position = new vscode.Position(file.cursor.line, file.cursor.character);
+        const position = clampCursorToDocument(openEditor.document, file.cursor);
         openEditor.selection = new vscode.Selection(position, position);
         openEditor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
         restoredCount++;
       }
     }
 
-    notify.showSuccess(`Restored cursor positions in ${restoredCount} file(s)`);
+    if (restoredCount === 0 && (snapshot.files?.length || 0) > 0) {
+      notify.showWarning('No cursor positions restored; open a saved file and try again');
+    } else {
+      notify.showSuccess(`Restored cursor positions in ${restoredCount} file(s)`);
+    }
     return;
   }
 
   // Full restore - open files and restore positions
+  let restoredCount = 0;
+  let skippedCount = 0;
   await notify.showProgress('Restoring context...', async () => {
     for (const file of snapshot.files || []) {
       try {
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-        if (!workspaceRoot) continue;
+        const resolvedPath = git.validatePathInWorkspace(file.path, workspaceRoot.fsPath);
+        if (!resolvedPath) {
+          skippedCount++;
+          continue;
+        }
 
-        const fileUri = vscode.Uri.joinPath(workspaceRoot, file.path);
+        const fileUri = vscode.Uri.file(resolvedPath);
+        if (!(await workspaceFileExists(fileUri))) {
+          skippedCount++;
+          continue;
+        }
         const doc = await vscode.workspace.openTextDocument(fileUri);
         const editor = await vscode.window.showTextDocument(doc, {
           viewColumn: file.isActive ? vscode.ViewColumn.Active : vscode.ViewColumn.Beside,
@@ -258,18 +341,70 @@ async function restoreContext(client: LanguageClient, snapshotToRestore?: Contex
         });
 
         // Restore cursor position
-        const position = new vscode.Position(file.cursor.line, file.cursor.character);
+        const position = clampCursorToDocument(doc, file.cursor);
         editor.selection = new vscode.Selection(position, position);
         editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+        restoredCount++;
 
       } catch (error) {
-    console.debug('Pre-CR: Operation failed:', error);
+        console.debug('Pre-CR: Snapshot file could not be restored:', error);
         // File might not exist anymore
+        skippedCount++;
       }
     }
   });
 
-  notify.showSuccess(`Restored context from "${snapshot.branch}"`);
+  if (skippedCount > 0) {
+    notify.showWarning(formatRestoreOutcome(snapshot.branch, restoredCount, skippedCount));
+  } else {
+    notify.showSuccess(formatRestoreOutcome(snapshot.branch, restoredCount, skippedCount));
+  }
+}
+
+export async function workspaceFileExists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clampCursorToDocument(
+  document: Pick<vscode.TextDocument, 'lineCount' | 'lineAt'>,
+  cursor: { line: number; character: number }
+): vscode.Position {
+  const maximumLine = Math.max(0, document.lineCount - 1);
+  const line = Math.min(Math.max(0, cursor.line), maximumLine);
+  const maximumCharacter = document.lineCount > 0
+    ? document.lineAt(line).text.length
+    : 0;
+  const character = Math.min(Math.max(0, cursor.character), maximumCharacter);
+  return new vscode.Position(line, character);
+}
+
+export function formatRestoreOutcome(
+  branch: string,
+  restoredCount: number,
+  skippedCount: number
+): string {
+  if (skippedCount > 0) {
+    return `Restored ${restoredCount} file(s) from "${branch}"; skipped ${skippedCount} missing or stale file(s)`;
+  }
+
+  return `Restored ${restoredCount} file(s) from "${branch}"`;
+}
+
+export function parseOpenAction(
+  action: string
+): { filePath: string; zeroBasedLine: number } | undefined {
+  const match = action.match(/^Open (.+):(\d+)$/);
+  if (!match) return undefined;
+
+  return {
+    filePath: match[1],
+    zeroBasedLine: Math.max(0, Number.parseInt(match[2], 10) - 1)
+  };
 }
 
 /**
@@ -301,30 +436,71 @@ async function whereWasI(client: LanguageClient) {
     }
 
     // Show quick pick with actions
-    const items: (vscode.QuickPickItem & { action: string })[] = summary.quickActions.map((action: string) => ({
-      label: action,
-      action
-    }));
+    const items: (vscode.QuickPickItem & { action: string })[] = [
+      ...summary.quickActions
+        .filter((action: string) => action.startsWith('Open '))
+        .map((action: string) => ({ label: action, action })),
+      {
+        label: '$(folder-opened) Restore saved context',
+        description: 'Reopen saved files and cursor positions',
+        action: 'restore'
+      },
+      {
+        label: '$(shield) Open Quick Actions',
+        description: 'Continue with coverage, setup, or the main check',
+        action: 'quickActions'
+      },
+      {
+        label: '$(play) Run Pre-CR Check',
+        description: 'Verify changed-line readiness',
+        action: 'runPreCrCheck'
+      }
+    ];
 
     const selected = await vscode.window.showQuickPick(items, {
       placeHolder: summary.summary
     });
 
     if (selected) {
-      // Handle action
-      if (selected.action.startsWith('Open ')) {
-        const match = selected.action.match(/Open (.+):(\d+)/);
-        if (match) {
-          const [, filePath, line] = match;
-          const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-          if (workspaceRoot) {
-            const fileUri = vscode.Uri.joinPath(workspaceRoot, filePath);
-            const doc = await vscode.workspace.openTextDocument(fileUri);
-            const editor = await vscode.window.showTextDocument(doc);
-            const position = new vscode.Position(parseInt(line) - 1, 0);
-            editor.selection = new vscode.Selection(position, position);
-            editor.revealRange(new vscode.Range(position, position));
-          }
+      if (selected.action === 'restore') {
+        await vscode.commands.executeCommand('preCr.restoreContext');
+        return;
+      }
+      if (selected.action === 'quickActions') {
+        await vscode.commands.executeCommand('preCr.showQuickActions');
+        return;
+      }
+      if (selected.action === 'runPreCrCheck') {
+        await vscode.commands.executeCommand('preCr.runPreCrCheck');
+        return;
+      }
+
+      const openAction = parseOpenAction(selected.action);
+      if (openAction) {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
+        if (!workspaceRoot) return;
+
+        const resolvedPath = git.validatePathInWorkspace(
+          openAction.filePath,
+          workspaceRoot.fsPath
+        );
+        if (!resolvedPath) {
+          notify.showWarning('Saved file is outside the current workspace');
+          return;
+        }
+
+        try {
+          const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(resolvedPath));
+          const editor = await vscode.window.showTextDocument(doc);
+          const position = clampCursorToDocument(doc, {
+            line: openAction.zeroBasedLine,
+            character: 0
+          });
+          editor.selection = new vscode.Selection(position, position);
+          editor.revealRange(new vscode.Range(position, position));
+        } catch (error) {
+          console.debug('Pre-CR: Saved context file could not be opened:', error);
+          notify.showWarning('Saved file is missing or stale');
         }
       }
     }
@@ -337,20 +513,56 @@ async function whereWasI(client: LanguageClient) {
 /**
  * Get current editor context
  */
-function getCurrentEditorContext() {
-  const editors = vscode.window.visibleTextEditors;
+export function getCurrentEditorContext() {
+  const visibleEditors = new Map(
+    vscode.window.visibleTextEditors.map(editor => [editor.document.uri.toString(), editor])
+  );
+  const openDocuments = new Map(
+    vscode.workspace.textDocuments.map(document => [document.uri.toString(), document])
+  );
   const activeEditor = vscode.window.activeTextEditor;
+  const files = new Map<string, {
+    path: string;
+    cursor: { line: number; character: number };
+    scrollTop: number;
+    isDirty: boolean;
+    isActive: boolean;
+  }>();
+
+  for (const group of vscode.window.tabGroups.all) {
+    for (const tab of group.tabs) {
+      const uri = tab.input instanceof vscode.TabInputText
+        ? tab.input.uri
+        : tab.input instanceof vscode.TabInputTextDiff
+          ? tab.input.modified
+          : undefined;
+      if (!uri) continue;
+      if (uri.scheme !== 'file' || !vscode.workspace.getWorkspaceFolder(uri)) continue;
+
+      const key = uri.toString();
+      const editor = visibleEditors.get(key);
+      const document = editor?.document || openDocuments.get(key);
+      const isActive = tab.isActive || editor === activeEditor;
+      const existing = files.get(key);
+
+      if (existing && (!isActive || existing.isActive)) continue;
+
+      files.set(key, {
+        path: vscode.workspace.asRelativePath(uri),
+        cursor: editor
+          ? {
+              line: editor.selection.active.line,
+              character: editor.selection.active.character
+            }
+          : { line: 0, character: 0 },
+        scrollTop: editor?.visibleRanges[0]?.start.line || 0,
+        isDirty: document?.isDirty || false,
+        isActive
+      });
+    }
+  }
 
   return {
-    files: editors.map(editor => ({
-      path: vscode.workspace.asRelativePath(editor.document.uri),
-      cursor: {
-        line: editor.selection.active.line,
-        character: editor.selection.active.character
-      },
-      scrollTop: editor.visibleRanges[0]?.start.line || 0,
-      isDirty: editor.document.isDirty,
-      isActive: editor === activeEditor
-    }))
+    files: [...files.values()]
   };
 }

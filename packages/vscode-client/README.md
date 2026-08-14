@@ -11,6 +11,21 @@ Pre-CR Suite for VS Code is the first-class beta client for the coverage-first p
 
 The extension now bundles the Pre-CR language server artifact. VS Code users do not need a separate server install.
 
+## IDE Continuity Candidate
+
+The source-verified VS Code continuity subset is:
+
+- `Pre-CR: Save Snapshot`
+- `Pre-CR: Where Was I?`
+- `Pre-CR: Restore Snapshot`
+- `Pre-CR: Quick Actions Menu`
+
+Snapshots persist in VS Code workspace storage and are imported when the
+bundled server restarts. Missing or stale files are skipped with a visible
+partial-restore warning. This subset is not promoted to installed beta proof
+until the packaged VSIX passes the workflow in
+[`docs/IDE_WORKFLOW.md`](../../docs/IDE_WORKFLOW.md).
+
 ## Repo Configuration
 
 Place `.pre-cr.json` at the repo root:
@@ -45,7 +60,6 @@ These features remain in the extension, but they are explicitly experimental dur
 - Checklist and security flows outside the main coverage path
 - Documentation generation
 - Review estimation and flaky-test reporting
-- Context snapshots
 - Debug-session capture
 
 ## From Source

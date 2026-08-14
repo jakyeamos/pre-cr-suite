@@ -21,7 +21,10 @@ import { registerCoverageFeatures } from './features/coverage';
 import { registerChecklistFeatures } from './features/checklist';
 import { registerDocgenFeatures } from './features/docgen';
 import { registerReviewFeatures } from './features/review';
-import { registerContextFeatures } from './features/context';
+import {
+  persistContextSnapshots,
+  registerContextFeatures
+} from './features/context';
 import { registerDebugFeatures, isDebugCapturing } from './features/debug';
 import { registerDashboardFeature } from './features/dashboard';
 import { registerPreCrCheckFeature } from './features/preCrCheck';
@@ -36,6 +39,7 @@ let client: LanguageClient;
 let outputChannel: vscode.OutputChannel;
 
 interface BranchSwitchResponse {
+  captured?: unknown;
   toRestore?: unknown;
 }
 
@@ -444,10 +448,12 @@ function registerQuickActions(context: vscode.ExtensionContext) {
           quickItem('$(tools) Fix Setup', 'Inspect repo config and coverage paths', 'preCr.fixSetup'),
           quickItem('$(dashboard) Open Dashboard', 'View coverage and setup status', 'preCr.showDashboard'),
 
-          { label: 'Experimental', kind: vscode.QuickPickItemKind.Separator },
+          { label: 'IDE Continuity', kind: vscode.QuickPickItemKind.Separator },
           quickItem('$(history) Where Was I?', 'Resume from saved state', 'preCr.whereWasI'),
           quickItem('$(save) Save Snapshot', 'Save current editor state', 'preCr.captureContext'),
           quickItem('$(folder-opened) Restore Snapshot', 'Load a saved state', 'preCr.restoreContext'),
+
+          { label: 'Experimental', kind: vscode.QuickPickItemKind.Separator },
           ...debugItems,
           quickItem('$(graph) Analyze Session', 'View patterns & insights', 'preCr.analyzeDebugSession'),
           quickItem('$(gear) Open Settings', 'Configure Pre-CR Suite', 'preCr.openSettings'),
@@ -513,6 +519,13 @@ function watchBranchChanges(
               toBranch: branch,
               currentContext: getCurrentContext()
             }).then((result: BranchSwitchResponse) => {
+              if (result.captured) {
+                void persistContextSnapshots(context, client).catch(error => {
+                  console.error('Failed to persist branch snapshot:', error);
+                  void notify.showWarning('Branch context was captured but could not be saved durably');
+                });
+              }
+
               if (result.toRestore) {
                 // Ask user if they want to restore context
                 notify.showInfo(

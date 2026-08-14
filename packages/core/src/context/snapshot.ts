@@ -406,7 +406,7 @@ export class ContextManager {
     const quickActions: string[] = [];
 
     if (activeFile) {
-      quickActions.push(`Open ${activeFile.path}:${activeFile.cursor.line}`);
+      quickActions.push(`Open ${activeFile.path}:${activeFile.cursor.line + 1}`);
     }
 
     if (modifiedCount > 0) {
@@ -425,7 +425,7 @@ export class ContextManager {
     let summary = '';
 
     if (activeFile) {
-      summary = `Working on ${activeFile.path} at line ${activeFile.cursor.line}`;
+      summary = `Working on ${activeFile.path} at line ${activeFile.cursor.line + 1}`;
     } else if (snapshot.files.length > 0) {
       summary = `${snapshot.files.length} files open`;
     } else {
@@ -440,7 +440,7 @@ export class ContextManager {
 
     return {
       primaryFile: activeFile?.path,
-      primaryLine: activeFile?.cursor.line,
+      primaryLine: activeFile ? activeFile.cursor.line + 1 : undefined,
       recentSearch: snapshot.searches[0]?.query,
       modifiedFilesCount: modifiedCount,
       timeSince,

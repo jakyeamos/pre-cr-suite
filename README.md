@@ -18,10 +18,11 @@ The beta promise is simple: the same repo-configured coverage workflow should be
 | Headless JSON gate | Supported | Runs the same gate without LSP via `pre-cr run --json` |
 | Refresh Coverage | Supported | Reloads configured coverage reports for overlays, diagnostics, and summaries |
 | Fix Setup | Supported | Shows repo config, coverage-path, and test-command health |
+| VS Code context continuity | Source-verified candidate | Save Snapshot, Where Was I?, and Restore Snapshot persist branch context in workspace storage; installed VSIX proof remains open |
 | VS Code | Supported | Ships with a bundled language-server artifact |
 | Neovim | Supported | Uses the published `@pre-cr/server` package |
 | Generic LSP clients | Compatible | Protocol-compatible, but not first-class beta targets |
-| Checklist, docs, review, context, debug | Experimental | Still available in-repo, but not part of the beta contract |
+| Checklist, docs, review, debug | Experimental | Still available in-repo, but not part of the beta contract |
 
 ## Quick Start
 

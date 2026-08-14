@@ -170,9 +170,11 @@ describe('Context Snapshot', () => {
       const summary = manager.generateSummary(snapshot);
 
       expect(summary.primaryFile).toBe('src/auth.ts');
-      expect(summary.primaryLine).toBe(10);
+      expect(summary.primaryLine).toBe(11);
       expect(summary.modifiedFilesCount).toBe(2);
       expect(summary.summary).toContain('src/auth.ts');
+      expect(summary.summary).toContain('line 11');
+      expect(summary.quickActions).toContain('Open src/auth.ts:11');
       expect(summary.quickActions.length).toBeGreaterThan(0);
     });
 
