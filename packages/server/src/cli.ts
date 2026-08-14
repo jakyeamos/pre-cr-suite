@@ -16,6 +16,7 @@ import {
   safeAppendAuditEvent,
   type QualityGateAuditAppender
 } from './qualityGateAudit';
+import packageMetadata from '../package.json';
 
 export interface HeadlessCliResult {
   exitCode: number;
@@ -46,12 +47,21 @@ interface ParsedHeadlessArgs {
 type CoverageTextResult = NonNullable<NonNullable<RunPreCrCheckResult['result']>['coverageCheck']>;
 
 const DEFAULT_PROGRESS_HEARTBEAT_MS = 15_000;
+const PACKAGE_VERSION = packageMetadata.version;
 
 export async function runHeadlessCli(
   argv: string[],
   dependencies: HeadlessCliDependencies = {}
 ): Promise<HeadlessCliResult> {
   setLogger(new NullLogger());
+
+  if (argv[0] === 'version' || argv[0] === '--version' || argv[0] === '-V') {
+    return {
+      exitCode: 0,
+      stdout: `pre-cr ${PACKAGE_VERSION}\n`,
+      stderr: ''
+    };
+  }
 
   if (argv[0] === 'hook') {
     return runHookCli(argv.slice(1), {
@@ -253,6 +263,7 @@ function elapsedSeconds(startedAt: number): number {
 function usage(): string {
   return [
     'Usage: pre-cr run [--json] [--workspace <path>]',
+    '       pre-cr version | --version | -V',
     '       pre-cr hook install [--manager auto|native|husky|lefthook|pre-commit|all] [--hook pre-commit|pre-push] [--force]',
     '       pre-cr hook status [--json]',
     '       pre-cr hook uninstall [--manager auto|native|husky|lefthook|pre-commit|all]',

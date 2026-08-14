@@ -65,6 +65,7 @@ See [packages/neovim-client/README.md](packages/neovim-client/README.md) for the
 Install the server package, then run the gate directly:
 
 ```bash
+pre-cr --version
 pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
 ```
@@ -119,6 +120,8 @@ Project behavior lives in `.pre-cr.json` at the repo root.
   }
 }
 ```
+
+Use `pre-cr-rust-coverage --version` to verify the installed adapter version.
 
 Notes:
 

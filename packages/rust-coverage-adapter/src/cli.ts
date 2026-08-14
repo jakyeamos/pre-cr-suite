@@ -6,9 +6,17 @@ import {
   runRustCoverage,
   RustCoverageError
 } from './index';
+import packageMetadata from '../package.json';
+
+const PACKAGE_VERSION = packageMetadata.version;
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   try {
+    if (argv[0] === 'version' || argv[0] === '--version' || argv[0] === '-V') {
+      process.stdout.write(`pre-cr-rust-coverage ${PACKAGE_VERSION}\n`);
+      return 0;
+    }
+
     if (argv.includes('--help') || argv.includes('-h')) {
       process.stdout.write(`${formatHelp()}\n`);
       return 0;

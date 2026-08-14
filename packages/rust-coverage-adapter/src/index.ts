@@ -148,6 +148,7 @@ export function formatHelp(): string {
     'Runs COMMAND with Rust LLVM instrumentation and writes an LCOV report.',
     '',
     'Options:',
+    '  --version                      Print the installed package version',
     '  --output PATH                 LCOV output path (default: coverage/lcov.info)',
     '  --toolchain NAME              rustup toolchain (default: stable)',
     '  --target-dir PATH             Cargo target directory when it is non-standard',

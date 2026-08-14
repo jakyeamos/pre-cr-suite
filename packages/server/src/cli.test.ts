@@ -9,6 +9,22 @@ import type { RunPreCrCheckResult } from '@pre-cr/core';
 import { runHeadlessCli, runHeadlessCliWithProgress } from './cli';
 
 describe('runHeadlessCli', () => {
+  it('reports the package version without running the gate', async () => {
+    for (const argument of ['version', '--version', '-V']) {
+      const result = await runHeadlessCli([argument], {
+        runCheck: async () => {
+          throw new Error('version must not run the gate');
+        }
+      });
+
+      expect(result).toEqual({
+        exitCode: 0,
+        stdout: 'pre-cr 0.1.0\n',
+        stderr: ''
+      });
+    }
+  });
+
   it('runs the gate in JSON mode without using the LSP transport', async () => {
     const calls: Array<{ workspaceRoot: string; changeScope: string | undefined }> = [];
 
