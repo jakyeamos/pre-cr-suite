@@ -92,7 +92,7 @@ pre-cr run --json --workspace /path/to/repo
 
 Use `--json` for automation. The CLI checks staged changes and returns non-zero for failures on protected/unknown branches; detected feature branches can return `0` with `gateDecision: "warn"`. Do not parse human-readable output as a stable API.
 
-For explicit hook changes only, use `pre-cr hook install|status|run|uninstall`; supported managers are `native`, `husky`, `lefthook`, `pre-commit`, `auto`, and `all`, with `pre-commit` as the default hook.
+For explicit hook changes only, use `pre-cr hook install|status|run|uninstall`; supported managers are `native`, `husky`, `lefthook`, `pre-commit`, `auto`, and `all`, with `pre-commit` as the default hook. Executable `run` and `hook run` commands report start, heartbeat, and terminal status on stderr while keeping JSON stdout machine-readable.
 
 If a staged source line contains package-manager text only as non-executable
 detector or fixture data, document the narrow exception inline with

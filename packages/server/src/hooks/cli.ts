@@ -15,7 +15,7 @@ interface HookCliDependencies {
   runCheck?: (workspaceRoot: string, options?: { changeScope?: 'worktree' | 'staged' }) => Promise<RunPreCrCheckResult>;
 }
 
-type ParsedHookArgs =
+export type ParsedHookArgs =
   | {
       command: 'install';
       manager: HookManager;
@@ -86,7 +86,7 @@ export async function runHookCli(argv: string[], dependencies: HookCliDependenci
   };
 }
 
-function parseHookArgs(argv: string[], cwd: string): ParsedHookArgs | null {
+export function parseHookArgs(argv: string[], cwd: string): ParsedHookArgs | null {
   const command = argv[0];
   if (command !== 'install' && command !== 'status' && command !== 'uninstall' && command !== 'run') {
     return null;

@@ -7,7 +7,7 @@ import {
   setLogger,
   type RunPreCrCheckResult
 } from '@pre-cr/core';
-import { runHookCli } from './hooks/cli';
+import { parseHookArgs, runHookCli } from './hooks/cli';
 import {
   buildPreCrAuditEvent,
   defaultCurrentBranch,
@@ -41,6 +41,11 @@ interface HeadlessCliProgressOptions {
 interface ParsedHeadlessArgs {
   command: 'run';
   json: boolean;
+  workspaceRoot: string;
+}
+
+interface ProgressInvocation {
+  label: string;
   workspaceRoot: string;
 }
 
@@ -118,8 +123,8 @@ export async function runHeadlessCliWithProgress(
   dependencies: HeadlessCliDependencies = {},
   options: HeadlessCliProgressOptions = {}
 ): Promise<HeadlessCliResult> {
-  const parsed = parseHeadlessArgs(argv, dependencies.cwd?.() ?? process.cwd());
-  if (!parsed) {
+  const invocation = parseProgressInvocation(argv, dependencies.cwd?.() ?? process.cwd());
+  if (!invocation) {
     return runHeadlessCli(argv, dependencies);
   }
 
@@ -129,12 +134,13 @@ export async function runHeadlessCliWithProgress(
   let exitCode: number | null = null;
   let heartbeat: ReturnType<typeof setInterval> | null = null;
 
-  writeProgress(stderr, `[pre-cr] Running changed-line readiness for ${parsed.workspaceRoot}`);
+  writeProgress(stderr, `[pre-cr] Running ${invocation.label} for ${invocation.workspaceRoot}`);
   if (heartbeatMs > 0) {
     heartbeat = setInterval(() => {
+      const action = invocation.label === 'changed-line readiness' ? '' : ` ${invocation.label}`;
       writeProgress(
         stderr,
-        `[pre-cr] Still running after ${elapsedSeconds(startedAt)}s for ${parsed.workspaceRoot}`
+        `[pre-cr] Still running${action} after ${elapsedSeconds(startedAt)}s for ${invocation.workspaceRoot}`
       );
     }, heartbeatMs);
   }
@@ -150,9 +156,33 @@ export async function runHeadlessCliWithProgress(
     const status = exitCode === null ? 'without a result' : `with exit code ${exitCode}`;
     writeProgress(
       stderr,
-      `[pre-cr] Finished changed-line readiness for ${parsed.workspaceRoot} in ${elapsedSeconds(startedAt)}s ${status}`
+      `[pre-cr] Finished ${invocation.label} for ${invocation.workspaceRoot} in ${elapsedSeconds(startedAt)}s ${status}`
     );
   }
+}
+
+function parseProgressInvocation(argv: string[], cwd: string): ProgressInvocation | null {
+  const parsed = parseHeadlessArgs(argv, cwd);
+  if (parsed) {
+    return {
+      label: 'changed-line readiness',
+      workspaceRoot: parsed.workspaceRoot
+    };
+  }
+
+  if (argv[0] !== 'hook') {
+    return null;
+  }
+
+  const hook = parseHookArgs(argv.slice(1), cwd);
+  if (!hook || hook.command !== 'run') {
+    return null;
+  }
+
+  return {
+    label: `${hook.hook} hook`,
+    workspaceRoot: hook.workspaceRoot
+  };
 }
 
 function parseHeadlessArgs(argv: string[], cwd: string): ParsedHeadlessArgs | null {
