@@ -27,6 +27,45 @@ afterEach(() => {
 });
 
 describe('runWorkspacePreCrCheck', () => {
+  it('honors an absolute configured coverage path from a custom test command', async () => {
+    const workspaceRoot = createGitWorkspace();
+    const coveragePath = path.join(workspaceRoot, 'build', 'python.lcov');
+    fs.mkdirSync(path.join(workspaceRoot, 'python'));
+    fs.mkdirSync(path.join(workspaceRoot, 'scripts'));
+    fs.writeFileSync(path.join(workspaceRoot, 'python', 'app.py'), 'print("old")\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'emit-coverage.js'), `
+const fs = require('fs');
+fs.mkdirSync('build', { recursive: true });
+fs.writeFileSync('build/python.lcov', [
+  'TN:',
+  'SF:python/app.py',
+  'DA:1,1',
+  'DA:2,1',
+  'LF:2',
+  'LH:2',
+  'end_of_record',
+  ''
+].join('\\n'));
+`);
+    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
+      version: 1,
+      testCommand: 'node scripts/emit-coverage.js',
+      coveragePaths: [coveragePath],
+      coverageFormat: 'lcov',
+      threshold: 100
+    }));
+    execFileSync('git', ['add', '.'], { cwd: workspaceRoot });
+    execFileSync('git', ['commit', '-m', 'initial'], { cwd: workspaceRoot });
+    fs.appendFileSync(path.join(workspaceRoot, 'python', 'app.py'), 'print("new")\n');
+
+    const result = await runWorkspacePreCrCheck(workspaceRoot);
+
+    expect(result.error).toBeUndefined();
+    expect(result.result?.coveragePath).toBe(coveragePath);
+    expect(result.result?.coverageCheck?.passed).toBe(true);
+    expect(result.result?.coverageCheck?.summary.coveredLines).toBe(1);
+  }, PRECHECK_INTEGRATION_TIMEOUT_MS);
+
   it('can use a configured coverage adapter after the test command succeeds', async () => {
     const workspaceRoot = createGitWorkspace();
     fs.mkdirSync(path.join(workspaceRoot, 'python'));

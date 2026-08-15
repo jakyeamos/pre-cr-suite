@@ -257,7 +257,9 @@ export async function runTestsWithCoverage(
       const exitCode = code ?? 0;
 
       // Check if coverage file was generated
-      const coveragePath = path.join(workspaceRoot, framework.coverageOutputPath);
+      const coveragePath = path.isAbsolute(framework.coverageOutputPath)
+        ? framework.coverageOutputPath
+        : path.join(workspaceRoot, framework.coverageOutputPath);
       const coverageExists = fs.existsSync(coveragePath);
 
       resolve({
