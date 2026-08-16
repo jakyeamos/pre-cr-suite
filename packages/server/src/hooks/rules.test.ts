@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_HOOK_RULE_POLICY, evaluateHookRules } from './rules';
+import { DEFAULT_HOOK_RULE_POLICY, evaluateHookRules, hasSourceFiles } from './rules';
 
 // quality-gate: allow static-ui-test: this file intentionally exercises the static UI test detector.
 
@@ -45,6 +45,23 @@ describe('evaluateHookRules', () => {
     expect(findings).toEqual([
       expect.objectContaining({
         path: 'src/large.ts',
+        line: 1,
+        rule: 'oversized-source',
+        severity: 'warn'
+      })
+    ]);
+  });
+
+  it('recognizes Rust as staged source and applies the source-size rule', () => {
+    const text = Array.from(
+      { length: 506 },
+      (_, index) => `fn value${index}() -> usize { ${index} }`
+    ).join('\n');
+
+    expect(hasSourceFiles(['src/large.rs'])).toBe(true);
+    expect(evaluateHookRules([{ path: 'src/large.rs', text }], DEFAULT_HOOK_RULE_POLICY)).toEqual([
+      expect.objectContaining({
+        path: 'src/large.rs',
         line: 1,
         rule: 'oversized-source',
         severity: 'warn'

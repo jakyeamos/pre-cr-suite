@@ -19,7 +19,7 @@ export const DEFAULT_HOOK_RULE_POLICY: HookRulePolicy = {
 };
 
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
-const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.py', '.sh']);
+const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.py', '.rs', '.sh']);
 const TEXT_EXTENSIONS = new Set([
   '.css',
   '.env',
@@ -30,6 +30,7 @@ const TEXT_EXTENSIONS = new Set([
   '.md',
   '.mjs',
   '.py',
+  '.rs',
   '.sh',
   '.sql',
   '.toml',
