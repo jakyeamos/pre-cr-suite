@@ -10,6 +10,45 @@ Pre-CR Suite is moving to a public beta around one workflow:
 
 The beta promise is simple: the same repo-configured coverage workflow should behave the same in VS Code and Neovim before you open a pull request.
 
+![Pre-CR terminal snapshot](docs/assets/readme-snapshot.png)
+
+## Why This Matters
+
+### Problem
+
+Coverage and setup problems usually surface too late: after a branch is pushed, after CI starts, or after review already began. Editor extensions, CLI scripts, and repo-specific coverage commands often drift from one another.
+
+### Who It Helps
+
+Pre-CR helps developers and reviewers who want a pre-review signal inside the tools they already use. It is especially useful for teams that care about changed-line coverage but do not want every editor, repo, and CI job to invent its own readiness workflow.
+
+### What I Built
+
+I built a TypeScript monorepo with shared coverage/config logic, a language server, a VS Code client, a Neovim client, and a headless CLI path. The core workflow runs a repo-defined Pre-CR check, refreshes coverage overlays, and reports setup issues from `.pre-cr.json`.
+
+### Technical Decisions
+
+- The shared `@pre-cr/core` package owns coverage parsing, repo config, changed-line evaluation, and protocol contracts.
+- The LSP server keeps VS Code, Neovim, and generic clients on the same behavior instead of duplicating editor logic.
+- `.pre-cr.json` is the repo-level contract so editor settings stay presentational and project behavior stays versioned.
+- The CLI uses the same core pipeline as the editor integrations so automation and local editor feedback do not diverge.
+
+### How To Run It
+
+```bash
+pnpm install
+pnpm build
+pnpm test
+pnpm typecheck
+pre-cr run --json --workspace /path/to/repo
+```
+
+Use `Pre-CR: Run Pre-CR Check` in VS Code or `:PreCrCheck` in Neovim for the editor workflow.
+
+### What I Would Improve Next
+
+The next improvements are clean-clone release verification, stronger marketplace packaging evidence, and a tighter demo path that shows the same failure moving through CLI JSON, VS Code diagnostics, and Neovim commands.
+
 ## Public Beta Scope
 
 | Surface | Status | Notes |
