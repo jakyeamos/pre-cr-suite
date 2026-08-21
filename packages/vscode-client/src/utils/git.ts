@@ -85,12 +85,26 @@ export function validatePathInWorkspace(
   filePath: string,
   workspaceRoot: string
 ): string | null {
+  const portablePath = filePath.replace(/\\/g, '/');
+  const hasWindowsAbsolutePrefix = /^[A-Za-z]:\//.test(portablePath);
+  const hasTraversalSegment = portablePath.split('/').some(segment => segment === '..');
+
+  // Validate the original path before sanitization. Sanitizing `..` or a
+  // leading slash first can turn an escape attempt into a different path that
+  // appears to be inside the workspace.
+  if (path.isAbsolute(filePath) || hasWindowsAbsolutePrefix || hasTraversalSegment) {
+    console.warn('Pre-CR: Path traversal attempt blocked:', filePath);
+    return null;
+  }
+
   const sanitized = sanitizePath(filePath);
   const resolved = path.resolve(workspaceRoot, sanitized);
   const normalizedRoot = path.normalize(workspaceRoot);
+  const relative = path.relative(normalizedRoot, resolved);
 
-  // Ensure resolved path starts with workspace root
-  if (!resolved.startsWith(normalizedRoot)) {
+  // Ensure resolved path is the workspace or a true descendant. A string
+  // prefix check alone incorrectly treats `/project-evil` as `/project`.
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     console.warn('Pre-CR: Path traversal attempt blocked:', filePath);
     return null;
   }

@@ -16,11 +16,23 @@ vi.mock('vscode', () => {
       public readonly modified: { scheme: string; toString(): string }
     ) {}
   }
+  class TreeItem {
+    public description?: string;
+    public command?: unknown;
+    public iconPath?: unknown;
+
+    constructor(
+      public readonly label: string,
+      public readonly collapsibleState: number
+    ) {}
+  }
 
   return {
     Position,
     TabInputText,
     TabInputTextDiff,
+    TreeItem,
+    TreeItemCollapsibleState: { None: 0 },
     window: {
       visibleTextEditors: [],
       activeTextEditor: undefined,
