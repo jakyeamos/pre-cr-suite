@@ -18,6 +18,7 @@ interface ConfigEntry {
 }
 
 const CONFIG_SCHEMA: Record<string, ConfigEntry> = {
+  'experimental.enabled': { type: 'boolean', default: false },
   // Coverage settings
   'coverage.autoLoad': { type: 'boolean', default: true },
   'coverage.searchPaths': {
@@ -156,6 +157,7 @@ export function onConfigChange(
  */
 export function getFullConfig(): Record<string, unknown> {
   return {
+    experimental: getSectionConfig('experimental'),
     coverage: getSectionConfig('coverage'),
     security: getSectionConfig('security'),
     checklist: getSectionConfig('checklist'),

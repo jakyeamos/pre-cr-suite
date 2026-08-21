@@ -5,6 +5,7 @@
     "packages/vscode-client/coverage/coverage-final.json"
   ],
   "coverageFormat": "istanbul",
+  "qualityAdapters": [],
   "threshold": 80,
   "checks": {
     "coverage": true,

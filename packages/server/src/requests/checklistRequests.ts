@@ -1,10 +1,14 @@
-import { parseIstanbulFile, parseLcovFile, runChecklist } from '@pre-cr/core';
-import type { ChecklistConfig, ChecklistInput, ChecklistResult, FileChange, FileContent, SourceFile, WorkspaceCoverage } from '@pre-cr/core';
-import { DEFAULT_CHECKLIST_CONFIG } from '@pre-cr/core';
+import { parseIstanbulFile, parseLcovFile } from '@pre-cr/core';
+import { runChecklist, DEFAULT_CHECKLIST_CONFIG } from '@pre-cr/core/experimental';
+import type { ChecklistConfig, ChecklistInput, ChecklistResult, FileChange, FileContent, SourceFile } from '@pre-cr/core/experimental';
+import type { WorkspaceCoverage } from '@pre-cr/core';
 import type { Connection } from 'vscode-languageserver/node';
+import { DiagnosticSeverity } from 'vscode-languageserver/node';
 import * as fs from 'fs';
 import * as path from 'path';
+import { URI } from 'vscode-uri';
 import type { ServerRequestState } from '../serverSettings';
+import { resolveReadableWorkspacePath } from './workspacePath';
 
 export function registerChecklistRequests(connection: Connection, state: ServerRequestState): void {
   interface RunChecklistParams {
@@ -51,11 +55,14 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
         for (const change of params.changes) {
           if (change.isDeleted) continue;
 
-          const filePath = path.join(state.workspaceRoot, change.path);
+          const resolvedFile = resolveReadableWorkspacePath(state.workspaceRoot, change.path);
+          if (!resolvedFile.valid) {
+            return { result: null, error: resolvedFile.error };
+          }
 
           try {
-            if (fs.existsSync(filePath)) {
-              const content = fs.readFileSync(filePath, 'utf-8');
+            if (fs.existsSync(resolvedFile.path)) {
+              const content = fs.readFileSync(resolvedFile.path, 'utf-8');
               files.push({ path: change.path, content });
               sourceFiles.push({
                 path: change.path,
@@ -65,18 +72,22 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
             }
           } catch (err) {
             // Skip files that can't be read
-            connection.console.warn(`Could not read file: ${filePath}`);
+            connection.console.warn(`Could not read file: ${change.path}`);
           }
         }
 
         // Load base coverage if provided
         let baseCoverage: WorkspaceCoverage | undefined;
         if (params.baseCoveragePath) {
-          const basePath = path.join(state.workspaceRoot, params.baseCoveragePath);
-          if (fs.existsSync(basePath)) {
-            const result = basePath.endsWith('.json')
-              ? parseIstanbulFile(basePath, state.workspaceRoot)
-              : parseLcovFile(basePath, state.workspaceRoot);
+          const resolvedBaseCoverage = resolveReadableWorkspacePath(state.workspaceRoot, params.baseCoveragePath);
+          if (!resolvedBaseCoverage.valid) {
+            return { result: null, error: resolvedBaseCoverage.error };
+          }
+
+          if (fs.existsSync(resolvedBaseCoverage.path)) {
+            const result = resolvedBaseCoverage.path.endsWith('.json')
+              ? parseIstanbulFile(resolvedBaseCoverage.path, state.workspaceRoot)
+              : parseLcovFile(resolvedBaseCoverage.path, state.workspaceRoot);
             if (result.success && result.data) {
               baseCoverage = result.data;
             }
@@ -114,10 +125,40 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
         line: number;
         message: string;
         severity: string;
+        pattern: string;
       }>;
     }> => {
-      const { scanSecurity } = await import('@pre-cr/core');
+      if (!state.workspaceRoot) {
+        return { hasIssues: false, findings: [] };
+      }
+      const { scanSecurity } = await import('@pre-cr/core/experimental');
       const result = scanSecurity(params.files);
+
+      for (const file of params.files) {
+        const resolvedFile = resolveReadableWorkspacePath(state.workspaceRoot ?? '', file.path);
+        if (!resolvedFile.valid) {
+          continue;
+        }
+        const uri = URI.file(path.resolve(resolvedFile.path)).toString();
+        const findings = result.findings.filter((finding) => finding.file === file.path);
+        connection.sendDiagnostics({
+          uri,
+          diagnostics: findings.map((finding) => ({
+            severity: finding.severity === 'error'
+              ? DiagnosticSeverity.Error
+              : finding.severity === 'warning'
+                ? DiagnosticSeverity.Warning
+                : DiagnosticSeverity.Information,
+            range: {
+              start: { line: Math.max(0, finding.line - 1), character: 0 },
+              end: { line: Math.max(0, finding.line - 1), character: Number.MAX_SAFE_INTEGER }
+            },
+            message: finding.message,
+            source: 'Pre-CR Security',
+            code: finding.pattern
+          }))
+        });
+      }
 
       return {
         hasIssues: result.findings.length > 0,
@@ -125,7 +166,8 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
           file: f.file,
           line: f.line,
           message: f.message,
-          severity: f.severity
+          severity: f.severity,
+          pattern: f.pattern
         }))
       };
     }
@@ -138,7 +180,7 @@ export function registerChecklistRequests(connection: Connection, state: ServerR
       coverage: number;
       undocumented: Array<{ name: string; file: string; line: number; kind: string }>;
     }> => {
-      const { analyzeDocCoverage } = await import('@pre-cr/core');
+      const { analyzeDocCoverage } = await import('@pre-cr/core/experimental');
       const sourceFiles: SourceFile[] = params.files.map(f => ({
         path: f.path,
         content: f.content

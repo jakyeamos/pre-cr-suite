@@ -2,6 +2,7 @@ node_modules/
 dist/
 *.vsix
 .turbo/
+.vscode-test/
 *.log
 .env
 .env.local

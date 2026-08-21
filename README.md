@@ -108,9 +108,10 @@ Install the server package, then run the gate directly:
 pre-cr --version
 pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
+pre-cr run --scope worktree --json --workspace /path/to/repo
 ```
 
-The CLI uses the same `@pre-cr/core` pipeline as the editor integrations and exits non-zero when the gate fails on `main`, `master`, `dev`, `develop`, `development`, or a branch connected to a dev environment through `AIOS_DEV_ENVIRONMENT`, `AIOS_DEV_ENV`, `QUALITY_GATE_DEV_ENV`, or `GATE_CONNECTED_DEV_ENV`. Failed checks on detected unprotected feature branches return exit code 0 with `gateDecision: "warn"` in JSON output. Unknown branches remain conservative and block. Human-readable output includes covered, ignored, and unsupported surface counts plus the unsupported file list. Use `--json` for the stable automation contract.
+The CLI uses the same `@pre-cr/core` pipeline as the editor integrations and exits non-zero when the gate fails on `main`, `master`, `dev`, `develop`, `development`, or a branch connected to a dev environment through `AIOS_DEV_ENVIRONMENT`, `AIOS_DEV_ENV`, `QUALITY_GATE_DEV_ENV`, or `GATE_CONNECTED_DEV_ENV`. Use `--scope staged` (the default) or `--scope worktree` explicitly. Failed checks on detected unprotected feature branches return exit code 0 with `gateDecision: "warn"` in JSON output. Unknown branches remain conservative and block. JSON output includes `schemaVersion`, `state`, `gateDecision`, `scope`, and structured remediation; human-readable output includes covered, ignored, and unsupported surface counts plus the unsupported file list.
 
 Executable `run` and `hook run` commands write an immediate start message, a periodic heartbeat, and a terminal exit summary to stderr. JSON stdout remains machine-readable, so a long-running commit hook is observable without corrupting automation output.
 
@@ -174,6 +175,7 @@ Notes:
 - Anti-Slop is the default required quality adapter. If `anti-slop` reports blocking findings or the binary is unavailable, Pre-CR fails unless the repo explicitly overrides `qualityAdapters`.
 - `surfaces` lets repos declare covered, ignored, and unsupported directories in repo config.
 - Editor settings are for presentation only: colors, notifications, and experimental visibility.
+- Repository config can name executable commands. Editors require an explicit trust decision before running them; see [configuration trust guidance](docs/CONFIGURATION.md#trusting-repository-commands).
 
 ### Rust coverage
 

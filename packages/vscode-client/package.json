@@ -37,6 +37,12 @@
     "workspaceContains:**/.nyc_output/**"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Pre-CR does not run repository-configured commands until the workspace is trusted."
+    }
+  },
   "contributes": {
     "commands": [
       {
@@ -49,7 +55,14 @@
         "command": "preCr.showDashboard",
         "title": "Show Dashboard",
         "category": "Pre-CR",
-        "icon": "$(dashboard)"
+        "icon": "$(dashboard)",
+        "enablement": "preCr.experimentalEnabled"
+      },
+      {
+        "command": "preCr.showReadiness",
+        "title": "Show Readiness",
+        "category": "Pre-CR",
+        "icon": "$(shield)"
       },
       {
         "command": "preCr.runPreCrCheck",
@@ -143,7 +156,8 @@
       {
         "command": "preCr.runChecklist",
         "title": "Run on Git Changes",
-        "category": "Pre-CR Review"
+        "category": "Pre-CR Review",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.runChecklistWorkspace",
@@ -153,7 +167,8 @@
       {
         "command": "preCr.quickSecurityScan",
         "title": "Scan Current File",
-        "category": "Pre-CR Security"
+        "category": "Pre-CR Security",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.securityScanWorkspace",
@@ -178,7 +193,8 @@
       {
         "command": "preCr.generateDocs",
         "title": "Generate All (Current File)",
-        "category": "Pre-CR Docs"
+        "category": "Pre-CR Docs",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.generateDocAtCursor",
@@ -198,7 +214,8 @@
       {
         "command": "preCr.captureContext",
         "title": "Save Snapshot",
-        "category": "Pre-CR Context"
+        "category": "Pre-CR Context",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.restoreContext",
@@ -213,7 +230,8 @@
       {
         "command": "preCr.startDebugCapture",
         "title": "Start Capture",
-        "category": "Pre-CR Debug"
+        "category": "Pre-CR Debug",
+        "enablement": "preCr.experimentalEnabled"
       },
       {
         "command": "preCr.stopDebugCapture",
@@ -269,6 +287,11 @@
           "minimum": 0,
           "maximum": 100,
           "description": "Minimum coverage percentage required for changed lines to pass Pre-CR check"
+        },
+        "preCr.experimental.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable legacy checklist, documentation, review, context, debug, and dashboard tools (requires reload)"
         },
         "preCr.coverage.excludePatterns": {
           "type": "array",
@@ -424,6 +447,10 @@
     "views": {
       "preCrSuite": [
         {
+          "id": "preCr.readiness",
+          "name": "Readiness"
+        },
+        {
           "id": "preCr.context",
           "name": "Where Was I?"
         },
@@ -433,19 +460,26 @@
         },
         {
           "id": "preCr.checklist",
-          "name": "PR Checklist"
+          "name": "PR Checklist",
+          "when": "preCr.experimentalEnabled"
         },
         {
           "id": "preCr.flakyTests",
-          "name": "Flaky Tests"
+          "name": "Flaky Tests",
+          "when": "preCr.experimentalEnabled"
         },
         {
           "id": "preCr.debugSessions",
-          "name": "Debug Sessions"
+          "name": "Debug Sessions",
+          "when": "preCr.experimentalEnabled"
         }
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "preCr.readiness",
+        "contents": "No readiness result yet.\n[Run Pre-CR Check](command:preCr.runPreCrCheck)\n\nThe view keeps the last result and remediation steps for this workspace."
+      },
       {
         "view": "preCr.context",
         "contents": "No saved context for this branch yet.\n[Save Current Context](command:preCr.captureContext)\n\nPre-CR stores only local file paths and cursor metadata so you can recover your IDE state after switching branches or restarting VS Code."
@@ -510,6 +544,10 @@
         },
         {
           "command": "preCr.showDashboard",
+          "when": "true"
+        },
+        {
+          "command": "preCr.showReadiness",
           "when": "true"
         },
         {
@@ -701,10 +739,11 @@
   },
   "scripts": {
     "vscode:prepublish": "corepack pnpm run build",
-    "build": "corepack pnpm run clean:maps && corepack pnpm run build:extension && corepack pnpm run build:server-bundle",
+    "build": "corepack pnpm run clean:maps && corepack pnpm run build:extension && corepack pnpm run build:server-artifact",
     "clean:maps": "node -e \"const fs=require('fs'); for (const f of ['dist/extension.js.map','dist/server.js.map']) { try { fs.unlinkSync(f); } catch {} }\"",
     "build:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
     "build:server-bundle": "esbuild ../server/src/server.ts --bundle --outfile=dist/server.js --format=cjs --platform=node",
+    "build:server-artifact": "node scripts/copy-server-artifact.mjs",
     "build:dev": "corepack pnpm run build:extension:dev && corepack pnpm run build:server-bundle:dev",
     "build:extension:dev": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
     "build:server-bundle:dev": "esbuild ../server/src/server.ts --bundle --outfile=dist/server.js --format=cjs --platform=node",
@@ -714,6 +753,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:vscode-host": "corepack pnpm run build && node scripts/run-vscode-host-smoke.mjs",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
@@ -724,6 +764,7 @@
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
     "@eslint/js": "^9.39.5",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^2.22.0",
     "esbuild": "^0.28.1",
     "eslint": "^9.39.5",

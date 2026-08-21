@@ -1,5 +1,7 @@
 import type { CoverageCheckResult, ChangedFile } from './runner/coverageChecker';
 import type { CoverageDecoration, CoverageSummary } from './types';
+import { PRE_CR_METHODS } from './contracts/methods';
+import type { ReadinessResultEnvelope, ReadinessScope } from './contracts/readiness';
 
 export type PreCrCoverageFormat = 'auto' | 'lcov' | 'istanbul';
 
@@ -67,7 +69,8 @@ export type ProjectHealthIssueCode =
   | 'missing-git'
   | 'missing-test-command'
   | 'missing-coverage'
-  | 'no-changes';
+  | 'no-changes'
+  | 'untrusted-workspace';
 
 export interface ProjectHealthIssue {
   code: ProjectHealthIssueCode;
@@ -177,30 +180,39 @@ export interface PreCrCheckResult {
 export interface RunPreCrCheckResult {
   result: PreCrCheckResult | null;
   error?: string;
+  readiness?: ReadinessResultEnvelope;
+}
+
+export interface WorkspaceRequestParams {
+  workspaceUri?: string;
+}
+
+export interface RunPreCrCheckParams extends WorkspaceRequestParams {
+  scope?: ReadinessScope;
 }
 
 export interface PreCrBetaMethodMap {
-  '$/preCr/getProjectHealth': {
-    params: Record<string, never>;
+  [PRE_CR_METHODS.getProjectHealth]: {
+    params: WorkspaceRequestParams;
     result: GetProjectHealthResult;
   };
-  '$/preCr/runPreCrCheck': {
-    params: Record<string, never>;
+  [PRE_CR_METHODS.runPreCrCheck]: {
+    params: RunPreCrCheckParams;
     result: RunPreCrCheckResult;
   };
-  '$/preCr/refreshCoverage': {
-    params: Record<string, never>;
+  [PRE_CR_METHODS.refreshCoverage]: {
+    params: WorkspaceRequestParams;
     result: RefreshCoverageResult;
   };
-  '$/preCr/getCoverageSummary': {
-    params: Record<string, never>;
+  [PRE_CR_METHODS.getCoverageSummary]: {
+    params: WorkspaceRequestParams;
     result: GetCoverageSummaryResult;
   };
-  '$/preCr/getCoverage': {
+  [PRE_CR_METHODS.getCoverage]: {
     params: GetCoverageParams;
     result: CoverageFileResult;
   };
-  '$/preCr/getCoverageDecorations': {
+  [PRE_CR_METHODS.getCoverageDecorations]: {
     params: GetCoverageDecorationsParams;
     result: GetCoverageDecorationsResult;
   };

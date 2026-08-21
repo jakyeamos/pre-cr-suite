@@ -1,7 +1,7 @@
 import { getHookStatus, installHook, uninstallHook } from './manager';
 import { runHook } from './run';
 import type { HookManager, HookName, HookRunResult } from './types';
-import type { RunPreCrCheckResult } from '@pre-cr/core';
+import type { RunPreCrCheckResult, RunWorkspacePreCrCheckOptions } from '@pre-cr/core';
 
 interface HookCliResult {
   exitCode: number;
@@ -12,7 +12,7 @@ interface HookCliResult {
 interface HookCliDependencies {
   cwd: string;
   usageText: string;
-  runCheck?: (workspaceRoot: string, options?: { changeScope?: 'worktree' | 'staged' }) => Promise<RunPreCrCheckResult>;
+  runCheck?: (workspaceRoot: string, options?: RunWorkspacePreCrCheckOptions) => Promise<RunPreCrCheckResult>;
 }
 
 export type ParsedHookArgs =

@@ -1,9 +1,9 @@
-import { estimateReviewTime, FlakyTestDetective, parseJestResults, parseVitestResults } from '@pre-cr/core';
-import type { FileChange, FlakyTestReport, ReviewerInfo, ReviewTimeEstimate, TestRunResult } from '@pre-cr/core';
+import { estimateReviewTime, FlakyTestDetective, parseJestResults, parseVitestResults } from '@pre-cr/core/experimental';
+import type { FileChange, FlakyTestReport, ReviewerInfo, ReviewTimeEstimate, TestRunResult } from '@pre-cr/core/experimental';
 import type { Connection } from 'vscode-languageserver/node';
 import * as fs from 'fs';
-import * as path from 'path';
 import type { ServerRequestState } from '../serverSettings';
+import { resolveReadableWorkspacePath } from './workspacePath';
 
 export function registerReviewRequests(connection: Connection, state: Pick<ServerRequestState, 'workspaceRoot'>): void {
   let flakyDetective: FlakyTestDetective | null = null;
@@ -30,10 +30,14 @@ export function registerReviewRequests(connection: Connection, state: Pick<Serve
           for (const change of params.changes) {
             if (change.isDeleted) continue;
 
-            const filePath = path.join(state.workspaceRoot, change.path);
+            const resolvedFile = resolveReadableWorkspacePath(state.workspaceRoot, change.path);
+            if (!resolvedFile.valid) {
+              return { estimate: null, error: resolvedFile.error };
+            }
+
             try {
-              if (fs.existsSync(filePath)) {
-                fileContents.set(change.path, fs.readFileSync(filePath, 'utf-8'));
+              if (fs.existsSync(resolvedFile.path)) {
+                fileContents.set(change.path, fs.readFileSync(resolvedFile.path, 'utf-8'));
               }
             } catch {
               // Skip files that can't be read

@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import { spawn } from 'child_process';
 
 import { parseIstanbulFile } from '../parsers/istanbul';
 import { parseLcovFile } from '../parsers/lcov';
@@ -16,6 +15,7 @@ import type {
 } from '../protocol';
 import type { WorkspaceCoverage } from '../types';
 import { checkChangesCoverage } from '../runner/coverageChecker';
+import { resolveWorkspacePath, validateCoverageFile } from '../validation';
 import {
   detectTestFramework,
   getCustomTestCommand,
@@ -23,8 +23,9 @@ import {
   type FrameworkDetectionResult,
   type TestFramework
 } from '../runner/testRunner';
+import { runProcess } from '../runner/processRunner';
 import { collectGitChangedFiles, isGitRepository } from './git';
-import { inferCoverageFormat, loadProjectConfig, resolveProjectPath } from './config';
+import { inferCoverageFormat, loadProjectConfig } from './config';
 import { parseCommandString, resolveWorkspaceCommand } from './command';
 
 interface LoadedCoverage {
@@ -86,17 +87,41 @@ export function loadWorkspaceCoverage(
   ];
 
   for (const source of coverageSources) {
-    const absolutePath = resolveProjectPath(workspaceRoot, loadedConfig, source.relativePath);
-    if (!fs.existsSync(absolutePath)) {
+    const pathResult = resolveWorkspacePath(workspaceRoot, source.relativePath, {
+      access: 'read',
+      allowMissing: true,
+      allowAbsolute: true
+    });
+    if (!pathResult.valid) {
+      return {
+        coverage: null,
+        coveragePath: null,
+        error: `Invalid configured coverage path "${source.relativePath}": ${pathResult.error}`
+      };
+    }
+
+    const absolutePath = pathResult.resolvedPath;
+    if (!pathResult.realPath) {
       continue;
     }
 
+    const validation = validateCoverageFile(source.relativePath, workspaceRoot);
+    if (!validation.valid) {
+      return {
+        coverage: null,
+        coveragePath: absolutePath,
+        error: validation.error
+      };
+    }
+
+    const parsePath = pathResult.realPath;
+
     const format = source.format === 'auto'
-      ? inferCoverageFormat(absolutePath)
+      ? inferCoverageFormat(parsePath)
       : source.format;
     const result = format === 'istanbul'
-      ? parseIstanbulFile(absolutePath, workspaceRoot)
-      : parseLcovFile(absolutePath, workspaceRoot);
+      ? parseIstanbulFile(parsePath, workspaceRoot)
+      : parseLcovFile(parsePath, workspaceRoot);
 
     if (result.success && result.data) {
       return {
@@ -155,6 +180,28 @@ async function runCoverageAdapters(
   };
 }
 
+function getInvalidConfiguredPath(
+  workspaceRoot: string,
+  loadedConfig: LoadedPreCrProjectConfig
+): string | null {
+  const configuredPaths = [
+    ...loadedConfig.config.coveragePaths,
+    ...loadedConfig.config.coverageAdapters.map((adapter) => adapter.coveragePath)
+  ];
+
+  for (const configuredPath of configuredPaths) {
+    const result = resolveWorkspacePath(workspaceRoot, configuredPath, {
+      access: 'write',
+      allowAbsolute: true
+    });
+    if (!result.valid) {
+      return `Invalid configured coverage path "${configuredPath}": ${result.error}`;
+    }
+  }
+
+  return null;
+}
+
 async function runQualityAdapters(
   workspaceRoot: string,
   adapters: PreCrQualityAdapterConfig[],
@@ -172,8 +219,8 @@ async function runQualityAdapter(
   context: QualityAdapterRunContext
 ): Promise<PreCrQualityAdapterResult> {
   const commandLine = adapter.command.replace(/\{changedFiles\}/g, context.changedFiles.join(','));
-  const parsed = parseCommandString(commandLine);
-  if (!parsed) {
+  const parsedTemplate = parseCommandString(adapter.command);
+  if (!parsedTemplate) {
     return {
       name: adapter.name,
       command: adapter.command,
@@ -188,53 +235,34 @@ async function runQualityAdapter(
     };
   }
 
+  const changedFilesArg = context.changedFiles.join(',');
+  const parsed = {
+    command: parsedTemplate.command.replace(/\{changedFiles\}/g, changedFilesArg),
+    args: parsedTemplate.args.map((arg) => arg.replace(/\{changedFiles\}/g, changedFilesArg))
+  };
   const resolved = resolveWorkspaceCommand(context.workspaceRoot, parsed);
-  const startTime = Date.now();
-  return new Promise((resolve) => {
-    const child = spawn(resolved.command, resolved.args, {
-      cwd: context.workspaceRoot,
-      env: { ...process.env, FORCE_COLOR: '0' }
-    });
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on('data', (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-    child.on('error', (error) => {
-      resolve({
-        name: adapter.name,
-        command: commandLine,
-        required: adapter.required,
-        success: !adapter.required,
-        skipped: !adapter.required,
-        exitCode: null,
-        duration: Date.now() - startTime,
-        stdout,
-        stderr,
-        error: `Failed to start quality adapter "${adapter.name}": ${error.message}`
-      });
-    });
-    child.on('close', (exitCode) => {
-      resolve({
-        name: adapter.name,
-        command: commandLine,
-        required: adapter.required,
-        success: exitCode === 0,
-        skipped: false,
-        exitCode: exitCode ?? 0,
-        duration: Date.now() - startTime,
-        stdout,
-        stderr,
-        error: exitCode === 0
-          ? undefined
-          : `Quality adapter "${adapter.name}" exited with code ${exitCode ?? 0}.`
-      });
-    });
+  const result = await runProcess({
+    command: resolved.command,
+    args: resolved.args,
+    cwd: context.workspaceRoot,
+    env: { ...process.env, FORCE_COLOR: '0' }
   });
+  const skipped = !adapter.required && result.exitCode === null;
+
+  return {
+    name: adapter.name,
+    command: commandLine,
+    required: adapter.required,
+    success: result.success || skipped,
+    skipped,
+    exitCode: result.exitCode,
+    duration: result.durationMs,
+    stdout: formatProcessOutput(result.stdout),
+    stderr: formatProcessOutput(result.stderr),
+    error: result.success || skipped
+      ? undefined
+      : `Quality adapter "${adapter.name}" failed: ${result.error ?? 'unknown error'}`
+  };
 }
 
 async function runCoverageAdapter(
@@ -242,6 +270,21 @@ async function runCoverageAdapter(
   loadedConfig: LoadedPreCrProjectConfig,
   adapter: PreCrCoverageAdapterConfig
 ): Promise<CoverageAdapterResult> {
+  const outputPath = resolveWorkspacePath(workspaceRoot, adapter.coveragePath, {
+    access: 'write',
+    allowAbsolute: true
+  });
+  if (!outputPath.valid) {
+    return {
+      success: false,
+      coveragePath: null,
+      coverageFormat: null,
+      stdout: '',
+      stderr: '',
+      error: `Invalid coverage output path for "${adapter.name}": ${outputPath.error}`
+    };
+  }
+
   const parsed = parseCommandString(adapter.command);
   if (!parsed) {
     return {
@@ -255,45 +298,37 @@ async function runCoverageAdapter(
   }
 
   const resolved = resolveWorkspaceCommand(workspaceRoot, parsed);
-  const startTime = Date.now();
-  return new Promise((resolve) => {
-    const child = spawn(resolved.command, resolved.args, {
-      cwd: workspaceRoot,
-      env: { ...process.env, FORCE_COLOR: '0' }
-    });
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on('data', (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-    child.on('error', (error) => {
-      resolve({
-        success: false,
-        coveragePath: null,
-        coverageFormat: null,
-        stdout,
-        stderr,
-        error: `Failed to start coverage adapter "${adapter.name}": ${error.message}`
-      });
-    });
-    child.on('close', (exitCode) => {
-      const coveragePath = resolveProjectPath(workspaceRoot, loadedConfig, adapter.coveragePath);
-      resolve({
-        success: exitCode === 0 && fs.existsSync(coveragePath),
-        coveragePath: exitCode === 0 && fs.existsSync(coveragePath) ? coveragePath : null,
-        coverageFormat: adapter.coverageFormat,
-        stdout,
-        stderr,
-        error: exitCode === 0
-          ? undefined
-          : `Coverage adapter "${adapter.name}" exited with code ${exitCode ?? 0} after ${Date.now() - startTime}ms.`
-      });
-    });
+  const result = await runProcess({
+    command: resolved.command,
+    args: resolved.args,
+    cwd: workspaceRoot,
+    env: { ...process.env, FORCE_COLOR: '0' }
   });
+  const producedCoverage = resolveWorkspacePath(workspaceRoot, adapter.coveragePath, {
+    access: 'read',
+    allowAbsolute: true
+  });
+  const coveragePath = producedCoverage.valid ? producedCoverage.resolvedPath : null;
+  const coverageExists = coveragePath !== null && fs.existsSync(coveragePath);
+
+  return {
+    success: result.success && coverageExists,
+    coveragePath: result.success && coverageExists ? coveragePath : null,
+    coverageFormat: adapter.coverageFormat,
+    stdout: formatProcessOutput(result.stdout),
+    stderr: formatProcessOutput(result.stderr),
+    error: result.success
+      ? coverageExists
+        ? undefined
+        : `Coverage adapter "${adapter.name}" produced an invalid coverage path: ${producedCoverage.valid ? 'not found' : producedCoverage.error}`
+      : `Coverage adapter "${adapter.name}" failed: ${result.error ?? 'unknown error'}`
+  };
+}
+
+function formatProcessOutput(output: { text: string; truncated: boolean; omittedBytes: number }): string {
+  return output.truncated
+    ? `${output.text}\n[Pre-CR truncated ${output.omittedBytes} bytes of command output.]\n`
+    : output.text;
 }
 
 export async function getProjectHealth(
@@ -312,6 +347,7 @@ export async function getProjectHealth(
   const issues: ProjectHealthIssue[] = [];
   const warnings = [...loadedConfig.warnings];
   const gitReady = await isGitRepository(workspaceRoot);
+  const invalidConfigPath = getInvalidConfiguredPath(workspaceRoot, loadedConfig);
 
   if (!loadedConfig.path) {
     issues.push({
@@ -328,6 +364,15 @@ export async function getProjectHealth(
       severity: 'error',
       message: 'This workspace is not a git repository.',
       hint: 'Pre-CR checks compare your current changes against git history.'
+    });
+  }
+
+  if (invalidConfigPath) {
+    issues.push({
+      code: 'invalid-config',
+      severity: 'error',
+      message: invalidConfigPath,
+      hint: 'Coverage paths must be workspace-relative and cannot resolve through an external symlink.'
     });
   }
 
@@ -380,6 +425,7 @@ export async function getProjectHealth(
 
 export interface RunWorkspacePreCrCheckOptions {
   changeScope?: 'worktree' | 'staged';
+  allowConfigExecution?: boolean;
 }
 
 export async function runWorkspacePreCrCheck(
@@ -388,6 +434,51 @@ export async function runWorkspacePreCrCheck(
 ): Promise<RunPreCrCheckResult> {
   const loadedConfig = loadProjectConfig(workspaceRoot);
   const healthBeforeRun = await getProjectHealth(workspaceRoot);
+
+  if (options.allowConfigExecution !== true) {
+    return {
+      result: {
+        health: {
+          ...healthBeforeRun,
+          issues: [
+            ...healthBeforeRun.issues,
+            {
+              code: 'untrusted-workspace',
+              severity: 'error',
+              message: 'Pre-CR will not execute repository-configured commands in an untrusted workspace.',
+              hint: 'Trust this workspace before running Pre-CR Check.'
+            }
+          ],
+          ready: false
+        },
+        changedFiles: [],
+        testRun: null,
+        coverageCheck: null,
+        qualityAdapters: [],
+        qualityAdaptersPassed: true,
+        coveragePath: null
+      }
+    };
+  }
+
+  const invalidConfigPath = getInvalidConfiguredPath(workspaceRoot, loadedConfig);
+  if (invalidConfigPath) {
+    return {
+      result: {
+        health: {
+          ...healthBeforeRun,
+          ready: false
+        },
+        changedFiles: [],
+        testRun: null,
+        coverageCheck: null,
+        qualityAdapters: [],
+        qualityAdaptersPassed: true,
+        coveragePath: null
+      }
+    };
+  }
+
   const framework = await resolveFramework(workspaceRoot, loadedConfig);
 
   if (!framework.framework) {
@@ -404,9 +495,18 @@ export async function runWorkspacePreCrCheck(
     };
   }
 
-  const changedFiles = await collectGitChangedFiles(workspaceRoot, {
-    scope: options.changeScope ?? 'worktree'
-  });
+  let changedFiles;
+  try {
+    changedFiles = await collectGitChangedFiles(workspaceRoot, {
+      scope: options.changeScope ?? 'worktree'
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      result: null,
+      error: `Unable to collect changed files: ${message}`
+    };
+  }
   if (changedFiles.length === 0) {
     const health: ProjectHealth = {
       ...healthBeforeRun,
@@ -507,7 +607,8 @@ export async function runWorkspacePreCrCheck(
   const coverageCheck = checkChangesCoverage(changedFiles, parseResult.data, {
     threshold: loadedConfig.config.threshold,
     excludePatterns: loadedConfig.config.excludePatterns,
-    surfaces: loadedConfig.config.surfaces
+    surfaces: loadedConfig.config.surfaces,
+    workspaceRoot
   });
   const qualityAdapters = await runQualityAdapters(
     workspaceRoot,

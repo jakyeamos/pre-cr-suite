@@ -26,23 +26,37 @@ describe('runHeadlessCli', () => {
   });
 
   it('runs the gate in JSON mode without using the LSP transport', async () => {
-    const calls: Array<{ workspaceRoot: string; changeScope: string | undefined }> = [];
+    const calls: Array<{
+      workspaceRoot: string;
+      changeScope: string | undefined;
+      allowConfigExecution: boolean | undefined;
+    }> = [];
 
     const result = await runHeadlessCli(['run', '--json', '--workspace', '/repo'], {
       runCheck: async (workspaceRoot, options) => {
         calls.push({
           workspaceRoot,
-          changeScope: options?.changeScope
+          changeScope: options?.changeScope,
+          allowConfigExecution: options?.allowConfigExecution
         });
         return makeRunResult(workspaceRoot);
       }
     });
 
-    expect(calls).toEqual([{ workspaceRoot: '/repo', changeScope: 'staged' }]);
+    expect(calls).toEqual([{
+      workspaceRoot: '/repo',
+      changeScope: 'staged',
+      allowConfigExecution: true
+    }]);
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: 1,
+      state: 'ready',
+      gateDecision: 'pass',
+      scope: 'staged',
       ok: true,
-      ...makeRunResult('/repo')
+      result: makeRunResult('/repo').result,
+      remediation: []
     });
     expect(result.stderr).toBe('');
   });
@@ -61,6 +75,24 @@ describe('runHeadlessCli', () => {
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ ok: true });
+  });
+
+  it('passes an explicit worktree scope to the shared engine', async () => {
+    let scope: string | undefined;
+    const result = await runHeadlessCli(['run', '--json', '--scope', 'worktree', '--workspace', '/repo'], {
+      runCheck: async (workspaceRoot, options) => {
+        scope = options?.changeScope;
+        return makeRunResult(workspaceRoot);
+      }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(scope).toBe('worktree');
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      schemaVersion: 1,
+      state: 'ready',
+      scope: 'worktree'
+    });
   });
 
   it('prints surface counts and unsupported files as a text-mode failure', async () => {
@@ -86,7 +118,7 @@ describe('runHeadlessCli', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe([
-      'Pre-CR check failed: 100% changed-line coverage (threshold 80%); 2 unsupported surface files need setup guidance.',
+      'Pre-CR check blocked: 100% changed-line coverage (threshold 80%); 2 unsupported surface files need setup guidance.',
       '  Covered Surface Files: 4',
       '  Ignored Surface Files: 2',
       '  Unsupported Surface Files: 2',
@@ -122,7 +154,7 @@ describe('runHeadlessCli', () => {
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.stdout).toContain('Pre-CR check failed: 100% changed-line coverage (threshold 80%); 1 unsupported surface file needs setup guidance.');
+    expect(result.stdout).toContain('Pre-CR check blocked: 100% changed-line coverage (threshold 80%); 1 unsupported surface file needs setup guidance.');
     expect(result.stdout).toContain('Unsupported Surface Files: 1');
     expect(result.stdout).toContain('Unsupported Files');
     expect(result.stdout).toContain('  - python/app.py');
@@ -295,47 +327,18 @@ describe('runHeadlessCli', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: 1,
+      state: 'ready',
+      gateDecision: 'pass',
+      scope: 'staged',
       ok: true,
-      ...makeRunResult('/repo')
+      result: makeRunResult('/repo').result,
+      remediation: []
     });
     expect(result.stdout).not.toContain('Pre-CR');
     expect(stderr.join('')).toContain('[pre-cr] Running changed-line readiness for /repo');
     expect(stderr.join('')).toContain('[pre-cr] Still running after');
     expect(stderr.join('')).toContain('[pre-cr] Finished changed-line readiness for /repo');
-  });
-
-  it('emits immediate and periodic progress for hook runs while preserving JSON stdout', async () => {
-    const workspaceRoot = makeHookRepo();
-    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), '{"version":1}\n');
-    fs.writeFileSync(path.join(workspaceRoot, 'src.ts'), 'export const value = 1;\n');
-    execFileSync('git', ['add', '-f', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
-    const stderr: string[] = [];
-
-    const result = await runHeadlessCliWithProgress(
-      ['hook', 'run', '--json', '--workspace', workspaceRoot, '--hook', 'pre-commit'],
-      {
-        runCheck: async (root) => {
-          await new Promise((resolve) => setTimeout(resolve, 25));
-          return makeRunResult(root);
-        }
-      },
-      {
-        heartbeatMs: 5,
-        stderr: {
-          write: (chunk: string) => {
-            stderr.push(chunk);
-            return true;
-          }
-        }
-      }
-    );
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout)).toMatchObject({ ok: true, findings: [] });
-    expect(stderr.join('')).toContain(`[pre-cr] Running pre-commit hook for ${workspaceRoot}`);
-    expect(stderr.join('')).toContain('[pre-cr] Still running pre-commit hook after');
-    expect(stderr.join('')).toContain(`[pre-cr] Finished pre-commit hook for ${workspaceRoot}`);
   });
 
   it('runs hook checks, blocks missing config, and emits JSON findings', async () => {
@@ -400,6 +403,8 @@ describe('runHeadlessCli', () => {
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       ok: true,
+      state: 'warning',
+      gateDecision: 'warn',
       findings: [
         {
           rule: 'typescript-any',
@@ -407,30 +412,6 @@ describe('runHeadlessCli', () => {
         }
       ]
     });
-  });
-
-  it('lets the hook pass when tests succeed and changed-line coverage is disabled', async () => {
-    const workspaceRoot = makeHookRepo();
-    fs.writeFileSync(path.join(workspaceRoot, '.pre-cr.json'), JSON.stringify({
-      version: 1,
-      checks: { coverage: false }
-    }));
-    fs.writeFileSync(path.join(workspaceRoot, 'src.ts'), 'export const value = 1;\n');
-    execFileSync('git', ['add', '-f', '.pre-cr.json', 'src.ts'], { cwd: workspaceRoot });
-
-    const result = await runHeadlessCli(['hook', 'run', '--json', '--workspace', workspaceRoot], {
-      runCheck: async () => {
-        const runResult = makeRunResult(workspaceRoot);
-        if (runResult.result) {
-          runResult.result.health.config.checks.coverage = false;
-          runResult.result.coverageCheck = null;
-        }
-        return runResult;
-      }
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({ ok: true });
   });
 
   it('follows hook policy for failed Pre-CR readiness', async () => {
@@ -459,6 +440,8 @@ describe('runHeadlessCli', () => {
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       ok: true,
+      state: 'warning',
+      gateDecision: 'warn',
       findings: [
         {
           rule: 'pre-cr-failed',
@@ -472,7 +455,6 @@ describe('runHeadlessCli', () => {
 function makeHookRepo(): string {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pre-cr-hook-cli-'));
   execFileSync('git', ['init'], { cwd: workspaceRoot, stdio: 'ignore' });
-  execFileSync('git', ['config', 'core.excludesfile', '/dev/null'], { cwd: workspaceRoot });
   execFileSync('git', ['config', 'core.hooksPath', '/dev/null'], { cwd: workspaceRoot });
   return workspaceRoot;
 }

@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "description": "Language Server Protocol server for Pre-CR Suite",
   "main": "dist/server.js",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "require": "./dist/server.js",
+      "default": "./dist/server.js"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "require": "./dist/cli.js",
+      "default": "./dist/cli.js"
+    }
+  },
   "bin": {
     "pre-cr": "./dist/cli.js",
     "pre-cr-server": "./dist/server.js"
@@ -14,7 +26,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/bundle-server-artifact.mjs",
     "typecheck": "tsc --noEmit",
     "watch": "tsc -w",
     "test": "vitest run",

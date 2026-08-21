@@ -8,6 +8,15 @@ All settings are prefixed with `preCr.` in VS Code settings.
 
 ---
 
+## Experimental Settings
+
+### `preCr.experimental.enabled`
+- **Type:** `boolean`
+- **Default:** `false`
+- **Description:** Enable the legacy checklist, documentation, review, context, debug, and dashboard tools. Reload VS Code after changing this setting.
+
+---
+
 ## Coverage Settings
 
 ### `preCr.coverage.autoLoad`
@@ -304,6 +313,15 @@ merges all generated raw profiles, and emits line-based LCOV. It does not
 install Rust toolchains or `llvm-tools-preview` automatically. Use
 `--target-dir` or repeat `--object` when Cargo uses a non-standard layout.
 
+### Trusting repository commands
+
+`.pre-cr.json` can name test, coverage, and quality commands, so it is executable
+repository input rather than passive metadata. VS Code relies on its Workspace
+Trust decision before it runs those commands. Neovim starts in read-only
+readiness mode; after reviewing a repository, opt in with
+`require('pre-cr').setup({ trustedExecution = true })`. Running the packaged CLI
+is an explicit local invocation and therefore permits its configured commands.
+
 ### Headless Gate
 
 Use the packaged CLI when automation needs JSON without speaking LSP over stdio:
@@ -311,9 +329,10 @@ Use the packaged CLI when automation needs JSON without speaking LSP over stdio:
 ```bash
 pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
+pre-cr run --scope worktree --json --workspace /path/to/repo
 ```
 
-The command runs the same gate used by VS Code and Neovim. It exits with `0` when the coverage gate passes and non-zero when setup, tests, or coverage fail. Text output mirrors the editor beta flow by showing covered, ignored, and unsupported surface counts plus unsupported files; `--json` keeps the machine-readable contract unchanged.
+The command runs the same gate used by VS Code and Neovim. `--scope staged` is the default; `--scope worktree` evaluates the current worktree. JSON responses include `schemaVersion`, `state` (`ready`, `warning`, `blocked`, or `setup-needed`), `gateDecision`, `scope`, and structured remediation. Text output mirrors the editor beta flow by showing covered, ignored, and unsupported surface counts plus unsupported files.
 
 ---
 

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const crypto = require('crypto');
 const os = require('os');
 const path = require('path');
 const { execFileSync, spawn } = require('child_process');
@@ -9,6 +10,11 @@ const vscodeBundledServerPath = path.join(repoRoot, 'packages', 'vscode-client',
 const publishedServerPath = path.join(repoRoot, 'packages', 'server', 'dist', 'server.js');
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pre-cr-cross-client-beta-'));
 const workspaceRoot = path.join(tempRoot, 'workspace');
+const stableMethods = {
+  getProjectHealth: '$/preCr/getProjectHealth',
+  runPreCrCheck: '$/preCr/runPreCrCheck',
+  refreshCoverage: '$/preCr/refreshCoverage'
+};
 
 function runGit(args) {
   execFileSync('git', args, {
@@ -24,6 +30,14 @@ function fileUri(filePath) {
 function assertBuiltServer(serverPath, label) {
   if (!fs.existsSync(serverPath)) {
     throw new Error(`Missing ${label} server at ${serverPath}. Run pnpm build first.`);
+  }
+}
+
+function assertServerArtifactsMatch() {
+  const publishedHash = crypto.createHash('sha256').update(fs.readFileSync(publishedServerPath)).digest('hex');
+  const bundledHash = crypto.createHash('sha256').update(fs.readFileSync(vscodeBundledServerPath)).digest('hex');
+  if (publishedHash !== bundledHash) {
+    throw new Error(`Server artifact mismatch: published=${publishedHash} bundled=${bundledHash}`);
   }
 }
 
@@ -74,6 +88,9 @@ class LspSession {
           configuration: true,
           workspaceFolders: true
         }
+      },
+      initializationOptions: {
+        trustedExecution: true
       }
     });
     this.notify('initialized', {});
@@ -268,10 +285,10 @@ async function collectPublicBetaSnapshot(label, serverPath) {
   const session = new LspSession(label, serverPath);
   try {
     await session.initialize();
-    const healthBefore = await session.request('$/preCr/getProjectHealth', {});
-    const refreshBefore = await session.request('$/preCr/refreshCoverage', {});
-    const check = await session.request('$/preCr/runPreCrCheck', {});
-    const refreshAfter = await session.request('$/preCr/refreshCoverage', {});
+    const healthBefore = await session.request(stableMethods.getProjectHealth, {});
+    const refreshBefore = await session.request(stableMethods.refreshCoverage, {});
+    const check = await session.request(stableMethods.runPreCrCheck, {});
+    const refreshAfter = await session.request(stableMethods.refreshCoverage, {});
 
     return {
       healthBefore: normalizeHealth(healthBefore.health),
@@ -317,6 +334,7 @@ function assertBetaPromise(snapshot) {
 try {
   assertBuiltServer(vscodeBundledServerPath, 'VS Code bundled');
   assertBuiltServer(publishedServerPath, 'published');
+  assertServerArtifactsMatch();
 
   fs.cpSync(fixtureRoot, workspaceRoot, { recursive: true });
   runGit(['init']);

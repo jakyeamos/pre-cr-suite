@@ -1,4 +1,17 @@
-import type { FilePosition, OpenFileState } from '@pre-cr/core';
+export interface FilePosition {
+  line: number;
+  character: number;
+}
+
+export interface OpenFileState {
+  path: string;
+  cursor: FilePosition;
+  scrollTop: number;
+  isDirty: boolean;
+  isActive: boolean;
+  viewColumn?: number;
+  languageId?: string;
+}
 
 export interface OpenTextTabCandidate {
   path: string;

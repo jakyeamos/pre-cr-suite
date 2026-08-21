@@ -27,11 +27,13 @@ import {
   LineCoverageStatus,
   FunctionCoverage,
   BranchCoverage,
+  ParseError,
   createEmptySummary,
   calculatePercentage,
   mergeSummaries
 } from '../types';
 import { getLogger } from '../logger';
+import { resolveWorkspacePath } from '../validation';
 
 /**
  * Istanbul location object
@@ -118,6 +120,7 @@ export function parseIstanbulContent(
   workspaceRoot?: string
 ): ParseResult<WorkspaceCoverage> {
   const logger = getLogger();
+  const errors: ParseError[] = [];
   const warnings: string[] = [];
 
   let data: IstanbulCoverage;
@@ -137,12 +140,27 @@ export function parseIstanbulContent(
   const files = new Map<string, FileCoverage>();
 
   for (const [filePath, fileCov] of Object.entries(data)) {
-    // Normalize and resolve path
-    let normalizedPath = fileCov.path || filePath;
-    if (workspaceRoot && !path.isAbsolute(normalizedPath)) {
-      normalizedPath = path.resolve(workspaceRoot, normalizedPath);
+    // Normalize and resolve path, rejecting coverage records outside the
+    // workspace before they can become editor decorations or gate input.
+    const requestedPath = fileCov.path || filePath;
+    let normalizedPath: string;
+    if (workspaceRoot) {
+      const pathResult = resolveWorkspacePath(workspaceRoot, requestedPath, {
+        access: 'read',
+        allowMissing: true,
+        allowAbsolute: true
+      });
+      if (!pathResult.valid) {
+        errors.push({
+          message: `Coverage source path is outside the workspace: ${requestedPath}`,
+          fatal: true
+        });
+        continue;
+      }
+      normalizedPath = pathResult.resolvedPath;
+    } else {
+      normalizedPath = path.normalize(requestedPath);
     }
-    normalizedPath = path.normalize(normalizedPath);
 
     // Parse line coverage from statements
     const lines = new Map<number, LineCoverage>();
@@ -244,14 +262,14 @@ export function parseIstanbulContent(
   });
 
   return {
-    success: true,
+    success: errors.filter((error) => error.fatal).length === 0,
     data: {
       files,
       summary: overallSummary,
       loadedAt: new Date(),
       format: 'istanbul'
     },
-    errors: [],
+    errors,
     warnings
   };
 }

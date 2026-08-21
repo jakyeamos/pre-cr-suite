@@ -145,6 +145,21 @@ function updateDisplay() {
   const parts: string[] = [];
   const tooltipParts: string[] = ['Pre-CR Suite - Click for quick actions'];
 
+  const readiness = s.readiness;
+  if (readiness.state !== 'idle') {
+    const readinessDisplay = {
+      ready: { icon: '$(check)', label: 'Ready' },
+      warning: { icon: '$(warning)', label: 'Warning' },
+      blocked: { icon: '$(error)', label: 'Blocked' },
+      'setup-needed': { icon: '$(tools)', label: 'Setup needed' }
+    }[readiness.state];
+    parts.push(`${readinessDisplay.icon} ${readinessDisplay.label}`);
+    tooltipParts.push(`Readiness: ${readinessDisplay.label}`);
+    if (readiness.summary) {
+      tooltipParts.push(readiness.summary);
+    }
+  }
+
   // Coverage info
   if (s.coverage.isLoaded && s.coverage.percent !== null) {
     const percent = s.coverage.percent;
@@ -154,7 +169,10 @@ function updateDisplay() {
   }
 
   // Security issues
-  if (s.security.issueCount > 0) {
+  if (readiness.state === 'blocked' || readiness.state === 'setup-needed') {
+    statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+    statusBarItem.color = new vscode.ThemeColor('statusBarItem.errorForeground');
+  } else if (readiness.state === 'warning' || s.security.issueCount > 0) {
     parts.push(`$(warning) ${s.security.issueCount}`);
     tooltipParts.push(`${s.security.issueCount} security issue${s.security.issueCount !== 1 ? 's' : ''} found`);
   }

@@ -1,5 +1,5 @@
-import { ContextManager } from '@pre-cr/core';
-import type { ContextConfig, ContextSnapshot, ContextSummary } from '@pre-cr/core';
+import { ContextManager } from '@pre-cr/core/experimental';
+import type { ContextConfig, ContextSnapshot, ContextSummary } from '@pre-cr/core/experimental';
 import type { Connection } from 'vscode-languageserver/node';
 
 export function registerContextRequests(connection: Connection): void {

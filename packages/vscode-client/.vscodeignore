@@ -3,6 +3,8 @@ eslint.config.mjs
 .turbo/**
 .vscode/**
 src/**
+scripts/**
+test/**
 node_modules/**
 coverage/**
 tsconfig.json

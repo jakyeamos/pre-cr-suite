@@ -6,11 +6,10 @@
  */
 
 import * as vscode from 'vscode';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as path from 'path';
+import { resolveWorkspacePath, runProcess } from '@pre-cr/core';
 
-const execAsync = promisify(exec);
+const MAX_GIT_OUTPUT_BYTES = 16 * 1024 * 1024;
 
 export interface ChangedFile {
   path: string;
@@ -49,6 +48,63 @@ function isGitExtensionExports(value: unknown): value is GitExtensionExports {
     && value !== null
     && 'getAPI' in value
     && typeof (value as { getAPI?: unknown }).getAPI === 'function';
+}
+
+async function runGitCommand(
+  workspaceRoot: string,
+  args: readonly string[]
+): Promise<Awaited<ReturnType<typeof runProcess>> | null> {
+  const result = await runProcess({
+    command: 'git',
+    args,
+    cwd: workspaceRoot,
+    env: { ...process.env, GIT_PAGER: 'cat', PAGER: 'cat' },
+    maxStdoutBytes: MAX_GIT_OUTPUT_BYTES,
+    maxStderrBytes: MAX_GIT_OUTPUT_BYTES
+  });
+
+  return result.success && !result.stdout.truncated && !result.stderr.truncated
+    ? result
+    : null;
+}
+
+function parseNameStatus(
+  output: string,
+  workspaceRoot: string
+): Array<{ path: string; status: ChangedFile['status'] }> {
+  const fields = output.split('\0');
+  const entries: Array<{ path: string; status: ChangedFile['status'] }> = [];
+
+  for (let index = 0; index < fields.length;) {
+    const status = fields[index++];
+    if (!status) {
+      continue;
+    }
+
+    const statusCode = status[0];
+    const isRename = statusCode === 'R' || statusCode === 'C';
+    if (isRename) {
+      index += 1;
+    }
+    const filePath = fields[index++];
+    if (!filePath || !resolveWorkspacePath(workspaceRoot, filePath, {
+      access: 'read',
+      allowMissing: true
+    }).valid) {
+      continue;
+    }
+
+    const fileStatus: ChangedFile['status'] = statusCode === 'A' || statusCode === 'C'
+      ? 'added'
+      : statusCode === 'D'
+        ? 'deleted'
+        : statusCode === 'R'
+          ? 'renamed'
+          : 'modified';
+    entries.push({ path: filePath, status: fileStatus });
+  }
+
+  return entries;
 }
 
 // ============================================================================
@@ -102,8 +158,8 @@ export function validatePathInWorkspace(
   const normalizedRoot = path.normalize(workspaceRoot);
   const relative = path.relative(normalizedRoot, resolved);
 
-  // Ensure resolved path is the workspace or a true descendant. A string
-  // prefix check alone incorrectly treats `/project-evil` as `/project`.
+  // Ensure resolved path is actually contained; a string prefix would treat
+  // `/workspace-other` as a child of `/workspace`.
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     console.warn('Pre-CR: Path traversal attempt blocked:', filePath);
     return null;
@@ -164,10 +220,8 @@ export async function getCurrentBranch(): Promise<string | null> {
   if (!workspaceRoot) return null;
 
   try {
-    const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', {
-      cwd: workspaceRoot
-    });
-    return stdout.trim();
+    const result = await runGitCommand(workspaceRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
+    return result?.stdout.text.trim() ?? null;
   } catch (error) {
     console.debug('Pre-CR: Operation failed:', error);
     return null;
@@ -207,36 +261,22 @@ export async function getChangedFiles(): Promise<ChangedFile[]> {
 
   try {
     // Get both staged and unstaged changes
-    const { stdout: stagedOutput } = await execAsync(
-      'git diff --cached --name-status',
-      { cwd: workspaceRoot }
-    );
-    const { stdout: unstagedOutput } = await execAsync(
-      'git diff --name-status',
-      { cwd: workspaceRoot }
-    );
+    const stagedResult = await runGitCommand(workspaceRoot, ['diff', '--cached', '--name-status', '-z']);
+    const unstagedResult = await runGitCommand(workspaceRoot, ['diff', '--name-status', '-z']);
+    if (!stagedResult || !unstagedResult) {
+      return [];
+    }
 
     const files = new Map<string, ChangedFile>();
 
-    // Parse output
-    const parseOutput = (output: string) => {
-      for (const line of output.split('\n').filter(Boolean)) {
-        const [status, ...pathParts] = line.split('\t');
-        const filePath = pathParts.join('\t'); // Handle paths with tabs
-
-        if (!filePath) continue;
-
-        let fileStatus: ChangedFile['status'] = 'modified';
-        if (status.startsWith('A')) fileStatus = 'added';
-        else if (status.startsWith('D')) fileStatus = 'deleted';
-        else if (status.startsWith('R')) fileStatus = 'renamed';
-
-        files.set(filePath, { path: filePath, status: fileStatus });
+    const parseOutput = (output: string): void => {
+      for (const entry of parseNameStatus(output, workspaceRoot)) {
+        files.set(entry.path, { path: entry.path, status: entry.status });
       }
     };
 
-    parseOutput(stagedOutput);
-    parseOutput(unstagedOutput);
+    parseOutput(stagedResult.stdout.text);
+    parseOutput(unstagedResult.stdout.text);
 
     return Array.from(files.values());
   } catch (error) {
@@ -331,10 +371,8 @@ export async function getHeadCommit(): Promise<string> {
   if (!workspaceRoot) return '';
 
   try {
-    const { stdout } = await execAsync('git rev-parse HEAD', {
-      cwd: workspaceRoot
-    });
-    return stdout.trim();
+    const result = await runGitCommand(workspaceRoot, ['rev-parse', 'HEAD']);
+    return result?.stdout.text.trim() ?? '';
   } catch (error) {
     console.debug('Pre-CR: Operation failed:', error);
     return '';
@@ -354,10 +392,8 @@ export async function isGitRepository(): Promise<boolean> {
   if (!workspaceRoot) return false;
 
   try {
-    await execAsync('git rev-parse --is-inside-work-tree', {
-      cwd: workspaceRoot
-    });
-    return true;
+    const result = await runGitCommand(workspaceRoot, ['rev-parse', '--is-inside-work-tree']);
+    return result?.success === true && result.stdout.text.trim() === 'true';
   } catch (error) {
     console.debug('Pre-CR: Operation failed:', error);
     return false;
@@ -372,10 +408,8 @@ export async function getRemoteUrl(): Promise<string | null> {
   if (!workspaceRoot) return null;
 
   try {
-    const { stdout } = await execAsync('git remote get-url origin', {
-      cwd: workspaceRoot
-    });
-    return stdout.trim();
+    const result = await runGitCommand(workspaceRoot, ['remote', 'get-url', 'origin']);
+    return result?.stdout.text.trim() ?? null;
   } catch (error) {
     console.debug('Pre-CR: Operation failed:', error);
     return null;

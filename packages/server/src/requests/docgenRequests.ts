@@ -1,6 +1,5 @@
-import { checkFileHealth, checkReadmeHealth, checkWorkspaceHealth, extractItems, generateAIPrompt, generateClassDoc, generateDocs, generateFunctionDoc, generateInterfaceDoc, generateTypeDoc } from '@pre-cr/core';
-import type { DocGenConfig, DocGenResult, ExtractedItems, FileHealthReport, GeneratedDoc, HealthMonitorConfig, SourceFile, WorkspaceHealthReport } from '@pre-cr/core';
-import { DEFAULT_DOC_GEN_CONFIG, DEFAULT_HEALTH_CONFIG } from '@pre-cr/core';
+import { checkFileHealth, checkReadmeHealth, checkWorkspaceHealth, extractItems, generateAIPrompt, generateClassDoc, generateDocs, generateFunctionDoc, generateInterfaceDoc, generateTypeDoc, DEFAULT_DOC_GEN_CONFIG, DEFAULT_HEALTH_CONFIG } from '@pre-cr/core/experimental';
+import type { DocGenConfig, DocGenResult, ExtractedItems, FileHealthReport, GeneratedDoc, HealthMonitorConfig, SourceFile, WorkspaceHealthReport } from '@pre-cr/core/experimental';
 import type { Connection, TextDocuments } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';

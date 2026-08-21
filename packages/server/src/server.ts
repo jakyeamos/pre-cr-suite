@@ -28,7 +28,8 @@ import { URI } from 'vscode-uri';
 import {
   setLogger,
   Logger,
-  WorkspaceCoverage,
+  WorkspaceSession,
+  WorkspaceSessionManager,
 } from '@pre-cr/core';
 
 import { createCoverageController } from './beta/coverageController';
@@ -51,21 +52,40 @@ const documents = new TextDocuments(TextDocument);
 // ============================================================================
 
 let globalSettings: ServerSettings = defaultSettings;
-let workspaceRoot: string | null = null;
-let coverage: WorkspaceCoverage | null = null;
-let coveragePath: string | null = null;
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
+const sessionManager = new WorkspaceSessionManager();
+let activeSessionKey: string | null = null;
+let trustedExecution = false;
+let experimentalEnabled = false;
+
+function getActiveSession(): WorkspaceSession | null {
+  return activeSessionKey ? sessionManager.get(activeSessionKey) : null;
+}
+
+function getSessionForRequest(params?: unknown): WorkspaceSession | null {
+  if (typeof params === 'object' && params !== null && !Array.isArray(params)) {
+    const workspaceUri = (params as Record<string, unknown>).workspaceUri;
+    if (workspaceUri !== undefined) {
+      return typeof workspaceUri === 'string' ? sessionManager.get(workspaceUri) : null;
+    }
+  }
+
+  return getActiveSession();
+}
 
 const requestState: ServerRequestState = {
   get workspaceRoot() {
-    return workspaceRoot;
+    return getActiveSession()?.workspaceRoot ?? null;
   },
   get globalSettings() {
     return globalSettings;
   },
   get coverage() {
-    return coverage;
+    return getActiveSession()?.coverage ?? null;
+  },
+  get trustedExecution() {
+    return getActiveSession()?.trustedExecution ?? false;
   }
 };
 
@@ -73,12 +93,30 @@ const coverageController = createCoverageController({
   connection,
   documents,
   getCoverageSettings: () => globalSettings.coverage,
-  getWorkspaceRoot: () => workspaceRoot,
-  getCoverage: () => coverage,
-  getCoveragePath: () => coveragePath,
-  setCoverageState: (nextCoverage, nextCoveragePath) => {
-    coverage = nextCoverage;
-    coveragePath = nextCoveragePath;
+  getWorkspaceRoot: (params) => getSessionForRequest(params)?.workspaceRoot ?? null,
+  getCoverage: (params) => getSessionForRequest(params)?.coverage ?? null,
+  getCoveragePath: (params) => getSessionForRequest(params)?.coveragePath ?? null,
+  getTrustedExecution: (params) => getSessionForRequest(params)?.trustedExecution ?? false,
+  getSessionForUri: (uri) => {
+    const session = sessionManager.getForUri(uri);
+    return session
+      ? {
+        workspaceRoot: session.workspaceRoot,
+        coverage: session.coverage,
+        coveragePath: session.coveragePath,
+        trustedExecution: session.trustedExecution
+      }
+      : null;
+  },
+  setCoverageState: (nextCoverage, nextCoveragePath, workspaceRoot) => {
+    const session = workspaceRoot ? sessionManager.get(workspaceRoot) : getActiveSession();
+    if (session) {
+      session.coverage = nextCoverage;
+      session.coveragePath = nextCoveragePath;
+    }
+  },
+  setSessionState: (workspaceRoot, update) => {
+    sessionManager.update(workspaceRoot, update);
   }
 });
 
@@ -119,17 +157,28 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   hasWorkspaceFolderCapability = !!(
     capabilities.workspace && !!capabilities.workspace.workspaceFolders
   );
+  trustedExecution = hasTrustedExecution(params.initializationOptions);
+  experimentalEnabled = hasExperimentalFeatures(params.initializationOptions);
+  const workspaceRoots = params.workspaceFolders && params.workspaceFolders.length > 0
+    ? params.workspaceFolders.map((folder) => URI.parse(folder.uri).fsPath)
+    : params.rootUri
+      ? [URI.parse(params.rootUri).fsPath]
+      : [];
 
-  if (params.workspaceFolders && params.workspaceFolders.length > 0) {
-    workspaceRoot = URI.parse(params.workspaceFolders[0].uri).fsPath;
-  } else if (params.rootUri) {
-    workspaceRoot = URI.parse(params.rootUri).fsPath;
+  sessionManager.clear();
+  activeSessionKey = null;
+  for (const root of workspaceRoots) {
+    const session = sessionManager.getOrCreate(root, trustedExecution);
+    if (!activeSessionKey) {
+      activeSessionKey = session.key;
+    }
   }
 
-  connection.console.info(`Pre-CR Server initializing. Workspace: ${workspaceRoot}`);
+  const activeSession = getActiveSession();
+  connection.console.info(`Pre-CR Server initializing. Workspace: ${activeSession?.workspaceRoot ?? null}; trusted execution: ${trustedExecution}`);
 
-  if (workspaceRoot) {
-    coverageController.loadCoverage();
+  for (const session of sessionManager.values()) {
+    coverageController.loadCoverage(session.workspaceRoot);
   }
 
   return {
@@ -146,6 +195,29 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   };
 });
 
+function hasTrustedExecution(initializationOptions: unknown): boolean {
+  if (typeof initializationOptions !== 'object' || initializationOptions === null) {
+    return false;
+  }
+
+  return (initializationOptions as Record<string, unknown>).trustedExecution === true;
+}
+
+function hasExperimentalFeatures(initializationOptions: unknown): boolean {
+  if (typeof initializationOptions !== 'object' || initializationOptions === null) {
+    return false;
+  }
+
+  const options = initializationOptions as Record<string, unknown>;
+  if (options.experimentalEnabled === true) {
+    return true;
+  }
+
+  const experimental = options.experimental;
+  return typeof experimental === 'object' && experimental !== null &&
+    (experimental as Record<string, unknown>).enabled === true;
+}
+
 connection.onInitialized(() => {
   if (hasConfigurationCapability) {
     void connection.client.register(
@@ -155,12 +227,37 @@ connection.onInitialized(() => {
   }
 
   if (hasWorkspaceFolderCapability) {
-    connection.workspace.onDidChangeWorkspaceFolders((_event) => {
-      connection.console.info('Workspace folder change detected');
+    connection.workspace.onDidChangeWorkspaceFolders((event) => {
+      for (const folder of event.removed) {
+        const removed = sessionManager.get(folder.uri);
+        if (removed?.key === activeSessionKey) {
+          activeSessionKey = null;
+        }
+        sessionManager.delete(folder.uri);
+      }
+      for (const folder of event.added) {
+        const session = sessionManager.getOrCreate(folder.uri, trustedExecution);
+        if (!activeSessionKey) {
+          activeSessionKey = session.key;
+        }
+      }
+      if (!activeSessionKey) {
+        activeSessionKey = sessionManager.values()[0]?.key ?? null;
+      }
+      connection.console.info(`Workspace folder change detected (${sessionManager.values().length} sessions)`);
     });
   }
 
   connection.console.info('Pre-CR Server initialized');
+
+  if (experimentalEnabled) {
+    registerChecklistRequests(connection, requestState);
+    registerDocgenRequests(connection, documents);
+    registerReviewRequests(connection, requestState);
+    registerContextRequests(connection);
+    registerDebugRequests(connection);
+    connection.console.info('Pre-CR experimental request surface enabled');
+  }
 });
 
 // ============================================================================
@@ -212,11 +309,6 @@ connection.onCodeLens((params: CodeLensParams): CodeLens[] => {
 // ============================================================================
 
 coverageController.registerBetaRequests();
-registerChecklistRequests(connection, requestState);
-registerDocgenRequests(connection, documents);
-registerReviewRequests(connection, requestState);
-registerContextRequests(connection);
-registerDebugRequests(connection);
 
 // ============================================================================
 // Start Server

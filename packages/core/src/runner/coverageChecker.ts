@@ -5,6 +5,8 @@
  * This is the core pre-CR validation logic.
  */
 
+import * as path from 'path';
+
 import { WorkspaceCoverage, FileCoverage, LineCoverageStatus } from '../types';
 import type { PreCrSurfaceConfig } from '../protocol';
 
@@ -20,6 +22,12 @@ export interface ChangedFile {
   additions: number[];      // Line numbers of added lines
   modifications: number[];  // Line numbers of modified lines
   isNew: boolean;
+  /**
+   * Exact source text for changed lines when the caller can provide it.
+   * Missing coverage may only be skipped after this text proves the line is
+   * blank or a full-line comment; absent text is treated as executable.
+   */
+  lineContents?: Readonly<Record<number, string>>;
 }
 
 export interface CoverageCheckResult {
@@ -65,6 +73,8 @@ export interface CoverageCheckOptions {
   skipComments?: boolean;       // Don't count comment-only lines
   skipBlankLines?: boolean;     // Don't count blank lines
   surfaces?: PreCrSurfaceConfig;
+  /** Workspace used to match coverage reporters' absolute source paths. */
+  workspaceRoot?: string;
 }
 
 type UnsupportedSurfaceFields = Pick<CoverageCheckResult, 'unsupportedFiles'>;
@@ -80,7 +90,10 @@ export function formatUnsupportedSurfaceSetupGuidance(coverage: UnsupportedSurfa
   ];
 }
 
-const DEFAULT_OPTIONS: Required<CoverageCheckOptions> = {
+type ResolvedCoverageCheckOptions = Required<Omit<CoverageCheckOptions, 'workspaceRoot'>> &
+  Pick<CoverageCheckOptions, 'workspaceRoot'>;
+
+const DEFAULT_OPTIONS: Omit<ResolvedCoverageCheckOptions, 'workspaceRoot'> = {
   threshold: 80,
   excludePatterns: [
     '**/*.test.*',
@@ -109,7 +122,7 @@ export function checkChangesCoverage(
   coverageData: WorkspaceCoverage,
   options?: CoverageCheckOptions
 ): CoverageCheckResult {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const opts: ResolvedCoverageCheckOptions = { ...DEFAULT_OPTIONS, ...options };
 
   const fileBreakdown: FileBreakdown[] = [];
   const uncoveredDetails: UncoveredDetail[] = [];
@@ -146,7 +159,7 @@ export function checkChangesCoverage(
     }
 
     // Get coverage for this file
-    const fileCoverage = findFileCoverage(changed.path, coverageData);
+    const fileCoverage = findFileCoverage(changed.path, coverageData, opts.workspaceRoot);
 
     // All changed lines (additions + modifications)
     const allChangedLines = [...changed.additions, ...changed.modifications];
@@ -155,31 +168,9 @@ export function checkChangesCoverage(
       continue;
     }
 
-    // If no coverage data for this file
-    if (!fileCoverage) {
-      // For new files, we might want to require coverage
-      if (changed.isNew && opts.includeNewFiles) {
-        const uncoveredCount = allChangedLines.length;
-        totalChangedLines += uncoveredCount;
-        totalUncoveredLines += uncoveredCount;
-
-        for (const line of allChangedLines) {
-          uncoveredDetails.push({
-            file: changed.path,
-            line,
-            reason: 'no-coverage-data'
-          });
-        }
-
-        fileBreakdown.push({
-          file: changed.path,
-          changedLines: uncoveredCount,
-          coveredLines: 0,
-          uncoveredLines: uncoveredCount,
-          percent: 0,
-          passed: false
-        });
-      }
+    // Preserve the existing opt-out for brand new files. Modified files always
+    // require a coverage decision when they contain executable changed lines.
+    if (!fileCoverage && changed.isNew && !opts.includeNewFiles) {
       continue;
     }
 
@@ -188,11 +179,20 @@ export function checkChangesCoverage(
     let fileUncovered = 0;
 
     for (const lineNum of allChangedLines) {
-      const lineData = fileCoverage.lines.get(lineNum);
+      const lineData = fileCoverage?.lines.get(lineNum);
 
-      // Line not in coverage data - might be comment/blank/non-executable
+      // A missing coverage entry is not evidence that a line is non-executable.
+      // Only source text that proves a blank or full-line comment may be skipped.
       if (!lineData) {
-        totalSkippedLines++;
+        if (shouldSkipMissingCoverageLine(changed, lineNum, opts)) {
+          totalSkippedLines++;
+          continue;
+        }
+
+        fileUncovered++;
+        totalChangedLines++;
+        totalUncoveredLines++;
+        uncoveredDetails.push(createNoCoverageDetail(changed, lineNum));
         continue;
       }
 
@@ -219,14 +219,16 @@ export function checkChangesCoverage(
     const fileTotal = fileCovered + fileUncovered;
     const filePercent = fileTotal > 0 ? (fileCovered / fileTotal) * 100 : 100;
 
-    fileBreakdown.push({
-      file: changed.path,
-      changedLines: fileTotal,
-      coveredLines: fileCovered,
-      uncoveredLines: fileUncovered,
-      percent: Math.round(filePercent * 10) / 10,
-      passed: filePercent >= opts.threshold
-    });
+    if (fileCoverage || fileTotal > 0) {
+      fileBreakdown.push({
+        file: changed.path,
+        changedLines: fileTotal,
+        coveredLines: fileCovered,
+        uncoveredLines: fileUncovered,
+        percent: Math.round(filePercent * 10) / 10,
+        passed: filePercent >= opts.threshold
+      });
+    }
   }
 
   const coveragePercent = totalChangedLines > 0
@@ -252,6 +254,86 @@ export function checkChangesCoverage(
   };
 }
 
+function createNoCoverageDetail(changed: ChangedFile, line: number): UncoveredDetail {
+  const content = changed.lineContents?.[line];
+  return content === undefined
+    ? {
+      file: changed.path,
+      line,
+      reason: 'no-coverage-data'
+    }
+    : {
+      file: changed.path,
+      line,
+      content,
+      reason: 'no-coverage-data'
+    };
+}
+
+function shouldSkipMissingCoverageLine(
+  changed: ChangedFile,
+  line: number,
+  options: Pick<ResolvedCoverageCheckOptions, 'skipBlankLines' | 'skipComments'>
+): boolean {
+  const content = changed.lineContents?.[line];
+  if (content === undefined) {
+    return false;
+  }
+
+  if (options.skipBlankLines && content.trim().length === 0) {
+    return true;
+  }
+
+  return options.skipComments && isProvenFullLineComment(changed.path, content);
+}
+
+function isProvenFullLineComment(filePath: string, content: string): boolean {
+  const trimmed = content.trim();
+  const extension = filePath.slice(filePath.lastIndexOf('.') + 1).toLowerCase();
+
+  if (supportsSlashComments(extension) && trimmed.startsWith('//')) {
+    return true;
+  }
+
+  if (supportsHashComments(extension) && trimmed.startsWith('#')) {
+    return true;
+  }
+
+  if (supportsDashComments(extension) && trimmed.startsWith('--')) {
+    return true;
+  }
+
+  return supportsBlockComments(extension) &&
+    trimmed.startsWith('/*') &&
+    trimmed.endsWith('*/');
+}
+
+function supportsSlashComments(extension: string): boolean {
+  return [
+    'c', 'cc', 'cpp', 'cs', 'cxx', 'dart', 'go', 'h', 'hpp', 'java', 'js',
+    'jsx', 'kt', 'kts', 'mjs', 'php', 'rs', 'scala', 'swift', 'ts', 'tsx'
+  ].includes(extension);
+}
+
+function supportsHashComments(extension: string): boolean {
+  return [
+    'bash', 'cfg', 'ini', 'pl', 'properties', 'py', 'rb', 'r', 'sh', 'toml',
+    'yaml', 'yml', 'zsh'
+  ].includes(extension);
+}
+
+function supportsDashComments(extension: string): boolean {
+  return ['hs', 'lua', 'sql'].includes(extension);
+}
+
+function supportsBlockComments(extension: string): boolean {
+  return [
+    'c', 'cc', 'cpp', 'cs', 'css', 'cxx', 'dart', 'go', 'h', 'hpp', 'java',
+    'js', 'jsx', 'kt', 'kts', 'less', 'mjs', 'php', 'rs', 'scss', 'scala',
+    'swift', 'ts', 'tsx'
+  ].includes(extension);
+}
+
 function classifySurface(filePath: string, surfaces: PreCrSurfaceConfig): 'covered' | 'ignored' | 'unsupported' {
   if (shouldExclude(filePath, surfaces.ignored)) {
     return 'ignored';
@@ -265,15 +347,25 @@ function classifySurface(filePath: string, surfaces: PreCrSurfaceConfig): 'cover
     return 'covered';
   }
 
-  return 'ignored';
+  // A non-empty covered surface is an explicit contract. Treat a file that is
+  // not classified by any configured surface as unsupported instead of silently
+  // exempting it from the check.
+  return 'unsupported';
 }
 
 /**
  * Find coverage data for a file (handles path variations)
  */
-function findFileCoverage(filePath: string, coverageData: WorkspaceCoverage): FileCoverage | null {
+function findFileCoverage(
+  filePath: string,
+  coverageData: WorkspaceCoverage,
+  workspaceRoot?: string
+): FileCoverage | null {
   // Normalize the path
   const normalized = normalizePath(filePath);
+  const normalizedWorkspacePath = workspaceRoot
+    ? normalizePath(path.resolve(workspaceRoot, filePath))
+    : null;
 
   // Try to find in the Map
   for (const [coveragePath, coverage] of coverageData.files) {
@@ -284,26 +376,12 @@ function findFileCoverage(filePath: string, coverageData: WorkspaceCoverage): Fi
       return coverage;
     }
 
-    // Check if paths end the same way
-    if (normalizedCoverage.endsWith(normalized) || normalized.endsWith(normalizedCoverage)) {
+    // Coverage reporters may use an absolute path while Git gives us a
+    // workspace-relative path. The workspace root gives us one unambiguous
+    // absolute candidate; suffix or basename matching could borrow coverage
+    // from an unrelated file.
+    if (normalizedCoverage === normalized || normalizedCoverage === normalizedWorkspacePath) {
       return coverage;
-    }
-
-    // Check filename match for simple cases
-    const fileBasename = normalized.split('/').pop();
-    const coverageBasename = normalizedCoverage.split('/').pop();
-    if (fileBasename && coverageBasename && fileBasename === coverageBasename) {
-      // Verify it's likely the same file by checking parent dirs
-      const fileParts = normalized.split('/');
-      const coverageParts = normalizedCoverage.split('/');
-
-      if (fileParts.length >= 2 && coverageParts.length >= 2) {
-        const fileParent = fileParts[fileParts.length - 2];
-        const coverageParent = coverageParts[coverageParts.length - 2];
-        if (fileParent === coverageParent) {
-          return coverage;
-        }
-      }
     }
   }
 

@@ -15,9 +15,6 @@ import * as git from '../utils/git';
 import * as webview from '../utils/webview';
 import { publishMacControlState } from '../utils/macControlState';
 
-// Store diagnostics collection globally so code actions can access it
-let securityDiagnostics: vscode.DiagnosticCollection;
-
 interface ChecklistFile {
   path: string;
   content: string;
@@ -87,10 +84,6 @@ export function registerChecklistFeatures(
     vscode.window.registerTreeDataProvider('preCr.checklist', treeProvider)
   );
 
-  // Create diagnostics collection for security issues
-  securityDiagnostics = vscode.languages.createDiagnosticCollection('preCr.security');
-  context.subscriptions.push(securityDiagnostics);
-
   // Register code action provider for ignore comments
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(
@@ -147,7 +140,7 @@ function navigateIssue(direction: 'next' | 'prev') {
   }
 
   const uri = editor.document.uri;
-  const diagnostics = securityDiagnostics.get(uri) || [];
+  const diagnostics = vscode.languages.getDiagnostics(uri);
 
   if (diagnostics.length === 0) {
     void publishMacControlState('preCr.nextIssue', 'issue_none');
@@ -370,41 +363,7 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
             : 'this file';
           notify.showSuccess(`No security issues found in ${scopeDesc}`);
         }
-        securityDiagnostics.clear();
         return;
-      }
-
-      // Group findings by file
-      const diagnosticsMap = new Map<string, vscode.Diagnostic[]>();
-
-      for (const f of findings) {
-        const fileUri = vscode.Uri.joinPath(
-          vscode.workspace.workspaceFolders![0].uri,
-          f.file
-        );
-        const uriString = fileUri.toString();
-
-        if (!diagnosticsMap.has(uriString)) {
-          diagnosticsMap.set(uriString, []);
-        }
-
-        const range = new vscode.Range(f.line - 1, 0, f.line - 1, 1000);
-        const diag = new vscode.Diagnostic(
-          range,
-          `[${f.severity}] ${f.message}`,
-          f.severity === 'high' ? vscode.DiagnosticSeverity.Error :
-          f.severity === 'medium' ? vscode.DiagnosticSeverity.Warning :
-          vscode.DiagnosticSeverity.Information
-        );
-        diag.source = 'Pre-CR Security';
-        diag.code = f.pattern; // Use pattern ID for ignore comments
-        diagnosticsMap.get(uriString)!.push(diag);
-      }
-
-      // Clear old diagnostics and apply new ones
-      securityDiagnostics.clear();
-      for (const [uri, diags] of diagnosticsMap) {
-        securityDiagnostics.set(vscode.Uri.parse(uri), diags);
       }
 
       // Auto-focus Problems panel when issues found (unless silent)
@@ -413,7 +372,7 @@ async function securityScan(client: LanguageClient, mode: 'file' | 'workspace' |
       }
 
       // Show summary with auto-dismiss (unless silent)
-      const fileCount = diagnosticsMap.size;
+      const fileCount = new Set(findings.map((finding) => finding.file)).size;
       if (!silent) {
         notify.showWarning(
           `Found ${findings.length} security issue${findings.length !== 1 ? 's' : ''} in ${fileCount} file${fileCount !== 1 ? 's' : ''}`

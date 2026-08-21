@@ -1,48 +1,67 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import { spawn } from 'child_process';
 
 import type { ChangedFile } from '../runner/coverageChecker';
+import { runProcess } from '../runner/processRunner';
+import { resolveWorkspacePath } from '../validation';
+
+const MAX_GIT_OUTPUT_BYTES = 16 * 1024 * 1024;
 
 interface CommandResult {
   stdout: string;
   stderr: string;
   exitCode: number;
+  outputTruncated: boolean;
+  error?: string;
 }
 
-async function runGitCommand(workspaceRoot: string, args: string[]): Promise<CommandResult> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('git', args, {
-      cwd: workspaceRoot,
-      env: { ...process.env, FORCE_COLOR: '0' }
-    });
+interface GitStatusEntry {
+  path: string;
+  previousPath?: string;
+  isNew: boolean;
+  isDeleted: boolean;
+  source: 'diff' | 'untracked';
+}
 
-    let stdout = '';
-    let stderr = '';
+interface ChangedLines {
+  additions: number[];
+  lineContents: Record<number, string>;
+  binary: boolean;
+}
 
-    child.stdout.on('data', (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
+export type GitChangeScope = 'worktree' | 'staged';
 
-    child.stderr.on('data', (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
+export interface CollectGitChangedFilesOptions {
+  scope?: GitChangeScope;
+}
 
-    child.on('error', reject);
-    child.on('close', (exitCode) => {
-      resolve({
-        stdout,
-        stderr,
-        exitCode: exitCode ?? 0
-      });
-    });
+async function runGitCommand(workspaceRoot: string, args: readonly string[]): Promise<CommandResult> {
+  const result = await runProcess({
+    command: 'git',
+    args,
+    cwd: workspaceRoot,
+    env: {
+      ...process.env,
+      FORCE_COLOR: '0',
+      GIT_PAGER: 'cat',
+      PAGER: 'cat'
+    },
+    maxStdoutBytes: MAX_GIT_OUTPUT_BYTES,
+    maxStderrBytes: MAX_GIT_OUTPUT_BYTES
   });
+
+  return {
+    stdout: result.stdout.text,
+    stderr: result.stderr.text,
+    exitCode: result.exitCode ?? 1,
+    outputTruncated: result.stdout.truncated || result.stderr.truncated,
+    ...(result.error ? { error: result.error } : {})
+  };
 }
 
 export async function isGitRepository(workspaceRoot: string): Promise<boolean> {
   try {
     const result = await runGitCommand(workspaceRoot, ['rev-parse', '--is-inside-work-tree']);
-    return result.exitCode === 0 && result.stdout.trim() === 'true';
+    return !result.outputTruncated && result.exitCode === 0 && result.stdout.trim() === 'true';
   } catch {
     return false;
   }
@@ -51,22 +70,127 @@ export async function isGitRepository(workspaceRoot: string): Promise<boolean> {
 async function hasHeadCommit(workspaceRoot: string): Promise<boolean> {
   try {
     const result = await runGitCommand(workspaceRoot, ['rev-parse', '--verify', 'HEAD']);
-    return result.exitCode === 0;
+    return !result.outputTruncated && result.exitCode === 0;
   } catch {
     return false;
   }
 }
 
-interface GitStatusEntry {
-  path: string;
-  isNew: boolean;
-  isDeleted: boolean;
+/**
+ * Collect paths from Git's NUL-delimited output. Git treats file names as byte
+ * sequences, so line- and tab-delimited forms are unsafe for valid filenames.
+ */
+function parseNameStatus(output: string): GitStatusEntry[] {
+  const entries: GitStatusEntry[] = [];
+  const fields = output.split('\0');
+
+  for (let index = 0; index < fields.length;) {
+    const status = fields[index++];
+    if (!status) {
+      continue;
+    }
+
+    const statusCode = status[0];
+    if (!statusCode) {
+      continue;
+    }
+
+    const hasPreviousPath = statusCode === 'R' || statusCode === 'C';
+    const previousPath = hasPreviousPath ? fields[index++] : undefined;
+    const filePath = fields[index++];
+
+    if (!filePath) {
+      continue;
+    }
+
+    entries.push({
+      path: filePath,
+      ...(hasPreviousPath && previousPath ? { previousPath } : {}),
+      isNew: statusCode === 'A' || statusCode === 'C',
+      isDeleted: statusCode === 'D',
+      source: 'diff'
+    });
+  }
+
+  return entries;
 }
 
-export type GitChangeScope = 'worktree' | 'staged';
+function parseUntrackedPaths(output: string): GitStatusEntry[] {
+  return output
+    .split('\0')
+    .filter((filePath) => filePath.length > 0)
+    .map((filePath) => ({
+      path: filePath,
+      isNew: true,
+      isDeleted: false,
+      source: 'untracked' as const
+    }));
+}
 
-export interface CollectGitChangedFilesOptions {
-  scope?: GitChangeScope;
+function mergeStatusEntries(entryLists: readonly GitStatusEntry[][]): GitStatusEntry[] {
+  const entries = new Map<string, GitStatusEntry>();
+
+  for (const entry of entryLists.flat()) {
+    const existing = entries.get(entry.path);
+    if (!existing) {
+      entries.set(entry.path, entry);
+      continue;
+    }
+
+    entries.set(entry.path, {
+      ...existing,
+      ...entry,
+      previousPath: entry.previousPath ?? existing.previousPath,
+      isNew: existing.isNew || entry.isNew,
+      isDeleted: entry.isDeleted
+    });
+  }
+
+  return [...entries.values()];
+}
+
+async function readNameStatus(workspaceRoot: string, args: readonly string[]): Promise<GitStatusEntry[]> {
+  const result = await runGitCommand(workspaceRoot, args);
+  assertGitCommandSucceeded(result, 'read changed Git paths');
+  return parseNameStatus(result.stdout);
+}
+
+async function readUntrackedStatus(workspaceRoot: string): Promise<GitStatusEntry[]> {
+  const result = await runGitCommand(workspaceRoot, [
+    'ls-files',
+    '--others',
+    '--exclude-standard',
+    '-z'
+  ]);
+  assertGitCommandSucceeded(result, 'read untracked Git paths');
+  return parseUntrackedPaths(result.stdout);
+}
+
+async function collectStatusEntries(
+  workspaceRoot: string,
+  scope: GitChangeScope,
+  headExists: boolean
+): Promise<GitStatusEntry[]> {
+  const commonArgs = ['--name-status', '-z', '--find-renames', '--no-ext-diff'];
+
+  if (scope === 'staged') {
+    return readNameStatus(workspaceRoot, [
+      'diff',
+      '--cached',
+      ...commonArgs,
+      ...(headExists ? ['HEAD'] : [])
+    ]);
+  }
+
+  const trackedEntries = headExists
+    ? await readNameStatus(workspaceRoot, ['diff', ...commonArgs, 'HEAD'])
+    : mergeStatusEntries([
+      await readNameStatus(workspaceRoot, ['diff', '--cached', ...commonArgs]),
+      await readNameStatus(workspaceRoot, ['diff', ...commonArgs])
+    ]);
+  const untrackedEntries = await readUntrackedStatus(workspaceRoot);
+
+  return mergeStatusEntries([trackedEntries, untrackedEntries]);
 }
 
 export async function collectGitChangedFiles(
@@ -79,18 +203,8 @@ export async function collectGitChangedFiles(
   }
 
   const scope = options.scope ?? 'worktree';
-  const statusArgs = scope === 'staged'
-    ? ['diff', '--cached', '--name-status']
-    : ['status', '--porcelain=v1'];
-  const statusResult = await runGitCommand(workspaceRoot, statusArgs);
-  if (statusResult.exitCode !== 0) {
-    return [];
-  }
-
   const headExists = await hasHeadCommit(workspaceRoot);
-  const entries = scope === 'staged'
-    ? parseNameStatus(statusResult.stdout)
-    : parsePorcelainStatus(statusResult.stdout);
+  const entries = await collectStatusEntries(workspaceRoot, scope, headExists);
   const changedFiles: ChangedFile[] = [];
 
   for (const entry of entries) {
@@ -98,106 +212,91 @@ export async function collectGitChangedFiles(
       continue;
     }
 
-    if (entry.isNew) {
-      const newPaths = scope === 'staged'
-        ? [entry.path]
-        : expandNewPath(workspaceRoot, entry.path);
-
-      for (const filePath of newPaths) {
-        changedFiles.push({
-          path: filePath,
-          additions: scope === 'staged'
-            ? await getAddedLines(workspaceRoot, filePath, headExists, scope)
-            : readAllLineNumbers(path.join(workspaceRoot, filePath)),
-          modifications: [],
-          isNew: true
-        });
-      }
-      continue;
+    assertWorkspacePath(workspaceRoot, entry.path, true);
+    if (entry.previousPath) {
+      assertWorkspacePath(workspaceRoot, entry.previousPath, true);
     }
+
+    const changedLines = entry.source === 'untracked'
+      ? readWorkspaceFileLines(workspaceRoot, entry.path)
+      : await getChangedLines(workspaceRoot, entry, scope, headExists);
 
     changedFiles.push({
       path: entry.path,
-      additions: await getAddedLines(workspaceRoot, entry.path, headExists, scope),
+      additions: changedLines.additions,
       modifications: [],
-      isNew: false
+      isNew: entry.isNew,
+      ...(Object.keys(changedLines.lineContents).length > 0
+        ? { lineContents: changedLines.lineContents }
+        : {})
     });
   }
 
   return changedFiles;
 }
 
-function parsePorcelainStatus(output: string): GitStatusEntry[] {
-  const entries: GitStatusEntry[] = [];
-
-  for (const rawLine of output.split('\n')) {
-    if (!rawLine.trim()) {
-      continue;
-    }
-
-    const status = rawLine.slice(0, 2);
-    const rawPath = rawLine.slice(3).trim();
-    const resolvedPath = rawPath.includes(' -> ')
-      ? rawPath.split(' -> ').pop() ?? rawPath
-      : rawPath;
-
-    entries.push({
-      path: resolvedPath,
-      isNew: status === '??' || status.includes('A'),
-      isDeleted: status.includes('D')
-    });
-  }
-
-  return entries;
-}
-
-function parseNameStatus(output: string): GitStatusEntry[] {
-  const entries: GitStatusEntry[] = [];
-
-  for (const rawLine of output.split('\n')) {
-    if (!rawLine.trim()) {
-      continue;
-    }
-
-    const [status, firstPath, secondPath] = rawLine.split('\t');
-    const resolvedPath = secondPath ?? firstPath;
-    if (!resolvedPath) {
-      continue;
-    }
-
-    entries.push({
-      path: resolvedPath,
-      isNew: status.startsWith('A'),
-      isDeleted: status.startsWith('D')
-    });
-  }
-
-  return entries;
-}
-
-async function getAddedLines(
+async function getChangedLines(
   workspaceRoot: string,
-  relativePath: string,
-  headExists: boolean,
-  scope: GitChangeScope
-): Promise<number[]> {
-  const args = scope === 'staged'
-    ? (headExists
-      ? ['diff', '--cached', '--no-color', '--unified=0', 'HEAD', '--', relativePath]
-      : ['diff', '--cached', '--no-color', '--unified=0', '--', relativePath])
-    : (headExists
-      ? ['diff', '--no-color', '--unified=0', 'HEAD', '--', relativePath]
-      : ['diff', '--no-color', '--unified=0', '--', relativePath]);
-
-  const result = await runGitCommand(workspaceRoot, args);
-  if (result.exitCode !== 0 || !result.stdout.trim()) {
-    return [];
+  entry: GitStatusEntry,
+  scope: GitChangeScope,
+  headExists: boolean
+): Promise<ChangedLines> {
+  if (scope === 'worktree' && !headExists) {
+    // Before the first commit, the working tree is the only authoritative
+    // candidate. Combining index-vs-empty and worktree-vs-index hunks can keep
+    // a line that a later unstaged deletion removed.
+    return readWorkspaceFileLines(workspaceRoot, entry.path);
   }
 
+  return readDiffChangedLines(workspaceRoot, entry, scope, headExists);
+}
+
+async function readDiffChangedLines(
+  workspaceRoot: string,
+  entry: GitStatusEntry,
+  scope: GitChangeScope,
+  headExists: boolean
+): Promise<ChangedLines> {
+  const paths = entry.previousPath ? [entry.previousPath, entry.path] : [entry.path];
+  const args = [
+    'diff',
+    ...(scope === 'staged' ? ['--cached'] : []),
+    '--no-color',
+    '--no-ext-diff',
+    '--no-textconv',
+    '--unified=0',
+    '--find-renames',
+    ...(headExists ? ['HEAD'] : []),
+    '--',
+    ...paths
+  ];
+  const result = await runGitCommand(workspaceRoot, args);
+  assertGitCommandSucceeded(result, `read changed lines for ${entry.path}`);
+  const changedLines = parseDiffChangedLines(result.stdout);
+  if (changedLines.binary) {
+    throw new Error(`Unable to read changed lines for ${entry.path}: Git reported a binary diff.`);
+  }
+
+  return changedLines;
+}
+
+function assertGitCommandSucceeded(result: CommandResult, action: string): void {
+  if (result.outputTruncated) {
+    throw new Error(`Unable to ${action}: Git output exceeded ${MAX_GIT_OUTPUT_BYTES} bytes.`);
+  }
+
+  if (result.exitCode !== 0) {
+    const detail = result.stderr.trim() || result.error || `git exited with code ${result.exitCode}.`;
+    throw new Error(`Unable to ${action}: ${detail}`);
+  }
+}
+
+function parseDiffChangedLines(output: string): ChangedLines {
   const additions: number[] = [];
+  const lineContents: Record<number, string> = {};
   let currentLine = 0;
 
-  for (const line of result.stdout.split('\n')) {
+  for (const line of output.split('\n')) {
     const hunkMatch = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
     if (hunkMatch) {
       currentLine = parseInt(hunkMatch[1], 10);
@@ -206,6 +305,7 @@ async function getAddedLines(
 
     if (line.startsWith('+') && !line.startsWith('+++')) {
       additions.push(currentLine);
+      lineContents[currentLine] = line.slice(1);
       currentLine += 1;
       continue;
     }
@@ -219,51 +319,52 @@ async function getAddedLines(
     }
   }
 
-  return additions;
+  return {
+    additions,
+    lineContents,
+    binary: output.includes('Binary files ') || output.includes('GIT binary patch')
+  };
 }
 
-function readAllLineNumbers(absolutePath: string): number[] {
-  if (!fs.existsSync(absolutePath)) {
-    return [];
+function readWorkspaceFileLines(workspaceRoot: string, relativePath: string): ChangedLines {
+  const pathResult = resolveWorkspacePath(workspaceRoot, relativePath, { access: 'read' });
+  if (!pathResult.valid) {
+    throw new Error(`Unable to read untracked Git path ${relativePath}: ${pathResult.error}`);
   }
 
-  const stat = fs.statSync(absolutePath);
+  const absolutePath = pathResult.realPath ?? pathResult.resolvedPath;
+  const stat = fs.lstatSync(absolutePath);
   if (!stat.isFile()) {
-    return [];
+    return emptyChangedLines();
   }
 
   const content = fs.readFileSync(absolutePath, 'utf-8');
-  const lineCount = content.length === 0 ? 0 : content.split('\n').length;
-  return Array.from({ length: lineCount }, (_unused, index) => index + 1);
+  const lines = content.length === 0 ? [] : content.split('\n');
+  if (content.endsWith('\n')) {
+    lines.pop();
+  }
+
+  const additions: number[] = [];
+  const lineContents: Record<number, string> = {};
+  for (const [index, line] of lines.entries()) {
+    const lineNumber = index + 1;
+    additions.push(lineNumber);
+    lineContents[lineNumber] = line;
+  }
+
+  return { additions, lineContents, binary: false };
 }
 
-function expandNewPath(workspaceRoot: string, relativePath: string): string[] {
-  const absolutePath = path.join(workspaceRoot, relativePath);
-  if (!fs.existsSync(absolutePath)) {
-    return [];
+function emptyChangedLines(): ChangedLines {
+  return { additions: [], lineContents: {}, binary: false };
+}
+
+function assertWorkspacePath(workspaceRoot: string, requestedPath: string, allowMissing: boolean): void {
+  const pathResult = resolveWorkspacePath(workspaceRoot, requestedPath, {
+    access: 'read',
+    allowMissing
+  });
+  if (!pathResult.valid) {
+    throw new Error(`Unable to use Git path ${requestedPath}: ${pathResult.error}`);
   }
-
-  const stat = fs.statSync(absolutePath);
-  if (stat.isFile()) {
-    return [relativePath];
-  }
-
-  if (!stat.isDirectory()) {
-    return [];
-  }
-
-  const files: string[] = [];
-  for (const entry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
-    const childPath = path.join(relativePath, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...expandNewPath(workspaceRoot, childPath));
-      continue;
-    }
-
-    if (entry.isFile()) {
-      files.push(childPath);
-    }
-  }
-
-  return files.sort();
 }

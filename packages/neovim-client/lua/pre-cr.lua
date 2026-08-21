@@ -13,7 +13,31 @@
 -- ============================================================================
 
 local M = {}
-local last_coverage_check = nil
+local coverage_checks = {}
+local last_readiness = nil
+local current_workspace_root = nil
+local load_readiness
+local stable_methods = {
+  getProjectHealth = '$/preCr/getProjectHealth',
+  runPreCrCheck = '$/preCr/runPreCrCheck',
+  refreshCoverage = '$/preCr/refreshCoverage',
+  getCoverageSummary = '$/preCr/getCoverageSummary',
+  getCoverageDecorations = '$/preCr/getCoverageDecorations'
+}
+
+local function error_message(err)
+  if type(err) == 'table' and err.message then
+    return err.message
+  end
+  return tostring(err)
+end
+
+local function workspace_request_params(client)
+  local root = client.config and client.config.root_dir or vim.fn.getcwd()
+  current_workspace_root = vim.fn.resolve(vim.fn.fnamemodify(root, ':p'))
+  load_readiness()
+  return { workspaceUri = vim.uri_from_fname(current_workspace_root) }
+end
 
 -- Default configuration
 M.config = {
@@ -22,6 +46,10 @@ M.config = {
   
   -- Filetypes to activate on (empty = all files)
   filetypes = {},
+
+  -- Repository-configured commands are executable input. Opt in for a
+  -- workspace only after you have reviewed and trusted its .pre-cr.json.
+  trustedExecution = false,
   
   -- Server settings
   settings = {
@@ -139,6 +167,107 @@ local function format_coverage_failure_message(coverage_check)
   )
 end
 
+local function readiness_state_label(readiness)
+  local labels = {
+    ready = 'READY',
+    warning = 'WARNING',
+    blocked = 'BLOCKED',
+    ['setup-needed'] = 'SETUP NEEDED'
+  }
+  return labels[readiness and readiness.state] or 'NOT RUN'
+end
+
+local function workspace_key()
+  return current_workspace_root or vim.fn.resolve(vim.fn.fnamemodify(vim.fn.getcwd(), ':p'))
+end
+
+local function readiness_store_path()
+  local root = current_workspace_root or vim.fn.resolve(vim.fn.fnamemodify(vim.fn.getcwd(), ':p'))
+  local key = vim.fn.sha256(root)
+  local directory = vim.fn.stdpath('state') .. '/pre-cr'
+  vim.fn.mkdir(directory, 'p')
+  return directory .. '/' .. key .. '.json'
+end
+
+load_readiness = function()
+  local path = readiness_store_path()
+  if vim.fn.filereadable(path) == 0 then
+    return
+  end
+
+  local ok, decoded = pcall(vim.fn.json_decode, table.concat(vim.fn.readfile(path), '\n'))
+  if ok and type(decoded) == 'table' and type(decoded.state) == 'string' then
+    last_readiness = decoded
+  end
+end
+
+local function set_readiness(readiness)
+  if type(readiness) ~= 'table' then
+    return
+  end
+
+  last_readiness = readiness
+  local ok, encoded = pcall(vim.fn.json_encode, readiness)
+  if ok then
+    vim.fn.writefile({ encoded }, readiness_store_path())
+  end
+end
+
+local function open_readiness_buffer()
+  local readiness = last_readiness or {
+    state = 'setup-needed',
+    summary = 'Run :PreCrCheck to evaluate this workspace.',
+    remediation = {}
+  }
+  local lines = {
+    'Pre-CR Readiness — ' .. readiness_state_label(readiness),
+    '',
+    readiness.summary or 'No readiness summary is available.',
+    ''
+  }
+
+  if readiness.scope then
+    table.insert(lines, 'Scope: ' .. readiness.scope)
+  end
+  if readiness.lastRunAt then
+    table.insert(lines, 'Last run: ' .. os.date('%Y-%m-%d %H:%M:%S', math.floor(readiness.lastRunAt / 1000)))
+  end
+
+  local remediation = readiness.remediation or {}
+  if #remediation > 0 then
+    table.insert(lines, '')
+    table.insert(lines, 'Remediation')
+    for _, item in ipairs(remediation) do
+      table.insert(lines, string.format('- [%s] %s', item.code or 'action', item.message or 'Review setup'))
+      if item.hint then
+        table.insert(lines, '  ' .. item.hint)
+      end
+    end
+  end
+
+  local bufnr = vim.fn.bufnr('Pre-CR Readiness')
+  if bufnr <= 0 or not vim.api.nvim_buf_is_valid(bufnr) then
+    bufnr = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_name(bufnr, 'Pre-CR Readiness')
+  end
+  vim.bo[bufnr].modifiable = true
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  vim.bo[bufnr].buftype = 'nofile'
+  vim.bo[bufnr].bufhidden = 'wipe'
+  vim.bo[bufnr].modifiable = false
+  vim.api.nvim_set_current_buf(bufnr)
+end
+
+local function sync_workspace_from_buffer(bufnr)
+  for _, client in ipairs(vim.lsp.get_active_clients({ bufnr = bufnr })) do
+    if client.name == 'pre-cr' and client.config and client.config.root_dir then
+      current_workspace_root = vim.fn.resolve(vim.fn.fnamemodify(client.config.root_dir, ':p'))
+      load_readiness()
+      return
+    end
+  end
+end
+
 -- ============================================================================
 -- LSP Client Setup (Manual)
 -- ============================================================================
@@ -160,6 +289,7 @@ local function setup_lsp_manual()
           name = 'pre-cr',
           cmd = M.config.cmd,
           root_dir = vim.fn.getcwd(),
+          init_options = { trustedExecution = M.config.trustedExecution == true },
           settings = M.config.settings,
           on_attach = function(client, bufnr)
             -- Request coverage decorations
@@ -169,7 +299,7 @@ local function setup_lsp_manual()
               }
             }
             
-            client.request('$/preCr/getCoverageDecorations', params, function(err, result)
+            client.request(stable_methods.getCoverageDecorations, params, function(err, result)
               if not err and result and result.decorations then
                 apply_decorations(bufnr, result.decorations)
               end
@@ -199,6 +329,7 @@ local function setup_lsp_lspconfig()
         cmd = M.config.cmd,
         filetypes = M.config.filetypes,
         root_dir = lspconfig.util.root_pattern('package.json', '.git', 'coverage'),
+        init_options = { trustedExecution = M.config.trustedExecution == true },
         settings = M.config.settings,
         on_attach = function(client, bufnr)
           -- Request coverage decorations when buffer is opened
@@ -211,7 +342,7 @@ local function setup_lsp_lspconfig()
                 }
               }
               
-              client.request('$/preCr/getCoverageDecorations', params, function(err, result)
+              client.request(stable_methods.getCoverageDecorations, params, function(err, result)
                 if not err and result and result.decorations then
                   apply_decorations(bufnr, result.decorations)
                 end
@@ -241,20 +372,38 @@ local function setup_commands()
       return
     end
 
-    clients[1].request('$/preCr/runPreCrCheck', {}, function(err, result)
+    clients[1].request(stable_methods.runPreCrCheck, vim.tbl_extend('force', workspace_request_params(clients[1]), { scope = 'staged' }), function(err, result)
       if err then
-        vim.notify('Pre-CR check failed: ' .. err.message, vim.log.levels.ERROR)
+        set_readiness({
+          state = 'blocked',
+          gateDecision = 'block',
+          scope = 'staged',
+          summary = 'The readiness request failed before the server returned a result.',
+          remediation = {
+            { code = 'server-request-failed', message = err.message or tostring(err) }
+          },
+          lastRunAt = os.time() * 1000
+        })
+        vim.notify('Pre-CR check failed: ' .. error_message(err), vim.log.levels.ERROR)
         return
       end
 
       if not result or not result.result then
+        if result and result.readiness then
+          result.readiness.lastRunAt = os.time() * 1000
+          set_readiness(result.readiness)
+        end
         vim.notify('Pre-CR check returned no result', vim.log.levels.WARN)
         return
       end
 
       local check = result.result
+      if result.readiness then
+        result.readiness.lastRunAt = os.time() * 1000
+        set_readiness(result.readiness)
+      end
       if check.coverageCheck then
-        last_coverage_check = check.coverageCheck
+        coverage_checks[workspace_key()] = check.coverageCheck
         local lines = format_coverage_surface_lines(check.coverageCheck)
         local status = check.coverageCheck.passed and 'passed' or format_coverage_failure_message(check.coverageCheck)
         local summary = string.format(
@@ -281,9 +430,9 @@ local function setup_commands()
       return
     end
 
-    clients[1].request('$/preCr/getProjectHealth', {}, function(err, result)
+    clients[1].request(stable_methods.getProjectHealth, workspace_request_params(clients[1]), function(err, result)
       if err then
-        vim.notify('Failed to inspect Pre-CR setup: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Failed to inspect Pre-CR setup: ' .. error_message(err), vim.log.levels.ERROR)
         return
       end
 
@@ -293,6 +442,28 @@ local function setup_commands()
       end
 
       local health = result.health
+      local has_blocking_issue = false
+      local has_warning_issue = false
+      for _, issue in ipairs(health.issues or {}) do
+        if issue.severity == 'error' then
+          has_blocking_issue = true
+        elseif issue.severity == 'warning' then
+          has_warning_issue = true
+        end
+      end
+      set_readiness({
+        state = has_blocking_issue and 'setup-needed' or has_warning_issue and 'warning' or 'ready',
+        gateDecision = has_blocking_issue and 'block' or has_warning_issue and 'warn' or 'pass',
+        scope = nil,
+        summary = has_blocking_issue
+          and 'Project setup requires attention.'
+          or has_warning_issue
+            and 'Project setup has warnings to review.'
+          or 'Project health is ready for the Pre-CR workflow.',
+        remediation = health.issues or {},
+        lastRunAt = os.time() * 1000
+      })
+      local last_coverage_check = coverage_checks[workspace_key()]
       local last_unsupported_files = last_coverage_check and last_coverage_check.unsupportedFiles or {}
       local has_last_unsupported_files = #last_unsupported_files > 0
       local lines = { 'Pre-CR Setup Health:' }
@@ -334,9 +505,9 @@ local function setup_commands()
       }
     }
     
-    clients[1].request('$/preCr/getCoverageDecorations', params, function(err, result)
+    clients[1].request(stable_methods.getCoverageDecorations, params, function(err, result)
       if err then
-        vim.notify('Failed to get coverage: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Failed to get coverage: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.decorations then
         apply_decorations(bufnr, result.decorations)
         vim.notify('Coverage applied: ' .. #result.decorations .. ' lines', vim.log.levels.INFO)
@@ -361,14 +532,44 @@ local function setup_commands()
       return
     end
     
-    clients[1].request('$/preCr/refreshCoverage', {}, function(err, result)
+    clients[1].request(stable_methods.refreshCoverage, workspace_request_params(clients[1]), function(err, result)
       if err then
-        vim.notify('Failed to refresh: ' .. err.message, vim.log.levels.ERROR)
+        set_readiness({
+          state = 'blocked',
+          gateDecision = 'block',
+          scope = 'staged',
+          summary = 'Coverage refresh failed before the server returned a result.',
+          remediation = {
+            { code = 'refresh-failed', message = error_message(err) }
+          },
+          lastRunAt = os.time() * 1000
+        })
+        vim.notify('Failed to refresh: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.success then
+        set_readiness({
+          state = 'warning',
+          gateDecision = 'warn',
+          scope = 'staged',
+          summary = 'Coverage refreshed. Run :PreCrCheck to recompute readiness.',
+          remediation = {
+            { code = 'readiness-refresh-required', message = 'Run :PreCrCheck to verify changed-line coverage and quality adapters.' }
+          },
+          lastRunAt = os.time() * 1000
+        })
         vim.notify('Coverage refreshed', vim.log.levels.INFO)
         -- Re-apply decorations
         vim.cmd('PreCrShow')
       else
+        set_readiness({
+          state = 'setup-needed',
+          gateDecision = 'block',
+          scope = 'staged',
+          summary = 'No configured coverage report is available.',
+          remediation = {
+            { code = 'missing-coverage', message = 'Run the configured test command, then refresh coverage again.' }
+          },
+          lastRunAt = os.time() * 1000
+        })
         vim.notify('Failed to refresh coverage', vim.log.levels.WARN)
       end
     end, bufnr)
@@ -384,9 +585,9 @@ local function setup_commands()
       return
     end
     
-    clients[1].request('$/preCr/getCoverageSummary', {}, function(err, result)
+    clients[1].request(stable_methods.getCoverageSummary, workspace_request_params(clients[1]), function(err, result)
       if err then
-        vim.notify('Failed to get summary: ' .. err.message, vim.log.levels.ERROR)
+        vim.notify('Failed to get summary: ' .. error_message(err), vim.log.levels.ERROR)
       elseif result and result.summary then
         local s = result.summary
         local msg = string.format(
@@ -401,6 +602,11 @@ local function setup_commands()
       end
     end, bufnr)
   end, { desc = 'Show coverage summary' })
+
+  vim.api.nvim_create_user_command('PreCrReadiness', function()
+    sync_workspace_from_buffer(vim.api.nvim_get_current_buf())
+    open_readiness_buffer()
+  end, { desc = 'Show the persisted Pre-CR readiness result' })
 end
 
 -- ============================================================================
@@ -414,6 +620,7 @@ local function setup_keymaps()
   vim.keymap.set('n', '<leader>cr', ':PreCrRefresh<CR>', { desc = 'Refresh coverage' })
   vim.keymap.set('n', '<leader>ci', ':PreCrSummary<CR>', { desc = 'Coverage summary' })
   vim.keymap.set('n', '<leader>cf', ':PreCrFixSetup<CR>', { desc = 'Fix Pre-CR setup' })
+  vim.keymap.set('n', '<leader>cd', ':PreCrReadiness<CR>', { desc = 'Show Pre-CR readiness' })
 end
 
 -- ============================================================================
@@ -425,6 +632,8 @@ function M.setup(opts)
   if opts then
     M.config = vim.tbl_deep_extend('force', M.config, opts)
   end
+
+  load_readiness()
   
   -- Set up highlights
   setup_highlights()
@@ -433,7 +642,7 @@ function M.setup(opts)
   setup_commands()
   
   -- Set up keymaps (optional)
-  if opts and opts.keymaps ~= false then
+  if not opts or opts.keymaps ~= false then
     setup_keymaps()
   end
   

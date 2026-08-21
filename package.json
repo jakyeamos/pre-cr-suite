@@ -20,9 +20,12 @@
     "typecheck": "node scripts/run-turbo-with-pinned-pnpm.mjs run typecheck",
     "test": "node scripts/run-turbo-with-pinned-pnpm.mjs run test",
     "test:headless-beta": "corepack pnpm run build:core && corepack pnpm run build:server && node scripts/smoke-headless-beta-gate.js",
+    "test:neovim-readiness": "node scripts/smoke-neovim-readiness.js",
+    "test:vscode-host": "corepack pnpm --filter pre-cr-suite test:vscode-host",
     "test:beta-parity": "corepack pnpm run build:core && corepack pnpm run build:server && corepack pnpm run build:vscode && node scripts/smoke-cross-client-beta-parity.js",
+    "server-artifact:check": "node scripts/verify-server-artifact.mjs",
     "lint": "node scripts/run-turbo-with-pinned-pnpm.mjs run lint",
-    "package": "corepack pnpm run build && corepack pnpm --filter pre-cr-suite package",
+    "package": "corepack pnpm run build && corepack pnpm run server-artifact:check && corepack pnpm --filter pre-cr-suite package",
     "secret:scan": "node scripts/secret-scan.mjs",
     "dependency:security": "node scripts/dependency-security.mjs",
     "clean": "pnpm -r run clean && rm -rf node_modules",
@@ -31,17 +34,15 @@
     "validation": "node scripts/aios-adoption-gates.mjs validation",
     "dead-code": "node scripts/aios-adoption-gates.mjs dead-code",
     "complexity:check": "node scripts/aios-adoption-gates.mjs complexity",
-    "pre-pr": "corepack pnpm lint && corepack pnpm build && corepack pnpm typecheck && corepack pnpm test && node scripts/aios-adoption-gates.mjs validation",
+    "pre-pr": "corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test && corepack pnpm build && node scripts/aios-adoption-gates.mjs validation",
     "thermo-nuclear-simplification": "node scripts/aios-adoption-gates.mjs thermo"
   },
   "devDependencies": {
-    "eslint": "^9.39.5",
-    "eslint-plugin-anti-slop": "0.5.0",
     "turbo": "^2.10.0",
     "typescript": "^5.3.3"
   },
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=18.0.0"
   },
   "packageManager": "pnpm@11.7.0"
 }

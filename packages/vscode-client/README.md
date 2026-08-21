@@ -55,7 +55,9 @@ Editor settings are presentation-only during beta. Use them for notification and
 
 ## Experimental Features
 
-These features remain in the extension, but they are explicitly experimental during beta:
+These features remain in the extension, but they are explicitly experimental and
+disabled by default during beta. Enable `preCr.experimental.enabled` and reload
+VS Code to expose them:
 
 - Checklist and security flows outside the main coverage path
 - Documentation generation
@@ -69,6 +71,10 @@ pnpm install
 pnpm --filter @pre-cr/core build
 pnpm --filter pre-cr-suite build
 pnpm --filter pre-cr-suite package
+pnpm test:vscode-host
 ```
 
-The package command creates a VSIX that includes `dist/extension.js` and the bundled `dist/server.js`.
+The package command creates a VSIX that includes `dist/extension.js` and the
+same compiled `dist/server.js` artifact published by `@pre-cr/server`.
+`pnpm test:vscode-host` launches a pinned VS Code development host and verifies
+activation, stable readiness commands, and default-off experimental commands.

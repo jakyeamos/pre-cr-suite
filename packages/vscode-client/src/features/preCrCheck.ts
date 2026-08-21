@@ -2,19 +2,37 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import { formatUnsupportedSurfaceSetupGuidance, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth } from '@pre-cr/core';
+import { formatUnsupportedSurfaceSetupGuidance, PRE_CR_METHODS, type CoverageCheckResult, type PreCrCheckResult, type ProjectHealth, type ReadinessResultEnvelope, type RunPreCrCheckParams, type WorkspaceRequestParams } from '@pre-cr/core';
 
 import * as notify from '../utils/notifications';
-import { validatePathInWorkspace } from '../utils/git';
+import * as statusBar from '../utils/statusBar';
 import { state } from '../utils/state';
 import { sendBetaRequestWithNotify } from '../utils/lsp';
 import * as webview from '../utils/webview';
-import { publishMacControlState } from '../utils/macControlState';
+import {
+  formatCoverageFailureMessage,
+  formatCoverageSurfaceLines,
+  formatIncompleteCheckMessage
+} from './preCrCheckMessages';
+
+export {
+  formatCoverageFailureMessage,
+  formatCoverageSurfaceLines,
+  formatIncompleteCheckMessage
+} from './preCrCheckMessages';
 
 let outputChannel: vscode.OutputChannel;
 let isRunning = false;
 
-type CoverageSurfaceFields = Pick<CoverageCheckResult, 'surfaceSummary' | 'unsupportedFiles'>;
+async function clearCoveragePresentation(): Promise<void> {
+  const coverage = await import('./coverage');
+  coverage.clearCoverage(false);
+}
+
+async function refreshCoveragePresentation(client: LanguageClient): Promise<void> {
+  const coverage = await import('./coverage');
+  await coverage.refreshCoverageDecorations(client);
+}
 
 function findProjectRoot(startPath: string): string {
   let current = startPath;
@@ -41,7 +59,19 @@ function getWorkspaceRoot(): string | null {
     return null;
   }
 
-  return findProjectRoot(workspaceFolders[0].uri.fsPath);
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeFolder = activeEditor ? vscode.workspace.getWorkspaceFolder(activeEditor.document.uri) : undefined;
+  return findProjectRoot((activeFolder ?? workspaceFolders[0]).uri.fsPath);
+}
+
+function getWorkspaceRequestParams(scope?: RunPreCrCheckParams['scope']): WorkspaceRequestParams & Pick<RunPreCrCheckParams, 'scope'> {
+  const folders = vscode.workspace.workspaceFolders;
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeFolder = activeEditor ? vscode.workspace.getWorkspaceFolder(activeEditor.document.uri) : undefined;
+  return {
+    ...((activeFolder ?? folders?.[0]) ? { workspaceUri: (activeFolder ?? folders?.[0])!.uri.toString() } : {}),
+    ...(scope ? { scope } : {})
+  };
 }
 
 export function registerPreCrCheckFeature(
@@ -72,36 +102,77 @@ export function registerPreCrCheckFeature(
 
 async function runPreCrCheck(client: LanguageClient): Promise<void> {
   if (isRunning) {
-    await publishMacControlState('preCr.runPreCrCheck', 'check_already_running', outputChannel);
     notify.showWarning('Pre-CR Check is already running');
     return;
   }
 
   if (!getWorkspaceRoot()) {
-    await publishMacControlState('preCr.runPreCrCheck', 'check_workspace_unavailable', outputChannel);
     return;
   }
 
   isRunning = true;
-  let completionState = 'check_unavailable';
   outputChannel.clear();
   outputChannel.show(true);
   outputChannel.appendLine('== Pre-CR Check ==');
-  await publishMacControlState('preCr.runPreCrCheck', 'check_running', outputChannel);
 
   try {
-    const response = await sendBetaRequestWithNotify(client, '$/preCr/runPreCrCheck', {}, 'Pre-CR check');
-    if (!response?.result) {
+    const response = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.runPreCrCheck, getWorkspaceRequestParams('staged'), 'Pre-CR check');
+    if (!response) {
+      state.setReadiness({
+        state: 'blocked',
+        gateDecision: 'block',
+        scope: 'staged',
+        summary: 'The readiness request failed before the server returned a result.',
+        remediation: [{
+          code: 'server-request-failed',
+          message: 'Reconnect to the Pre-CR server and run the check again.'
+        }],
+        lastRunAt: Date.now()
+      });
+      return;
+    }
+    if (!response.result) {
+      if (response.readiness) {
+        applyReadinessState(response.readiness);
+      } else {
+        state.setReadiness({
+          state: 'setup-needed',
+          gateDecision: 'block',
+          scope: 'staged',
+          summary: response.error ?? 'Project setup is required before the readiness check can run.',
+          remediation: response.error
+            ? [{ code: 'readiness-failed', message: response.error }]
+            : [],
+          lastRunAt: Date.now()
+        });
+      }
       return;
     }
 
     renderCheckOutput(response.result);
+    if (response.readiness) {
+      applyReadinessState(response.readiness);
+    }
     applyCoverageState(response.result);
 
     if (response.result.coverageCheck) {
-      completionState = response.result.coverageCheck.passed ? 'check_passed' : 'check_failed';
-      await showUncoveredAsDiagnostics(response.result.coverageCheck.uncoveredDetails);
       const summary = response.result.coverageCheck;
+      const readinessBlocked = response.readiness?.gateDecision === 'block' || !response.result.qualityAdaptersPassed;
+      if (readinessBlocked && summary.passed) {
+        const action = await notify.showWarning(
+          formatIncompleteCheckMessage(response.result),
+          undefined,
+          'Fix Setup',
+          'Show Details'
+        );
+        if (action === 'Fix Setup') {
+          await showProjectHealth(client, true, summary);
+        } else if (action === 'Show Details') {
+          outputChannel.show(true);
+        }
+        return;
+      }
+
       const message = summary.passed
         ? `Coverage ${summary.coveragePercent.toFixed(1)}% on changed lines`
         : formatCoverageFailureMessage(summary);
@@ -131,8 +202,12 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
       return;
     }
 
-    completionState = 'check_incomplete';
-    const action = await notify.showWarning('Pre-CR check could not complete. Review project health for setup issues.', undefined, 'Fix Setup', 'Show Details');
+    const action = await notify.showWarning(
+      formatIncompleteCheckMessage(response.result),
+      undefined,
+      'Fix Setup',
+      'Show Details'
+    );
     if (action === 'Fix Setup') {
       await showProjectHealth(client, true, response.result.coverageCheck ?? undefined);
     } else if (action === 'Show Details') {
@@ -140,22 +215,27 @@ async function runPreCrCheck(client: LanguageClient): Promise<void> {
     }
   } finally {
     isRunning = false;
-    await publishMacControlState('preCr.runPreCrCheck', completionState, outputChannel);
   }
 }
 
 async function refreshCoverage(client: LanguageClient): Promise<void> {
-  const refresh = await sendBetaRequestWithNotify(client, '$/preCr/refreshCoverage', {}, 'Refresh coverage');
+  const refresh = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.refreshCoverage, getWorkspaceRequestParams(), 'Refresh coverage');
   if (!refresh) {
     return;
   }
 
   if (!refresh.success || !refresh.summary) {
-    state.setCoverage({
-      isLoaded: false,
-      percent: null,
-      fileCount: 0,
-      lastLoadedFile: null
+    await clearCoveragePresentation();
+    state.setReadiness({
+      state: 'setup-needed',
+      gateDecision: 'block',
+      scope: 'staged',
+      summary: 'No configured coverage report is available.',
+      remediation: [{
+        code: 'missing-coverage',
+        message: 'Run the configured test command, then refresh coverage again.'
+      }],
+      lastRunAt: Date.now()
     });
     const action = await notify.showWarning('No configured coverage report is available yet.', undefined, 'Fix Setup');
     if (action === 'Fix Setup') {
@@ -171,6 +251,21 @@ async function refreshCoverage(client: LanguageClient): Promise<void> {
     lastLoadedFile: refresh.coveragePath
   });
 
+  await vscode.commands.executeCommand('setContext', 'preCr.hasCoverage', true);
+  statusBar.setCoverage(refresh.summary.linePercentage);
+  await refreshCoveragePresentation(client);
+  state.setReadiness({
+    state: 'warning',
+    gateDecision: 'warn',
+    scope: 'staged',
+    summary: 'Coverage refreshed. Run Pre-CR Check to recompute readiness.',
+    remediation: [{
+      code: 'readiness-refresh-required',
+      message: 'Run Pre-CR Check to verify changed-line coverage and quality adapters.'
+    }],
+    lastRunAt: Date.now()
+  });
+
   notify.showSuccess(`Coverage refreshed: ${refresh.summary.linePercentage.toFixed(1)}%`, 4000);
 }
 
@@ -179,20 +274,32 @@ async function showProjectHealth(
   openPanel = false,
   coverageCheck?: CoverageCheckResult
 ): Promise<void> {
-  const result = await sendBetaRequestWithNotify(client, '$/preCr/getProjectHealth', {}, 'Project health');
+  const result = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, getWorkspaceRequestParams(), 'Project health');
   if (!result) {
     return;
   }
 
-  const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error').length;
-  const totalIssues = result.health.issues.length;
-  state.setSetup({
-    status: blockingIssues > 0 ? 'blocked' : totalIssues > 0 ? 'attention' : 'ready',
-    issueCount: totalIssues,
-    lastChecked: new Date()
+  const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error');
+  const warningIssues = result.health.issues.filter((issue) => issue.severity === 'warning');
+  state.setReadiness({
+    state: blockingIssues.length > 0 ? 'setup-needed' : warningIssues.length > 0 ? 'warning' : 'ready',
+    gateDecision: blockingIssues.length > 0 ? 'block' : warningIssues.length > 0 ? 'warn' : 'pass',
+    scope: null,
+    summary: blockingIssues.length > 0
+      ? `${blockingIssues.length} setup issue${blockingIssues.length === 1 ? '' : 's'} require attention.`
+      : warningIssues.length > 0
+        ? 'Project health has warnings to review.'
+        : 'Project health is ready for the Pre-CR workflow.',
+    remediation: result.health.issues.map((issue) => ({
+      code: issue.code,
+      message: issue.message,
+      hint: issue.hint
+    })),
+    lastRunAt: Date.now()
   });
 
   if (!openPanel) {
+    const blockingIssues = result.health.issues.filter((issue) => issue.severity === 'error').length;
     if (blockingIssues === 0) {
       notify.showSuccess('Project health looks good', 4000);
       return;
@@ -221,7 +328,7 @@ async function openProjectConfig(client: LanguageClient): Promise<void> {
     return;
   }
 
-  const health = await sendBetaRequestWithNotify(client, '$/preCr/getProjectHealth', {}, 'Project health');
+  const health = await sendBetaRequestWithNotify(client, PRE_CR_METHODS.getProjectHealth, getWorkspaceRequestParams(), 'Project health');
   const template = buildProjectConfigTemplate(health?.health);
 
   const document = await vscode.workspace.openTextDocument({
@@ -304,41 +411,6 @@ function renderCheckOutput(result: PreCrCheckResult): void {
   }
 }
 
-export function formatCoverageSurfaceLines(coverage: CoverageSurfaceFields): string[] {
-  const lines = [
-    `  Covered Surface Files: ${coverage.surfaceSummary.coveredFiles}`,
-    `  Ignored Surface Files: ${coverage.surfaceSummary.ignoredFiles}`,
-    `  Unsupported Surface Files: ${coverage.surfaceSummary.unsupportedFiles}`
-  ];
-
-  if (coverage.unsupportedFiles.length === 0) {
-    return lines;
-  }
-
-  lines.push('', 'Unsupported Files');
-  for (const file of coverage.unsupportedFiles.slice(0, 10)) {
-    lines.push(`  - ${file}`);
-  }
-
-  const remaining = coverage.unsupportedFiles.length - 10;
-  if (remaining > 0) {
-    lines.push(`  ... and ${remaining} more`);
-  }
-
-  lines.push('', ...formatUnsupportedSurfaceSetupGuidance(coverage));
-
-  return lines;
-}
-
-export function formatCoverageFailureMessage(coverage: Pick<CoverageCheckResult, 'coveragePercent' | 'threshold' | 'unsupportedFiles'>): string {
-  if (coverage.unsupportedFiles.length > 0) {
-    const suffix = coverage.unsupportedFiles.length === 1 ? 'file needs' : 'files need';
-    return `${coverage.unsupportedFiles.length} unsupported surface ${suffix} setup guidance`;
-  }
-
-  return `Coverage ${coverage.coveragePercent.toFixed(1)}% is below ${coverage.threshold}%`;
-}
-
 function applyCoverageState(result: PreCrCheckResult): void {
   if (!result.coverageCheck) {
     return;
@@ -349,6 +421,26 @@ function applyCoverageState(result: PreCrCheckResult): void {
     percent: result.coverageCheck.coveragePercent,
     fileCount: result.coverageCheck.fileBreakdown.length,
     lastLoadedFile: result.coveragePath
+  });
+}
+
+function applyReadinessState(readiness: ReadinessResultEnvelope): void {
+  const coverage = readiness.result?.coverageCheck;
+  const summary = coverage
+    ? `${coverage.coveragePercent.toFixed(1)}% changed-line coverage (threshold ${coverage.threshold}%).`
+    : readiness.result
+      ? formatIncompleteCheckMessage(readiness.result)
+      : readiness.state === 'setup-needed'
+        ? 'Project setup is required before the readiness check can run.'
+        : 'Pre-CR readiness result received.';
+
+  state.setReadiness({
+    state: readiness.state,
+    gateDecision: readiness.gateDecision,
+    scope: readiness.scope,
+    summary,
+    remediation: readiness.remediation,
+    lastRunAt: Date.now()
   });
 }
 
@@ -434,42 +526,4 @@ function buildProjectHealthHtml(
       </div>
     `
   });
-}
-
-async function showUncoveredAsDiagnostics(details: Array<{ file: string; line: number }>): Promise<void> {
-  const collection = vscode.languages.createDiagnosticCollection('preCr-coverage');
-  const grouped = new Map<string, vscode.Diagnostic[]>();
-  const workspaceRoot = getWorkspaceRoot();
-
-  if (!workspaceRoot) {
-    return;
-  }
-
-  for (const detail of details) {
-    const existing = grouped.get(detail.file) ?? [];
-    const diagnostic = new vscode.Diagnostic(
-      new vscode.Range(detail.line - 1, 0, detail.line - 1, 1000),
-      'Line not covered by tests',
-      vscode.DiagnosticSeverity.Warning
-    );
-    diagnostic.source = 'Pre-CR Coverage';
-    diagnostic.code = 'uncovered-line';
-    existing.push(diagnostic);
-    grouped.set(detail.file, existing);
-  }
-
-  for (const [file, diagnostics] of grouped) {
-    const relativePath = path.isAbsolute(file)
-      ? path.relative(workspaceRoot, path.resolve(file))
-      : file;
-    const resolvedPath = validatePathInWorkspace(relativePath, workspaceRoot);
-    if (resolvedPath && fs.existsSync(resolvedPath)) {
-      collection.set(vscode.Uri.file(resolvedPath), diagnostics);
-    }
-  }
-
-  setTimeout(() => {
-    collection.clear();
-    collection.dispose();
-  }, 60000);
 }

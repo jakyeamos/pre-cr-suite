@@ -1,5 +1,5 @@
-import { DebugSessionManager } from '@pre-cr/core';
-import type { DebugCaptureConfig, DebugSession, SessionAnalysis } from '@pre-cr/core';
+import { DebugSessionManager } from '@pre-cr/core/experimental';
+import type { DebugCaptureConfig, DebugSession, SessionAnalysis } from '@pre-cr/core/experimental';
 import type { Connection } from 'vscode-languageserver/node';
 
 export function registerDebugRequests(connection: Connection): void {

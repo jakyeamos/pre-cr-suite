@@ -8,6 +8,8 @@
 // Types
 export * from './types';
 export * from './protocol';
+export * from './contracts';
+export * from './engine';
 
 // Parsers
 export { parseLcovFile, parseLcovContent } from './parsers/lcov';
@@ -20,11 +22,18 @@ export * from './beta';
 export {
   validateCoverageFile,
   validateSourcePath,
+  resolveWorkspacePath,
   sanitizeForDisplay,
   formatBytes,
   LIMITS
 } from './validation';
-export type { ValidationResult } from './validation';
+export type {
+  ResolveWorkspacePathOptions,
+  ValidationResult,
+  WorkspacePathAccess,
+  WorkspacePathErrorCode,
+  WorkspacePathResult
+} from './validation';
 
 // Logger
 export {
@@ -35,20 +44,28 @@ export {
 } from './logger';
 export type { Logger } from './logger';
 
-// Checklist (Phase 2)
-export * from './checklist';
-
-// Documentation Generator (Phase 2)
-export * from './docgen';
-
-// Review Optimization (Phase 3)
-export * from './review';
-
-// Context Preservation (Phase 4)
-export * from './context';
-
-// Debug Intelligence (Phase 5)
-export * from './debug';
-
-// Test Runner & Coverage Checker
-export * from './runner';
+// Stable changed-line coverage and bounded process primitives.
+export {
+  checkChangesCoverage,
+  formatCoverageReport,
+  formatUnsupportedSurfaceSetupGuidance,
+  getShortSummary
+} from './runner/coverageChecker';
+export type {
+  ChangedFile,
+  ChangedLine,
+  CoverageCheckOptions,
+  CoverageCheckResult,
+  FileBreakdown,
+  UncoveredDetail
+} from './runner/coverageChecker';
+export {
+  DEFAULT_MAX_PROCESS_OUTPUT_BYTES,
+  DEFAULT_PROCESS_TIMEOUT_MS,
+  runProcess
+} from './runner/processRunner';
+export type {
+  ProcessOutput,
+  ProcessRunResult,
+  RunProcessOptions
+} from './runner/processRunner';

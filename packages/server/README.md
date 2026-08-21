@@ -18,9 +18,10 @@ This package exposes two commands:
 ```bash
 pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
+pre-cr run --scope worktree --json --workspace /path/to/repo
 ```
 
-The headless gate uses the same `.pre-cr.json` configuration and `@pre-cr/core` pipeline as the editor integrations.
+The headless gate uses the same `.pre-cr.json` configuration and `@pre-cr/core` pipeline as the editor integrations. `--scope staged` is the default; `--scope worktree` evaluates the current worktree. JSON responses expose `schemaVersion`, `state`, `gateDecision`, `scope`, and structured remediation.
 
 ## Git Hooks
 
@@ -64,7 +65,7 @@ syntax; executable commands remain blocking.
 
 ## Public Beta Surface
 
-The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, the headless JSON gate, and command-only hook management. Broader checklist, docs, review, context, and debug methods are experimental.
+The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, the headless JSON gate, and command-only hook management. Broader checklist, docs, review, context, and debug methods are experimental and are not registered unless the client opts in with `initializationOptions.experimental.enabled: true`. Their implementation imports the explicit `@pre-cr/core/experimental` entrypoint and is not part of the stable core package surface.
 
 ## Scope
 
@@ -91,6 +92,11 @@ This README documents the `server` subproject inside `pre-cr-suite-lsp/packages`
 
 Runtime dependencies include `@pre-cr/core`, `js-yaml`, `vscode-languageserver`, `vscode-languageserver-textdocument`, `vscode-uri`.
 Use `pnpm` from the containing workspace to install dependencies and run scripts.
+
+The build emits a standalone `dist/server.js` artifact with its runtime
+dependencies bundled. The published server and VS Code extension copy are
+verified byte-for-byte identical, so the editor host does not depend on a
+workspace `node_modules` tree.
 
 ## Verification
 

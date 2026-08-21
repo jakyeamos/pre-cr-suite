@@ -14,7 +14,7 @@ Project-level hook policy is parsed from `.pre-cr.json` and consumed by `@pre-cr
 
 ## Public Beta Surface
 
-The beta-stable surface is the changed-line coverage and setup-health pipeline, including shared `.pre-cr.json` hook policy types. Checklist, docs, review, context, and debug helpers remain available for in-repo use, but they are experimental until their contracts are hardened.
+The beta-stable surface is the changed-line coverage and setup-health pipeline, including shared `.pre-cr.json` hook policy types. Checklist, docs, review, context, and debug helpers are isolated behind the explicit `@pre-cr/core/experimental` entrypoint and remain experimental until their contracts are hardened.
 
 ## Scope
 

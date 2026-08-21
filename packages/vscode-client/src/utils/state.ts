@@ -9,6 +9,12 @@
  */
 
 import * as vscode from 'vscode';
+import type {
+  ReadinessGateDecision,
+  ReadinessRemediation,
+  ReadinessScope,
+  ReadinessState
+} from '@pre-cr/core';
 
 // ============================================================================
 // State Types
@@ -42,12 +48,13 @@ export interface ContextState {
   snapshotDescription: string | null;
 }
 
-export type SetupStatus = 'unknown' | 'ready' | 'attention' | 'blocked';
-
-export interface SetupState {
-  status: SetupStatus;
-  issueCount: number;
-  lastChecked: Date | null;
+export interface PreCrReadinessState {
+  state: ReadinessState | 'idle';
+  gateDecision: ReadinessGateDecision | null;
+  scope: ReadinessScope | null;
+  summary: string | null;
+  remediation: ReadinessRemediation[];
+  lastRunAt: number | null;
 }
 
 export interface ExtensionState {
@@ -55,7 +62,7 @@ export interface ExtensionState {
   security: SecurityState;
   debug: DebugState;
   context: ContextState;
-  setup: SetupState;
+  readiness: PreCrReadinessState;
   recentActions: string[];
   isLspConnected: boolean;
 }
@@ -89,10 +96,13 @@ const initialState: ExtensionState = {
     hasSnapshot: false,
     snapshotDescription: null
   },
-  setup: {
-    status: 'unknown',
-    issueCount: 0,
-    lastChecked: null
+  readiness: {
+    state: 'idle',
+    gateDecision: null,
+    scope: null,
+    summary: null,
+    remediation: [],
+    lastRunAt: null
   },
   recentActions: [],
   isLspConnected: false
@@ -105,6 +115,23 @@ const initialState: ExtensionState = {
 type StateListener<T> = (newValue: T, oldValue: T) => void;
 type UnknownStateListener = (newValue: unknown, oldValue: unknown) => void;
 type StateKey = keyof ExtensionState;
+
+function isReadinessState(value: unknown): value is PreCrReadinessState {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Partial<PreCrReadinessState>;
+  const validState = candidate.state === 'idle' || candidate.state === 'ready' || candidate.state === 'warning' || candidate.state === 'blocked' || candidate.state === 'setup-needed';
+  const validDecision = candidate.gateDecision === null || candidate.gateDecision === 'pass' || candidate.gateDecision === 'warn' || candidate.gateDecision === 'block';
+  const validScope = candidate.scope === null || candidate.scope === 'staged' || candidate.scope === 'worktree';
+  const validRemediation = Array.isArray(candidate.remediation) && candidate.remediation.every((item) => (
+    typeof item === 'object' && item !== null &&
+    typeof (item as { code?: unknown }).code === 'string' &&
+    typeof (item as { message?: unknown }).message === 'string'
+  ));
+  return validState && validDecision && validScope && validRemediation;
+}
 
 class StateManager {
   private state: ExtensionState;
@@ -128,6 +155,14 @@ class StateManager {
       if (persisted.recentActions) {
         this.state.recentActions = persisted.recentActions;
       }
+    }
+
+    const persistedReadiness = context.workspaceState.get<PreCrReadinessState>('preCr.readiness');
+    if (isReadinessState(persistedReadiness)) {
+      this.state.readiness = {
+        ...initialState.readiness,
+        ...persistedReadiness
+      };
     }
   }
 
@@ -181,11 +216,13 @@ class StateManager {
     this.notifyListeners('context', this.state.context, oldValue);
   }
 
-  /** Update setup/readiness state shown by the IDE shell. */
-  setSetup(updates: Partial<SetupState>) {
-    const oldValue = { ...this.state.setup };
-    this.state.setup = { ...this.state.setup, ...updates };
-    this.notifyListeners('setup', this.state.setup, oldValue);
+  setReadiness(updates: Partial<PreCrReadinessState>) {
+    const oldValue = { ...this.state.readiness };
+    this.state.readiness = { ...this.state.readiness, ...updates };
+    if (this.extensionContext) {
+      void this.extensionContext.workspaceState.update('preCr.readiness', this.state.readiness);
+    }
+    this.notifyListeners('readiness', this.state.readiness, oldValue);
   }
 
   /**
