@@ -1,3 +1,23 @@
 [quality_runner]
 default_profile = "default"
 required_capabilities = ["formatter", "lint", "typecheck", "tests", "build", "dead_code", "runtime_smoke", "pre_pr", "pre_cr"]
+
+[[quality_runner.cache_design.paths]]
+path = "packages/core/dist"
+class = "build_output"
+lifecycle = "rebuildable"
+
+[[quality_runner.cache_design.paths]]
+path = "packages/rust-coverage-adapter/dist"
+class = "build_output"
+lifecycle = "rebuildable"
+
+[[quality_runner.cache_design.paths]]
+path = "packages/server/dist"
+class = "build_output"
+lifecycle = "rebuildable"
+
+[[quality_runner.cache_design.paths]]
+path = "packages/vscode-client/dist"
+class = "build_output"
+lifecycle = "rebuildable"
