@@ -23,6 +23,18 @@ pre-cr run --scope worktree --json --workspace /path/to/repo
 
 The headless gate uses the same `.pre-cr.json` configuration and `@pre-cr/core` pipeline as the editor integrations. `--scope staged` is the default; `--scope worktree` evaluates the current worktree. JSON responses expose `schemaVersion`, `state`, `gateDecision`, `scope`, and structured remediation.
 
+## Contribution Proof
+
+```bash
+pre-cr proof --manifest contribution-proof.json --json --workspace /path/to/repo
+```
+
+Contribution Proof is an experimental, read-only CLI workflow. It validates
+risk-scaled evidence and binds the manifest to a clean, non-empty descendant
+diff. It does not execute manifest commands, authorize a merge, or imply LSP,
+VS Code, or Neovim parity. See
+[`docs/CONTRIBUTION_PROOF.md`](../../docs/CONTRIBUTION_PROOF.md).
+
 ## Git Hooks
 
 Hook installation is explicit. Installing the package does not mutate `.git/hooks`, Husky, Lefthook, or pre-commit framework config.
@@ -65,7 +77,7 @@ syntax; executable commands remain blocking.
 
 ## Public Beta Surface
 
-The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, the headless JSON gate, and command-only hook management. Broader checklist, docs, review, context, and debug methods are experimental and are not registered unless the client opts in with `initializationOptions.experimental.enabled: true`. Their implementation imports the explicit `@pre-cr/core/experimental` entrypoint and is not part of the stable core package surface.
+The beta-supported server surface is Pre-CR Check, Refresh Coverage, Fix Setup, the headless JSON gate, and command-only hook management. Contribution Proof is an experimental CLI-only surface. Broader checklist, docs, review, context, and debug methods are experimental and are not registered unless the client opts in with `initializationOptions.experimental.enabled: true`. Their implementation imports the explicit `@pre-cr/core/experimental` entrypoint and is not part of the stable core package surface.
 
 ## Scope
 

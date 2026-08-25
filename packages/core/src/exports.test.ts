@@ -16,5 +16,6 @@ describe('core package entrypoints', () => {
     expect(experimental).toHaveProperty('generateDocs');
     expect(experimental).toHaveProperty('ContextManager');
     expect(experimental).toHaveProperty('DebugSessionManager');
+    expect(experimental).toHaveProperty('evaluateContributionProof');
   });
 });

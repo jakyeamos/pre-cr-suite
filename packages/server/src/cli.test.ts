@@ -25,6 +25,27 @@ describe('runHeadlessCli', () => {
     }
   });
 
+  it('routes Contribution Proof without running the readiness gate', async () => {
+    const calls: string[][] = [];
+    const result = await runHeadlessCli(
+      ['proof', '--manifest', 'proof.json', '--json'],
+      {
+        cwd: () => '/repo',
+        runCheck: async () => {
+          throw new Error('proof must not run the changed-line gate');
+        },
+        runContributionProof: async (argv, dependencies) => {
+          calls.push(argv);
+          expect(dependencies.cwd).toBe('/repo');
+          return { exitCode: 0, stdout: '{"state":"ready"}\n', stderr: '' };
+        }
+      }
+    );
+
+    expect(calls).toEqual([['--manifest', 'proof.json', '--json']]);
+    expect(result).toEqual({ exitCode: 0, stdout: '{"state":"ready"}\n', stderr: '' });
+  });
+
   it('runs the gate in JSON mode without using the LSP transport', async () => {
     const calls: Array<{
       workspaceRoot: string;

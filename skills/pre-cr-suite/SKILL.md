@@ -17,7 +17,7 @@ description: Use when coding with the Pre-CR Suite monorepo—@pre-cr/core, @pre
 
 ## When to use this skill
 
-Use it for implementation, debugging, configuration, test integration, CLI automation, LSP/client work, coverage parsing, or upgrading this package family. Prefer the beta workflow: repo configuration, changed-line coverage, setup health, refresh, and parity across clients. The VS Code-only context continuity subset is a source-verified candidate with installed proof still open. Treat checklist, docs, review, and debug helpers as experimental unless the task explicitly targets them.
+Use it for implementation, debugging, configuration, test integration, CLI automation, LSP/client work, coverage parsing, or upgrading this package family. Prefer the beta workflow: repo configuration, changed-line coverage, setup health, refresh, and parity across clients. The VS Code-only context continuity subset is a source-verified candidate with installed proof still open. Treat Contribution Proof, checklist, docs, review, and debug helpers as experimental unless the task explicitly targets them.
 
 ## Package mental model
 
@@ -92,6 +92,21 @@ pre-cr run --json --workspace /path/to/repo
 
 Use `--json` for automation. The CLI checks staged changes and returns non-zero for failures on protected/unknown branches; detected feature branches can return `0` with `gateDecision: "warn"`. Do not parse human-readable output as a stable API.
 
+For an explicitly requested evidence handoff, use the experimental read-only
+Contribution Proof command:
+
+```bash
+pre-cr proof --manifest contribution-proof.json --json --workspace /path/to/repo
+```
+
+The manifest binds claims, direct observations, passed automated tests,
+negative controls, edge cases, unknowns, and reviewer reproduction steps to a
+full base commit. Low risk requires a direct observation or passed test; medium
+requires both; high also requires a negative control and edge case per claim.
+The worktree must be clean and the base-to-HEAD diff non-empty. The command
+validates supplied evidence but does not run it, edit the repo, open a PR, or
+authorize merge. Do not infer editor or LSP parity from this CLI-only surface.
+
 For explicit hook changes only, use `pre-cr hook install|status|run|uninstall`; supported managers are `native`, `husky`, `lefthook`, `pre-commit`, `auto`, and `all`, with `pre-commit` as the default hook. Executable `run` and `hook run` commands report start, heartbeat, and terminal status on stderr while keeping JSON stdout machine-readable.
 
 If a staged source line contains package-manager text only as non-executable
@@ -141,7 +156,7 @@ Use workspace-relative coverage paths and the exported validation helpers. Cover
 
 - Importing internal files or relying on undocumented LSP methods.
 - Using `coveragePath` in new config instead of `coveragePaths`.
-- Treating experimental helpers as the public beta contract.
+- Treating Contribution Proof or other experimental helpers as the public beta contract.
 - Running the CLI without considering staged-vs-worktree scope or branch-aware warning behavior.
 - Assuming editor settings override repo behavior; project behavior belongs in `.pre-cr.json`.
 - Parsing text CLI output when `--json` is available.

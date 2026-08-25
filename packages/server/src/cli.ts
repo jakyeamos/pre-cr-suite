@@ -12,6 +12,7 @@ import {
   type RunWorkspacePreCrCheckOptions
 } from '@pre-cr/core';
 import { runHookCli } from './hooks/cli';
+import { runContributionProofCli } from './contributionProofCli';
 import {
   buildPreCrAuditEvent,
   defaultCurrentBranch,
@@ -28,11 +29,12 @@ export interface HeadlessCliResult {
   stderr: string;
 }
 
-interface HeadlessCliDependencies {
+export interface HeadlessCliDependencies {
   runCheck?: (workspaceRoot: string, options?: RunWorkspacePreCrCheckOptions) => Promise<RunPreCrCheckResult>;
   cwd?: () => string;
   audit?: QualityGateAuditAppender;
   currentBranch?: (workspaceRoot: string) => Promise<string | null>;
+  runContributionProof?: typeof runContributionProofCli;
 }
 
 interface HeadlessCliProgressOptions {
@@ -73,6 +75,12 @@ export async function runHeadlessCli(
       cwd: dependencies.cwd?.() ?? process.cwd(),
       usageText: usage(),
       runCheck: dependencies.runCheck
+    });
+  }
+
+  if (argv[0] === 'proof') {
+    return (dependencies.runContributionProof ?? runContributionProofCli)(argv.slice(1), {
+      cwd: dependencies.cwd?.() ?? process.cwd()
     });
   }
 
@@ -303,6 +311,7 @@ function elapsedSeconds(startedAt: number): number {
 function usage(): string {
   return [
     'Usage: pre-cr run [--json] [--scope staged|worktree] [--workspace <path>]',
+    '       pre-cr proof --manifest <path|-> [--json] [--workspace <path>]',
     '       pre-cr version | --version | -V',
     '       pre-cr hook install [--manager auto|native|husky|lefthook|pre-commit|all] [--hook pre-commit|pre-push] [--force]',
     '       pre-cr hook status [--json]',

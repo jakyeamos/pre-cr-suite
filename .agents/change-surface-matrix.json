@@ -1,0 +1,39 @@
+{
+  "schema_version": "change-surface-matrix/v1",
+  "subject": {"kind": "repository", "id": "pre-cr-suite"},
+  "owner": "pre-cr-suite-maintainers",
+  "last_reviewed": "2026-08-25",
+  "surfaces": [
+    {
+      "id": "matrix-maintenance",
+      "scope": "local",
+      "distribution": "local_only",
+      "path": ".agents/change-surface-matrix.json",
+      "owner": "pre-cr-suite-maintainers",
+      "condition": "A material feature, behavior, CLI, workflow, data contract, integration, security, or release surface changes.",
+      "operations": ["add", "change", "remove"],
+      "validation": [
+        "Update this matrix in the same change.",
+        "For internal-only work, record a reviewed no-impact reason instead of omitting the surface."
+      ],
+      "status": "applicable"
+    },
+    {
+      "id": "contribution-proof",
+      "scope": "external",
+      "distribution": "public_experimental",
+      "path": "packages/core/src/contributionProof, packages/core/src/experimental.ts, packages/server/src/contributionProofCli.ts, packages/server/src/cli.ts, docs/CONTRIBUTION_PROOF.md, package documentation, and skills/pre-cr-suite/SKILL.md",
+      "owner": "pre-cr-suite-maintainers",
+      "condition": "Contribution Proof manifest, risk policy, Git binding, JSON envelope, CLI routing, authority boundary, or support status changes.",
+      "operations": ["add", "change", "remove"],
+      "validation": [
+        "core and server focused tests cover pass, warn, block, malformed input, missing evidence, negative control, edge case, unknown claim, dirty worktree, empty diff, and CLI routing",
+        "core and server typecheck and lint",
+        "direct pre-cr proof JSON smoke on a clean committed descendant diff",
+        "Confirm the command remains read-only, reports executionAuthority false, and stays experimental CLI-only without editor parity claims."
+      ],
+      "status": "applicable"
+    }
+  ],
+  "unresolved_surfaces": []
+}

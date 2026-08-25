@@ -55,6 +55,7 @@ The next improvements are clean-clone release verification, stronger marketplace
 | --- | --- | --- |
 | Run Pre-CR Check | Supported | Runs tests with coverage and checks changed-line coverage against the repo threshold |
 | Headless JSON gate | Supported | Runs the same gate without LSP via `pre-cr run --json` |
+| Contribution Proof | Experimental CLI | Validates commit-bound claims, risk-scaled evidence, falsification, edge cases, unknowns, and reviewer handoff; no editor parity claim |
 | Refresh Coverage | Supported | Reloads configured coverage reports for overlays, diagnostics, and summaries |
 | Fix Setup | Supported | Shows repo config, coverage-path, and test-command health |
 | VS Code context continuity | Source-verified candidate | Save Snapshot, Where Was I?, and Restore Snapshot persist branch context in workspace storage; installed VSIX proof remains open |
@@ -109,11 +110,17 @@ pre-cr --version
 pre-cr run --workspace /path/to/repo
 pre-cr run --json --workspace /path/to/repo
 pre-cr run --scope worktree --json --workspace /path/to/repo
+pre-cr proof --manifest contribution-proof.json --json --workspace /path/to/repo
 ```
 
 The CLI uses the same `@pre-cr/core` pipeline as the editor integrations and exits non-zero when the gate fails on `main`, `master`, `dev`, `develop`, `development`, or a branch connected to a dev environment through `AIOS_DEV_ENVIRONMENT`, `AIOS_DEV_ENV`, `QUALITY_GATE_DEV_ENV`, or `GATE_CONNECTED_DEV_ENV`. Use `--scope staged` (the default) or `--scope worktree` explicitly. Failed checks on detected unprotected feature branches return exit code 0 with `gateDecision: "warn"` in JSON output. Unknown branches remain conservative and block. JSON output includes `schemaVersion`, `state`, `gateDecision`, `scope`, and structured remediation; human-readable output includes covered, ignored, and unsupported surface counts plus the unsupported file list.
 
 Executable `run` and `hook run` commands write an immediate start message, a periodic heartbeat, and a terminal exit summary to stderr. JSON stdout remains machine-readable, so a long-running commit hook is observable without corrupting automation output.
+
+`pre-cr proof` is a separate experimental, read-only workflow. It validates a
+manifest against a clean commit-bound diff and applies risk-scaled evidence
+requirements; it does not execute the listed tests or authorize review or
+merge. See [Contribution Proof](docs/CONTRIBUTION_PROOF.md).
 
 When the headless gate blocks, warns, or forces iteration, it appends an AIOS-compatible event to `.aios/audit/gate-events.jsonl` in the checked workspace and refreshes `.aios/audit/gate-summary.md` plus `.aios/audit/learning-lessons.md`. Audit write failures are non-blocking; the branch-aware Pre-CR exit code remains authoritative.
 
@@ -228,6 +235,7 @@ packages/
 ## Docs
 
 - [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
+- [docs/CONTRIBUTION_PROOF.md](docs/CONTRIBUTION_PROOF.md)
 - [docs/ROADMAP.md](docs/ROADMAP.md)
 - [packages/vscode-client/README.md](packages/vscode-client/README.md)
 - [packages/neovim-client/README.md](packages/neovim-client/README.md)

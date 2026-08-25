@@ -27,6 +27,7 @@ Pre-CR Suite is being narrowed into a public beta around one strong workflow:
 | Area | Status | Notes |
 | --- | --- | --- |
 | Checklist and broad review helpers | Experimental | Still available, not part of the beta guarantee |
+| Contribution Proof | Experimental CLI | Commit-bound evidence envelope with risk-scaled claim coverage; editor parity is not claimed |
 | Documentation generation | Experimental | Needs typed/tested parity work |
 | Review estimation and flaky tests | Experimental | Kept in-repo, not part of the beta contract |
 | Debug capture | Experimental | Needs stronger verification |
