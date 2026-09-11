@@ -1,0 +1,12 @@
+{
+  "behaviors": [
+    {
+      "id": "candidate-pre-cr-suite-lsp-core-loop",
+      "spec_ref": "docs/IDE_WORKFLOW.md",
+      "title": "Workspace-isolated readiness shared by supported clients",
+      "authority": "accepted",
+      "source_head": "5c551809eec4bf188e2f86f446e84f41b7ba5274",
+      "scope_note": "Existing canonical beta source association only; broader family and installed delivery remain partial."
+    }
+  ]
+}
