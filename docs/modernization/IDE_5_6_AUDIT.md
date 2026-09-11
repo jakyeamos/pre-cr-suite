@@ -1,7 +1,9 @@
 # VS Code IDE modernization audit — Upgrading to 5.6
 
-**Status:** local modernization complete; external publishing remains owner-gated  
-**Date:** 2026-08-12  
+**Status:** local modernization complete; external publishing remains owner-gated
+
+**Date:** 2026-08-12
+
 **Scope:** `packages/vscode-client`, its user-facing documentation, packaging metadata, and the client/server seams required by the IDE workflow.
 
 ## Product boundary
