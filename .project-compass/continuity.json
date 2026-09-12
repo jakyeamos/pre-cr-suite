@@ -1,10 +1,82 @@
 {
   "schema_version": 1,
-  "revision": 1,
+  "revision": 2,
   "commitments": [
-    {"id": "bootstrap-boundary", "kind": "constraint", "statement": "Only .project-compass/ may be changed by this bootstrap; preserve unrelated dirty work and ownership.", "status": "active", "source": {"ref": "conversation:2026-08-02-project-compass-fleet-bootstrap", "note": "User-authorized scope.", "observed_at": "2026-08-02T13:25:04Z"}},
-    {"id": "cross-surface-parity", "kind": "decision", "statement": "The intended readiness contract covers supported VS Code, Neovim, and headless surfaces; one client cannot be treated as parity proof for the others.", "status": "active", "source": {"ref": "README.md", "note": "Shared configuration and beta promise.", "observed_at": "2026-08-02T13:25:04Z"}}
+    {
+      "id": "bootstrap-boundary",
+      "kind": "constraint",
+      "statement": "Only .project-compass/ may be changed by this bootstrap; preserve unrelated dirty work and ownership.",
+      "status": "superseded",
+      "source": {
+        "ref": "conversation:2026-08-02-project-compass-fleet-bootstrap",
+        "note": "User-authorized scope.",
+        "observed_at": "2026-08-02T13:25:04Z"
+      }
+    },
+    {
+      "id": "cross-surface-parity",
+      "kind": "decision",
+      "statement": "The intended readiness contract covers supported VS Code, Neovim, and headless surfaces; one client cannot be treated as parity proof for the others.",
+      "status": "active",
+      "source": {
+        "ref": "README.md",
+        "note": "Shared configuration and beta promise.",
+        "observed_at": "2026-08-02T13:25:04Z"
+      }
+    },
+    {
+      "id": "bounded-package-hook-repair",
+      "kind": "constraint",
+      "statement": "Repair the shared hook blocker for the existing repository package contract with source/tests/documentation and current verification; preserve unrelated ownership, independent gates and client parity boundaries.",
+      "status": "active",
+      "source": {
+        "ref": "conversation:01a08207-33a9-7f71-a11c-7ed453677d28",
+        "observed_at": "2026-09-11T22:07:07.785736+00:00",
+        "note": "User explicitly requested repairing held repositories and preapproved necessary completion work."
+      }
+    }
   ],
-  "reconciliations": [],
-  "updated_at": "2026-08-02T13:25:04Z"
+  "reconciliations": [
+    {
+      "id": "authorized-hook-repair",
+      "observed_at": "2026-09-11T22:07:07.785736+00:00",
+      "source": {
+        "ref": "conversation:01a08207-33a9-7f71-a11c-7ed453677d28",
+        "observed_at": "2026-09-11T22:07:07.785736+00:00",
+        "note": "User explicitly requested repairing held repositories and preapproved necessary completion work."
+      },
+      "classification": "superseding",
+      "materiality": "medium",
+      "incoming": "Handle RemodelVision prerequisite fixes as part of fleet completion.",
+      "project_evidence": [
+        {
+          "ref": "docs/HOOK_PACKAGE_CONTRACT.md",
+          "observed_at": "2026-09-11T22:07:07.785736+00:00"
+        }
+      ],
+      "preserved": [
+        "Project purpose, shared readiness and separate installed-client evidence.",
+        "Unrelated dirty work and ownership."
+      ],
+      "changed": [
+        "Earlier documentation-only bootstrap scope now includes the bounded shared package-contract hook repair."
+      ],
+      "contradicted": [],
+      "deferred": [
+        "Package publication and unrelated modernization."
+      ],
+      "left_behind": [],
+      "unknown": [],
+      "disposition": "recorded-supersession",
+      "question": "",
+      "user_decision": "Handle the fixes and continue task to completion.",
+      "decision_source": {
+        "ref": "conversation:01a08207-33a9-7f71-a11c-7ed453677d28",
+        "observed_at": "2026-09-11T22:07:07.785736+00:00",
+        "note": "User explicitly requested repairing held repositories and preapproved necessary completion work."
+      },
+      "reason": "The current explicit request authorizes prerequisite repairs beyond the earlier documentation-only bootstrap; the repair preserves existing product intent and independent verification."
+    }
+  ],
+  "updated_at": "2026-09-11T22:07:07.785736+00:00"
 }

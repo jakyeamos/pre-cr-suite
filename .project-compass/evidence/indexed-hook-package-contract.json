@@ -1,0 +1,357 @@
+{
+  "command": [
+    "pnpm",
+    "run",
+    "test:hook-package-contract"
+  ],
+  "exit_code": 0,
+  "inputs": {
+    "behavior_contracts": "e73f4f6d32eb7d4bb2c76f3ff364c9e85645787bf1e22e4bcce29c096d608915",
+    "binding": "df2a2079b5c2ab4d3241237bcaef664eedf6d738f30eb55e230ea7559177cbfb",
+    "commitments": "af7f095332358be4c083eb2c7ad9c711f8a38a7ae4c01689e012f38df49a4048",
+    "contracts": {
+      "project": "b8d79eb2d1f61e6651578cbfa1fbc9a026432d2ab4ee34a805c2fb8341ea442e"
+    },
+    "decision": "271267c270dd6b48ec38de5516707976d397dd4b1d03af4f5b21dc54ef8195e4",
+    "references": {
+      ".project-compass/continuity.json": {
+        "digest": "1618daaf16ec608c5617bc53485dd65da9b003cbce2904b762c2110682e6bf9d",
+        "ref": ".project-compass/continuity.json",
+        "status": "present"
+      },
+      "README.md": {
+        "digest": "93f3e5039ad06ca5f47f15c955c3b36ce24f967deac855670354c534bc4821af",
+        "ref": "README.md",
+        "status": "present"
+      },
+      "docs/HOOK_PACKAGE_CONTRACT.md": {
+        "digest": "5f6619def1f8a738a5ade49bcbaf1398fe2471efd4e4621d284c2563aa14d6b6",
+        "ref": "docs/HOOK_PACKAGE_CONTRACT.md",
+        "status": "present"
+      },
+      "docs/change-surface-matrix.json": {
+        "digest": "059c87fcd0213a45d94cf509b9c453c04b49c1e20822b04c4105391c55077fe4",
+        "ref": "docs/change-surface-matrix.json",
+        "status": "present"
+      },
+      "package.json": {
+        "digest": "902052f2ba0f31ab83e998573cb10bc5ea09228cc5447dd1e3199058832bb4bd",
+        "ref": "package.json",
+        "status": "present"
+      },
+      "packages/core/package.json": {
+        "digest": "abfb50d6c1321481662aab8a77e7784f2691c9d91c1e25a6fd622826a3bd09ab",
+        "ref": "packages/core/package.json",
+        "status": "present"
+      },
+      "packages/core/src/beta/command.ts": {
+        "digest": "713823d917dc6b082e6d224a1f0d294122c8a5eef6fdb9d33017bd6e2e2525f9",
+        "ref": "packages/core/src/beta/command.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/config.ts": {
+        "digest": "8a0da040def488035ac30bd6a8c78849b2a33f110d92d02012c9844fcf279570",
+        "ref": "packages/core/src/beta/config.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/git.ts": {
+        "digest": "e8628e21e2d9e9a071f69168c068d93f2667b68443c01e6b46de55f7b2749d6c",
+        "ref": "packages/core/src/beta/git.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/index.ts": {
+        "digest": "3b9089a017b026962e980867b001458556aff270dcdba4026ed314c63fd5a7f9",
+        "ref": "packages/core/src/beta/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/precheck.ts": {
+        "digest": "94897ac4bf9d9369b81214ea63ada198de766a32127d60c7e9d66352df1968c2",
+        "ref": "packages/core/src/beta/precheck.ts",
+        "status": "present"
+      },
+      "packages/core/src/checklist/docCoverage.ts": {
+        "digest": "e1470b44f6edde700f7dbc85768a382a8b3b451348d7435b3b5aca88035142ef",
+        "ref": "packages/core/src/checklist/docCoverage.ts",
+        "status": "present"
+      },
+      "packages/core/src/checklist/healthMonitor.ts": {
+        "digest": "47167b7f7c5a7ddd9b694baa3ff31a09e95883afe62a3d820ff9c9418ac11d3c",
+        "ref": "packages/core/src/checklist/healthMonitor.ts",
+        "status": "present"
+      },
+      "packages/core/src/checklist/index.ts": {
+        "digest": "5d4d5e3bae4ea178b0a3e360054f3bcaaafc93faf4748f2973ea36f6834cacb0",
+        "ref": "packages/core/src/checklist/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/checklist/prSize.ts": {
+        "digest": "05ff0db22d59178279a210b4935f47282b59c8adf4a4321f7db63046f2412c4f",
+        "ref": "packages/core/src/checklist/prSize.ts",
+        "status": "present"
+      },
+      "packages/core/src/checklist/runner.ts": {
+        "digest": "d2e9915b19a819219e2e1fd74ebfda7450045311ca5a0228154346305ba809fc",
+        "ref": "packages/core/src/checklist/runner.ts",
+        "status": "present"
+      },
+      "packages/core/src/checklist/security.ts": {
+        "digest": "1204238870cbec47e2004d610fb20599904ee92bb64146a56c71ec1e7b01404b",
+        "ref": "packages/core/src/checklist/security.ts",
+        "status": "present"
+      },
+      "packages/core/src/checklist/types.ts": {
+        "digest": "d6357bbba448dbb4050309148b5f58c7983d791a81142a850624425493a5aa0c",
+        "ref": "packages/core/src/checklist/types.ts",
+        "status": "present"
+      },
+      "packages/core/src/context/index.ts": {
+        "digest": "ca6dcf94f8cd51dfcd4418714955fa6f0bdc108e416ffabd254e17e43eac8333",
+        "ref": "packages/core/src/context/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/context/snapshot.ts": {
+        "digest": "818c2d3822748dba8b4d0f922d4f99d97bbbf3d226a66d55a8aae6278408cbac",
+        "ref": "packages/core/src/context/snapshot.ts",
+        "status": "present"
+      },
+      "packages/core/src/contracts/index.ts": {
+        "digest": "f7da2cd5265c714660ce9c5087270a0eb7b2affc814c7d936c1e8ef2a841b308",
+        "ref": "packages/core/src/contracts/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/contracts/methods.ts": {
+        "digest": "a45eb5897bee22ffef693d13cb50d1bb44ebb3d64be66b36a8c4fd98de63f114",
+        "ref": "packages/core/src/contracts/methods.ts",
+        "status": "present"
+      },
+      "packages/core/src/contracts/readiness.ts": {
+        "digest": "b59c77b4a1037248d38aacf8f9010f0e9aae97c6d9782113eabedd38fd09abaf",
+        "ref": "packages/core/src/contracts/readiness.ts",
+        "status": "present"
+      },
+      "packages/core/src/contracts/validators.ts": {
+        "digest": "a382876ae506dfecbfc65942e603459a39eade237a0e612947dfb4891afde0cf",
+        "ref": "packages/core/src/contracts/validators.ts",
+        "status": "present"
+      },
+      "packages/core/src/debug/capture.ts": {
+        "digest": "7435283729c65e87092f77bbd9885688fa1e8f2abaaf0aeb8145ce8d00bcb8d4",
+        "ref": "packages/core/src/debug/capture.ts",
+        "status": "present"
+      },
+      "packages/core/src/debug/index.ts": {
+        "digest": "ba02d3a8c5008e37f3a1a29832c965802af3d74bdacff294ca918d14c6870d7f",
+        "ref": "packages/core/src/debug/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/docgen/extractor.ts": {
+        "digest": "b778f0bcb151c0c761ba72488c19097f0e8a16bda144f9c8ea19acedadd95b89",
+        "ref": "packages/core/src/docgen/extractor.ts",
+        "status": "present"
+      },
+      "packages/core/src/docgen/extractorAST.ts": {
+        "digest": "329d02a9929b9cfb7bf84c277218324978d9506f6cf9f218f984a325fea7aa15",
+        "ref": "packages/core/src/docgen/extractorAST.ts",
+        "status": "present"
+      },
+      "packages/core/src/docgen/formatter.ts": {
+        "digest": "92ee4d62a2e8ee045f047ce1d0247271ad25e9aa5835c393e4ac9788c95cec46",
+        "ref": "packages/core/src/docgen/formatter.ts",
+        "status": "present"
+      },
+      "packages/core/src/docgen/index.ts": {
+        "digest": "7df5e63707edc9f289a4d03ef5ac9635be2159f63759f84cf4c097ee9e62a942",
+        "ref": "packages/core/src/docgen/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/docgen/types.ts": {
+        "digest": "cf5ac8c2e952b1e5df3db571c277ccdf9229aa426a270e828e7cf5c5cbf1776d",
+        "ref": "packages/core/src/docgen/types.ts",
+        "status": "present"
+      },
+      "packages/core/src/engine/index.ts": {
+        "digest": "8ee1d5b60322c443205c899a286c3c3b8f7d22ffee3f6cbc5f73dc3e1b6a3a3d",
+        "ref": "packages/core/src/engine/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/engine/workspaceSession.ts": {
+        "digest": "618cf27f404227e0836b2215775d38907bfdf49a7cc2f296e7a034ad47dfc39a",
+        "ref": "packages/core/src/engine/workspaceSession.ts",
+        "status": "present"
+      },
+      "packages/core/src/experimental.ts": {
+        "digest": "22108e3797ca35a7f304626395501c33d8f532cea5c5ebadf9e81670fa13cbfe",
+        "ref": "packages/core/src/experimental.ts",
+        "status": "present"
+      },
+      "packages/core/src/index.ts": {
+        "digest": "972bf071990aed64720189e3ddda0804bc0a301341441d77aa09008dfb482e3f",
+        "ref": "packages/core/src/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/logger.ts": {
+        "digest": "088953cb7605b7620ba46edb12efe6c6771d750660bda82a74d73b16c581355b",
+        "ref": "packages/core/src/logger.ts",
+        "status": "present"
+      },
+      "packages/core/src/parsers/index.ts": {
+        "digest": "078e2e70dbac6e32b29b15cc062dbad521ed1a48c02d9b7f1c12d353fb8781a2",
+        "ref": "packages/core/src/parsers/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/parsers/istanbul.ts": {
+        "digest": "f691e4eb625a46c2d5a3bec67b42f5f0efb3b4681d919593b9b03af40d700500",
+        "ref": "packages/core/src/parsers/istanbul.ts",
+        "status": "present"
+      },
+      "packages/core/src/parsers/lcov.ts": {
+        "digest": "3e7cc94afcf031098cd23d7d1b94106f2689ed2b652cde563f02752efb2f01fe",
+        "ref": "packages/core/src/parsers/lcov.ts",
+        "status": "present"
+      },
+      "packages/core/src/parsers/lcovStreaming.ts": {
+        "digest": "e6a67ed3579673642d4e29bc506effc7f9115035711a0fcdaa99a481004358b3",
+        "ref": "packages/core/src/parsers/lcovStreaming.ts",
+        "status": "present"
+      },
+      "packages/core/src/protocol.ts": {
+        "digest": "87eb61a27729cb10aa54bf6f35e0645b425737d72102cfd7358577557e7fa440",
+        "ref": "packages/core/src/protocol.ts",
+        "status": "present"
+      },
+      "packages/core/src/review/estimator.ts": {
+        "digest": "e8f721ba7af42092fd88f3dbda8a98d3c2383f92cf0f42c423e660f067be6b2c",
+        "ref": "packages/core/src/review/estimator.ts",
+        "status": "present"
+      },
+      "packages/core/src/review/flakyDetective.ts": {
+        "digest": "239aa6f9f27f29959287cf064f883eefaeb928bdc84d1f85d82658d7f300f962",
+        "ref": "packages/core/src/review/flakyDetective.ts",
+        "status": "present"
+      },
+      "packages/core/src/review/index.ts": {
+        "digest": "46f81fc1815a460b952379daac90e1b2ab740c8c310ff3dbf8dbb203af5d2e3b",
+        "ref": "packages/core/src/review/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/review/types.ts": {
+        "digest": "5bae76128e872c6eb45fc63f3b5a86440070f4e52d979acb16b78e35fa2dcd66",
+        "ref": "packages/core/src/review/types.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/coverageChecker.ts": {
+        "digest": "b86a9b4c2c49b4435b3fee5691df5a8e2128e030182251d14fb538d3cf2cba94",
+        "ref": "packages/core/src/runner/coverageChecker.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/index.ts": {
+        "digest": "93a8e21dfea33a6b37408ca632edfee46fb8686810aaf763a244cf502f2ab405",
+        "ref": "packages/core/src/runner/index.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/processRunner.ts": {
+        "digest": "b29842b8ecce3a362c51f04eef7b237ee67c92fcd6cfb1aa12bf5590ceaced6e",
+        "ref": "packages/core/src/runner/processRunner.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/testRunner.ts": {
+        "digest": "c460451247e062b6458f4f072ceb0eb178d56a2c515e7748dd17b8e59fd5d714",
+        "ref": "packages/core/src/runner/testRunner.ts",
+        "status": "present"
+      },
+      "packages/core/src/types.ts": {
+        "digest": "fbadd23cd84b6b99cca5818a23509490f6d0dfbec87682601d4046c486ffa164",
+        "ref": "packages/core/src/types.ts",
+        "status": "present"
+      },
+      "packages/core/src/validation.ts": {
+        "digest": "f458cb8f64c65e4d05943e978ebb0f18f4ae7998476c3a13a3eb5a48e81281e6",
+        "ref": "packages/core/src/validation.ts",
+        "status": "present"
+      },
+      "packages/core/tsconfig.json": {
+        "digest": "e2ec89eca991df37b5278a05589fbf12d1c63b704089da4a99d41f6fd7be3e13",
+        "ref": "packages/core/tsconfig.json",
+        "status": "present"
+      },
+      "packages/server/package.json": {
+        "digest": "f19cc9fcd07d2d99e56fe679281b7f91a4efec831cf91e6e8ce6025681ab2c40",
+        "ref": "packages/server/package.json",
+        "status": "present"
+      },
+      "packages/server/src/hooks/audit.ts": {
+        "digest": "783de916910f18aee55b5ee94ab781dc77e1b0723f3f6c5654b054fe63ad80cc",
+        "ref": "packages/server/src/hooks/audit.ts",
+        "status": "present"
+      },
+      "packages/server/src/hooks/git.ts": {
+        "digest": "a9c30d85e5dba1df5abed2cce6be1f17226d00c42ff71147b29b494ada3a6012",
+        "ref": "packages/server/src/hooks/git.ts",
+        "status": "present"
+      },
+      "packages/server/src/hooks/package-manager.test.ts": {
+        "digest": "655cb27be21ac9253feafc4d90b6d7571a4c3c0fd97a40d9e3c1710669a5cdbc",
+        "ref": "packages/server/src/hooks/package-manager.test.ts",
+        "status": "present"
+      },
+      "packages/server/src/hooks/package-manager.ts": {
+        "digest": "5b4af694009ff77ca0d958e8780d5b06438f1123aa5ed485121545586b6e391b",
+        "ref": "packages/server/src/hooks/package-manager.ts",
+        "status": "present"
+      },
+      "packages/server/src/hooks/rules.test.ts": {
+        "digest": "0d672d6f63fedbabf2dd73443f369ea734be54080073cff262ccd038b2a220a6",
+        "ref": "packages/server/src/hooks/rules.test.ts",
+        "status": "present"
+      },
+      "packages/server/src/hooks/rules.ts": {
+        "digest": "795e280ae46719ce6439bd4d995b206abe0c2a3176b27230bee752eb3ca8c07e",
+        "ref": "packages/server/src/hooks/rules.ts",
+        "status": "present"
+      },
+      "packages/server/src/hooks/run.ts": {
+        "digest": "f04ce5c3515663a9aa395f240ef1597cea60656c4a528318057903714d06e14a",
+        "ref": "packages/server/src/hooks/run.ts",
+        "status": "present"
+      },
+      "packages/server/src/hooks/types.ts": {
+        "digest": "66208d9dd9bc26ece2a8290ea05af4aa23835c1ebbb99187873c1a29b2312f26",
+        "ref": "packages/server/src/hooks/types.ts",
+        "status": "present"
+      },
+      "packages/server/tsconfig.json": {
+        "digest": "3f068d5133b0a6fd3924fc99e6f8b2a5587b2bf4a24e29d670743b733be1b353",
+        "ref": "packages/server/tsconfig.json",
+        "status": "present"
+      },
+      "packages/server/vitest.config.ts": {
+        "digest": "7ae7b7f76fb8c5329d2ffd0d0cbc29c80b94b164dbaa8d18195c7d7b698498bd",
+        "ref": "packages/server/vitest.config.ts",
+        "status": "present"
+      },
+      "pnpm-lock.yaml": {
+        "digest": "13f8c2b0524e6222212f96665cba617434d991741c37ab0a185f189667f02792",
+        "ref": "pnpm-lock.yaml",
+        "status": "present"
+      },
+      "pnpm-workspace.yaml": {
+        "digest": "350b0360fa75ff7aad0841efad24cc19e14abc87e6c1d27cf1437cd671b5c1c5",
+        "ref": "pnpm-workspace.yaml",
+        "status": "present"
+      },
+      "skills/pre-cr-suite/SKILL.md": {
+        "digest": "fb6533168253fbbc2d04b584a369b61acfeaa6877beb87fd248b6e63f4d0f190",
+        "ref": "skills/pre-cr-suite/SKILL.md",
+        "status": "present"
+      }
+    },
+    "relationships": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "observed_at": "2026-09-12T14:14:46.639910+00:00",
+  "output_digest": "834c21aca36696eebd824fb5397970c6c7a2e9ad450096159dc41855e097a077",
+  "producer": "project-compass-check/v1",
+  "repository": "/Users/jakyeamos/projects/pre-cr-suite-lsp/.git",
+  "requirement_id": "indexed-hook-package-contract",
+  "schema": "compass-evidence/v1",
+  "workspace": "/private/tmp/compass-hook-repair-worktrees/20260911T212242Z-4175446a/pre-cr-suite-lsp"
+}

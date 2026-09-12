@@ -1,0 +1,204 @@
+{
+  "command": [
+    "pnpm",
+    "--filter",
+    "@pre-cr/core",
+    "test",
+    "src/beta/command.test.ts"
+  ],
+  "exit_code": 0,
+  "inputs": {
+    "behavior_contracts": "e8ccb83dc253c63af5a7a89ed8fe8e7c40b119841a3dfa161f88ffb868897026",
+    "binding": "1ba08c7982290f13ae9339b74e7b07ec1be7b73f3db6bfd25c4e9e242f64233c",
+    "commitments": "af7f095332358be4c083eb2c7ad9c711f8a38a7ae4c01689e012f38df49a4048",
+    "contracts": {
+      "project": "b8d79eb2d1f61e6651578cbfa1fbc9a026432d2ab4ee34a805c2fb8341ea442e"
+    },
+    "decision": "053466874c920a7f5859764910b3ca1f7969590316ff1e95b23c8a34665bd6e0",
+    "references": {
+      ".project-compass/behaviors.json": {
+        "digest": "426e51112519f7b505e9c9c5821700cf7f8a19f4a14120b022cd94a1436761b4",
+        "ref": ".project-compass/behaviors.json",
+        "status": "present"
+      },
+      ".project-compass/contract.json": {
+        "digest": "38c129b58de334276270135a47e4437451472c843746e01a8ca6036104473611",
+        "ref": ".project-compass/contract.json",
+        "status": "present"
+      },
+      ".project-compass/development.json": {
+        "digest": "8239a03694155ba4a993bdd446faba6afd1ea63bbd8b81f8f68ea031bc53d73a",
+        "ref": ".project-compass/development.json",
+        "status": "present"
+      },
+      "README.md": {
+        "digest": "93f3e5039ad06ca5f47f15c955c3b36ce24f967deac855670354c534bc4821af",
+        "ref": "README.md",
+        "status": "present"
+      },
+      "docs/IDE_WORKFLOW.md": {
+        "digest": "6f2de9c0b237a066f5701490240251be9a27456030944f466987ba40c305e427",
+        "ref": "docs/IDE_WORKFLOW.md",
+        "status": "present"
+      },
+      "docs/modernization/IDE_5_6_AUDIT.md": {
+        "digest": "9a5da157dfe2c9c3cbabc573c8996d7c0591096321fc706eaaa9c4bddc9eda73",
+        "ref": "docs/modernization/IDE_5_6_AUDIT.md",
+        "status": "present"
+      },
+      "package.json": {
+        "digest": "902052f2ba0f31ab83e998573cb10bc5ea09228cc5447dd1e3199058832bb4bd",
+        "ref": "package.json",
+        "status": "present"
+      },
+      "packages/core/package.json": {
+        "digest": "abfb50d6c1321481662aab8a77e7784f2691c9d91c1e25a6fd622826a3bd09ab",
+        "ref": "packages/core/package.json",
+        "status": "present"
+      },
+      "packages/core/src/beta/command.test.ts": {
+        "digest": "b149d2bd51eceb94a553c21a1ee732e275be0d81a982c6fb4b22432f077b1af2",
+        "ref": "packages/core/src/beta/command.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/command.ts": {
+        "digest": "713823d917dc6b082e6d224a1f0d294122c8a5eef6fdb9d33017bd6e2e2525f9",
+        "ref": "packages/core/src/beta/command.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/config.test.ts": {
+        "digest": "673bb48b06415b4e3b19475bc2ba4bcefdfabe2e01ac5fc70d7bdfdcf69bfbdd",
+        "ref": "packages/core/src/beta/config.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/config.ts": {
+        "digest": "8a0da040def488035ac30bd6a8c78849b2a33f110d92d02012c9844fcf279570",
+        "ref": "packages/core/src/beta/config.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/git.test.ts": {
+        "digest": "07aa7c9799f781fe8d9bf00bd4a1dc0f76fbb0bd2a129c42d44d644c4d921e0b",
+        "ref": "packages/core/src/beta/git.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/git.ts": {
+        "digest": "e8628e21e2d9e9a071f69168c068d93f2667b68443c01e6b46de55f7b2749d6c",
+        "ref": "packages/core/src/beta/git.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/precheck.test.ts": {
+        "digest": "dc6a04e0a95df186a39f6bc4919991ef48856016de2dfcdf6666074cb1464aea",
+        "ref": "packages/core/src/beta/precheck.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/beta/precheck.ts": {
+        "digest": "94897ac4bf9d9369b81214ea63ada198de766a32127d60c7e9d66352df1968c2",
+        "ref": "packages/core/src/beta/precheck.ts",
+        "status": "present"
+      },
+      "packages/core/src/contracts/methods.ts": {
+        "digest": "a45eb5897bee22ffef693d13cb50d1bb44ebb3d64be66b36a8c4fd98de63f114",
+        "ref": "packages/core/src/contracts/methods.ts",
+        "status": "present"
+      },
+      "packages/core/src/contracts/readiness.ts": {
+        "digest": "b59c77b4a1037248d38aacf8f9010f0e9aae97c6d9782113eabedd38fd09abaf",
+        "ref": "packages/core/src/contracts/readiness.ts",
+        "status": "present"
+      },
+      "packages/core/src/logger.ts": {
+        "digest": "088953cb7605b7620ba46edb12efe6c6771d750660bda82a74d73b16c581355b",
+        "ref": "packages/core/src/logger.ts",
+        "status": "present"
+      },
+      "packages/core/src/parsers/istanbul.ts": {
+        "digest": "f691e4eb625a46c2d5a3bec67b42f5f0efb3b4681d919593b9b03af40d700500",
+        "ref": "packages/core/src/parsers/istanbul.ts",
+        "status": "present"
+      },
+      "packages/core/src/parsers/lcov.ts": {
+        "digest": "3e7cc94afcf031098cd23d7d1b94106f2689ed2b652cde563f02752efb2f01fe",
+        "ref": "packages/core/src/parsers/lcov.ts",
+        "status": "present"
+      },
+      "packages/core/src/parsers/pathContainment.test.ts": {
+        "digest": "118580cbaa7ab897e398f2eb4dd5f9cb8a8c333db01d68aba320d0832726d09b",
+        "ref": "packages/core/src/parsers/pathContainment.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/protocol.ts": {
+        "digest": "87eb61a27729cb10aa54bf6f35e0645b425737d72102cfd7358577557e7fa440",
+        "ref": "packages/core/src/protocol.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/coverageChecker.test.ts": {
+        "digest": "34eec867bb2e929f4b10b2b7900ecf2bec44e1df3646ec2ac4ab9a4876fbfb9d",
+        "ref": "packages/core/src/runner/coverageChecker.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/coverageChecker.ts": {
+        "digest": "b86a9b4c2c49b4435b3fee5691df5a8e2128e030182251d14fb538d3cf2cba94",
+        "ref": "packages/core/src/runner/coverageChecker.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/processRunner.test.ts": {
+        "digest": "575609cef54a6edd4390f632e4b530e3ea21d0161e6d65269af845540e1932cb",
+        "ref": "packages/core/src/runner/processRunner.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/processRunner.ts": {
+        "digest": "b29842b8ecce3a362c51f04eef7b237ee67c92fcd6cfb1aa12bf5590ceaced6e",
+        "ref": "packages/core/src/runner/processRunner.ts",
+        "status": "present"
+      },
+      "packages/core/src/runner/testRunner.ts": {
+        "digest": "c460451247e062b6458f4f072ceb0eb178d56a2c515e7748dd17b8e59fd5d714",
+        "ref": "packages/core/src/runner/testRunner.ts",
+        "status": "present"
+      },
+      "packages/core/src/types.ts": {
+        "digest": "fbadd23cd84b6b99cca5818a23509490f6d0dfbec87682601d4046c486ffa164",
+        "ref": "packages/core/src/types.ts",
+        "status": "present"
+      },
+      "packages/core/src/validation.test.ts": {
+        "digest": "94912f316f3606659007755fb2fa26bccd68ebf07ddc5f953c8bae010f020ebe",
+        "ref": "packages/core/src/validation.test.ts",
+        "status": "present"
+      },
+      "packages/core/src/validation.ts": {
+        "digest": "f458cb8f64c65e4d05943e978ebb0f18f4ae7998476c3a13a3eb5a48e81281e6",
+        "ref": "packages/core/src/validation.ts",
+        "status": "present"
+      },
+      "packages/core/tsconfig.json": {
+        "digest": "e2ec89eca991df37b5278a05589fbf12d1c63b704089da4a99d41f6fd7be3e13",
+        "ref": "packages/core/tsconfig.json",
+        "status": "present"
+      },
+      "packages/core/vitest.config.ts": {
+        "digest": "b515e3043a834f2ae7ad8c80fa141cae842665a44532bf2c4fbda3285f40dfaa",
+        "ref": "packages/core/vitest.config.ts",
+        "status": "present"
+      },
+      "pnpm-lock.yaml": {
+        "digest": "13f8c2b0524e6222212f96665cba617434d991741c37ab0a185f189667f02792",
+        "ref": "pnpm-lock.yaml",
+        "status": "present"
+      },
+      "pnpm-workspace.yaml": {
+        "digest": "350b0360fa75ff7aad0841efad24cc19e14abc87e6c1d27cf1437cd671b5c1c5",
+        "ref": "pnpm-workspace.yaml",
+        "status": "present"
+      }
+    },
+    "relationships": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "observed_at": "2026-09-12T14:16:05.349445+00:00",
+  "output_digest": "88de567932a32aafeb620e5c55e20533f892e92ee71d46f908bc5a46e7df8d28",
+  "producer": "project-compass-check/v1",
+  "repository": "/Users/jakyeamos/projects/pre-cr-suite-lsp/.git",
+  "requirement_id": "test-beta-command",
+  "schema": "compass-evidence/v1",
+  "workspace": "/private/tmp/compass-hook-repair-worktrees/20260911T212242Z-4175446a/pre-cr-suite-lsp"
+}

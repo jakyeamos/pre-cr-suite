@@ -98,7 +98,15 @@ If a staged source line contains package-manager text only as non-executable
 detector or fixture data, document the narrow exception inline with
 `quality-gate: allow package-manager: non-executable`. The hook validates that
 the line is a `detection_terms` or `good_example` field without process-launch
-syntax; executable npm or Yarn commands remain blocking.
+syntax; commands from a manager other than the selected repository contract remain blocking.
+
+The hook defaults to pnpm. An existing exact npm declaration in HEAD and the
+index, with a matching regular staged npm lock and no competing lock, selects
+npm for that repository. Invalid, unstaged or newly introduced declarations
+do not grant an exception. See `docs/HOOK_PACKAGE_CONTRACT.md` for the complete
+selection boundary. Both metadata and source hooks retain independent readiness
+checks. Use `pnpm run test:hook-package-contract` to rebuild the core dependency
+before the local hook fixtures; source tests do not establish installed parity.
 
 ## Preferred APIs and idioms
 

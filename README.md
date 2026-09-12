@@ -117,6 +117,8 @@ Executable `run` and `hook run` commands write an immediate start message, a per
 
 When the headless gate blocks, warns, or forces iteration, it appends an AIOS-compatible event to `.aios/audit/gate-events.jsonl` in the checked workspace and refreshes `.aios/audit/gate-summary.md` plus `.aios/audit/learning-lessons.md`. Audit write failures are non-blocking; the branch-aware Pre-CR exit code remains authoritative.
 
+Commit hooks honor [existing repository package-manager contracts](docs/HOOK_PACKAGE_CONTRACT.md) while retaining the default policy and independent readiness checks.
+
 ## Repo Configuration
 
 Project behavior lives in `.pre-cr.json` at the repo root.

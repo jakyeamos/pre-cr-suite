@@ -1,6 +1,6 @@
 {
   "schema": "compass-development/v1",
-  "revision": 3,
+  "revision": 5,
   "inventory": {
     "source": "git-tracked",
     "include": [
@@ -192,6 +192,111 @@
       ],
       "handoff_review": "Reviewed canonical beta shared readiness contract. This binding owns only the direct beta precheck implementation and imported core dependencies. Package-local tests exercise explicit trust refusal, configured coverage validation, command parsing, Git selection and adapter results; they do not prove every coverage format, live installed CLI, VS Code/Neovim transport, Rust toolchain, or published consumer parity. Experimental checklist/review/debug and editor implementation remain visible unbound scope; source-only context snapshots remain source-only. Full tracked inventory retained; no child organization or broader maturity ratification. The modernization audit is reviewed support metadata: two Markdown hard breaks were replaced with paragraph breaks solely to satisfy the existing format gate; historical installed evidence and publishing boundaries remain unchanged. The original supported-client readiness behavior remains accepted and unbound. Only local-beta-readiness-primitives is associated with these fixture oracles; passing them does not prove cross-client equivalence.",
       "decision_id": "canonical-beta-core-source-association"
+    },
+    {
+      "id": "indexed-hook-package-contract",
+      "compass_id": "project",
+      "authority": "accepted",
+      "paths": [
+        "packages/server/src/hooks/package-manager.ts",
+        "packages/server/src/hooks/package-manager.test.ts",
+        "packages/server/src/hooks/run.ts",
+        "packages/server/src/hooks/rules.ts",
+        "packages/server/src/hooks/rules.test.ts",
+        "docs/HOOK_PACKAGE_CONTRACT.md",
+        "docs/change-surface-matrix.json",
+        ".project-compass/continuity.json",
+        "skills/pre-cr-suite/SKILL.md"
+      ],
+      "outcomes": [
+        "same-checks-before-pr",
+        "reviewable-readiness-result"
+      ],
+      "references": [
+        "docs/HOOK_PACKAGE_CONTRACT.md",
+        "README.md"
+      ],
+      "constraints": [
+        "Read the staged target contract and prior committed manager; do not trust unstaged, ambiguous, conflicting or newly introduced declarations.",
+        "Preserve required coverage, adapter and source-readiness failures; local fixture evidence cannot establish installed client parity."
+      ],
+      "behavior_ids": [
+        "indexed-hook-package-contract"
+      ],
+      "proof": [
+        {
+          "id": "indexed-hook-package-contract",
+          "receipt": ".project-compass/evidence/indexed-hook-package-contract.json",
+          "command": [
+            "pnpm",
+            "run",
+            "test:hook-package-contract"
+          ],
+          "oracle_ref": "packages/server/src/hooks/package-manager.test.ts",
+          "behavior_ids": [
+            "indexed-hook-package-contract"
+          ]
+        }
+      ],
+      "decision_id": "existing-package-contract-repair",
+      "dependencies": [
+        "package.json",
+        "packages/core/package.json",
+        "packages/core/src/beta/command.ts",
+        "packages/core/src/beta/config.ts",
+        "packages/core/src/beta/git.ts",
+        "packages/core/src/beta/index.ts",
+        "packages/core/src/beta/precheck.ts",
+        "packages/core/src/checklist/docCoverage.ts",
+        "packages/core/src/checklist/healthMonitor.ts",
+        "packages/core/src/checklist/index.ts",
+        "packages/core/src/checklist/prSize.ts",
+        "packages/core/src/checklist/runner.ts",
+        "packages/core/src/checklist/security.ts",
+        "packages/core/src/checklist/types.ts",
+        "packages/core/src/context/index.ts",
+        "packages/core/src/context/snapshot.ts",
+        "packages/core/src/contracts/index.ts",
+        "packages/core/src/contracts/methods.ts",
+        "packages/core/src/contracts/readiness.ts",
+        "packages/core/src/contracts/validators.ts",
+        "packages/core/src/debug/capture.ts",
+        "packages/core/src/debug/index.ts",
+        "packages/core/src/docgen/extractor.ts",
+        "packages/core/src/docgen/extractorAST.ts",
+        "packages/core/src/docgen/formatter.ts",
+        "packages/core/src/docgen/index.ts",
+        "packages/core/src/docgen/types.ts",
+        "packages/core/src/engine/index.ts",
+        "packages/core/src/engine/workspaceSession.ts",
+        "packages/core/src/experimental.ts",
+        "packages/core/src/index.ts",
+        "packages/core/src/logger.ts",
+        "packages/core/src/parsers/index.ts",
+        "packages/core/src/parsers/istanbul.ts",
+        "packages/core/src/parsers/lcov.ts",
+        "packages/core/src/parsers/lcovStreaming.ts",
+        "packages/core/src/protocol.ts",
+        "packages/core/src/review/estimator.ts",
+        "packages/core/src/review/flakyDetective.ts",
+        "packages/core/src/review/index.ts",
+        "packages/core/src/review/types.ts",
+        "packages/core/src/runner/coverageChecker.ts",
+        "packages/core/src/runner/index.ts",
+        "packages/core/src/runner/processRunner.ts",
+        "packages/core/src/runner/testRunner.ts",
+        "packages/core/src/types.ts",
+        "packages/core/src/validation.ts",
+        "packages/core/tsconfig.json",
+        "packages/server/package.json",
+        "packages/server/src/hooks/audit.ts",
+        "packages/server/src/hooks/git.ts",
+        "packages/server/src/hooks/types.ts",
+        "packages/server/tsconfig.json",
+        "packages/server/vitest.config.ts",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ]
     }
   ],
   "decisions": [
@@ -200,6 +305,12 @@
       "summary": "Reviewed exact beta precheck source and shared input association under current canonical README root outcomes. Experimental/editor/installed behavior stays separate and unmapped, no new owner intent.",
       "source": "README.md",
       "status": "accepted"
+    },
+    {
+      "id": "existing-package-contract-repair",
+      "status": "accepted",
+      "source": "docs/HOOK_PACKAGE_CONTRACT.md",
+      "summary": "Preserve repository-specific package authority under the existing readiness outcome; no change to user intent or gate severity."
     }
   ]
 }

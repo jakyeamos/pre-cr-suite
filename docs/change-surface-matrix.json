@@ -1,0 +1,30 @@
+{
+  "schema_version": "change-surface-matrix/v1",
+  "subject": {
+    "kind": "repository",
+    "id": "pre-cr-suite-lsp"
+  },
+  "owner": "pre-cr-suite-maintainers",
+  "last_reviewed": "2026-09-11",
+  "surfaces": [
+    {
+      "id": "hook-package-contract",
+      "scope": "local",
+      "distribution": "public_core",
+      "path": "packages/server/src/hooks",
+      "owner": "pre-cr-suite-maintainers",
+      "condition": "Commit hook package contract resolution or rule routing changes.",
+      "operations": [
+        "change"
+      ],
+      "validation": [
+        "Run package-manager and rules tests; exercise built CLI on valid and invalid staged contracts.",
+        "Run source readiness with a failed checker and verify it remains blocked.",
+        "Rebuild and verify bundled server, then separately verify installed consumer behavior.",
+        "Use the maintained pre-cr-suite skill contract; dogfood valid, invalid and boundary cases in a fresh context.",
+        "Bind the proof to the core source closure and rebuild core before hook tests."
+      ],
+      "status": "applicable"
+    }
+  ]
+}

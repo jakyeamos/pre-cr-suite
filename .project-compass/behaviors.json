@@ -14,6 +14,13 @@
       "title": "Evaluate local beta command, configuration, path and coverage precheck fixtures",
       "authority": "accepted",
       "scope_note": "Narrow source association for the eight registered core oracles only; excludes installed VS Code/Neovim parity and complete workspace workflow assurance. Canonical section: Headless CLI."
+    },
+    {
+      "id": "indexed-hook-package-contract",
+      "spec_ref": "docs/HOOK_PACKAGE_CONTRACT.md",
+      "title": "Honor an existing indexed package contract without bypassing readiness",
+      "authority": "accepted",
+      "scope_note": "Local temporary Git fixture and hook route proof only; no installed client parity or package-manager migration authority."
     }
   ]
 }

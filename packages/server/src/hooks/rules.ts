@@ -1,6 +1,7 @@
 import * as path from 'path';
 
 import type { HookFile, HookFinding, HookRuleId, HookRulePolicy } from './types';
+import type { RepositoryPackageManager } from './package-manager';
 
 // quality-gate: allow handler-before-send: this file intentionally defines handler/send detector patterns.
 
@@ -69,7 +70,7 @@ const ALLOW_STATIC_UI_TEST_MARKER = 'quality-gate: allow static-ui-test';
 const SECRET_RE =
   /\b(api[_-]?key|secret|token|password|private[_-]?key|client[_-]?secret)\b\s*[:=]\s*['"][^'"\s]{12,}['"]/i;
 const TS_ANY_RE = /(:\s*any\b|\bas\s+any\b|<\s*any\s*>|Array\s*<\s*any\s*>)/;
-const PACKAGE_MANAGER_RE = /\b(npm|yarn)\s+(install|add|run|test|ci|start|build|lint|exec)\b/;
+const PACKAGE_MANAGER_RE = /\b(pnpm|npm|yarn)\s+(install|add|run|test|ci|start|build|lint|exec)\b/g;
 const CONFLICT_MARKERS = ['<<<<<<< ', '=======', '>>>>>>> '];
 const STATIC_UI_RENDER_PATTERNS = ['renderToStaticMarkup(', '@testing-library/react'];
 const STATIC_UI_COPY_PATTERNS = ['.toContain(', '.not.toContain(', 'getByText(', 'queryByText('];
@@ -83,7 +84,7 @@ const UI_BEHAVIOR_PATTERNS = [
   '.click('
 ];
 
-export function evaluateHookRules(files: HookFile[], policy: HookRulePolicy): HookFinding[] {
+export function evaluateHookRules(files: HookFile[], policy: HookRulePolicy, manager: RepositoryPackageManager = 'pnpm'): HookFinding[] {
   const findings: HookFinding[] = [];
 
   for (const file of files) {
@@ -94,7 +95,7 @@ export function evaluateHookRules(files: HookFile[], policy: HookRulePolicy): Ho
     findings.push(
       ...findConflictMarkers(file, policy),
       ...findSecretLiterals(file, policy),
-      ...findPackageManagerViolations(file, policy),
+      ...findPackageManagerViolations(file, policy, manager),
       ...findTypescriptAny(file, policy),
       ...findOversizedSource(file, policy),
       ...findWeakPythonTest(file, policy),
@@ -149,10 +150,12 @@ function findSecretLiterals(file: HookFile, policy: HookRulePolicy): HookFinding
   return findings;
 }
 
-function findPackageManagerViolations(file: HookFile, policy: HookRulePolicy): HookFinding[] {
+function findPackageManagerViolations(file: HookFile, policy: HookRulePolicy, manager: RepositoryPackageManager): HookFinding[] {
   const findings: HookFinding[] = [];
-  if (['package-lock.json', 'yarn.lock'].includes(path.basename(file.path))) {
-    pushFinding(findings, policy, file.path, 1, 'package-manager', 'use pnpm; do not commit npm/yarn lockfiles');
+  const allowedLock = manager === 'npm' ? 'package-lock.json' : 'pnpm-lock.yaml';
+  const basename = path.basename(file.path);
+  if (['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'].includes(basename) && basename !== allowedLock) {
+    pushFinding(findings, policy, file.path, 1, 'package-manager', `use ${manager}; do not commit another package manager's lockfile`);
     return findings;
   }
 
@@ -160,8 +163,8 @@ function findPackageManagerViolations(file: HookFile, policy: HookRulePolicy): H
     if (isNonExecutablePackageManagerExample(line)) {
       return;
     }
-    if (PACKAGE_MANAGER_RE.test(line)) {
-      pushFinding(findings, policy, file.path, index + 1, 'package-manager', 'use pnpm instead of npm/yarn commands');
+    if ([...line.matchAll(PACKAGE_MANAGER_RE)].some((match) => match[1] !== manager)) {
+      pushFinding(findings, policy, file.path, index + 1, 'package-manager', `use ${manager} instead of another package manager's commands`);
     }
   });
   return findings;

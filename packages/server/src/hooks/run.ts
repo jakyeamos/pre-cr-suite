@@ -5,6 +5,7 @@ import { buildReadinessEnvelope, loadProjectConfig, runWorkspacePreCrCheck } fro
 
 import { appendHookAuditEvents } from './audit';
 import { stagedFiles, stagedPaths } from './git';
+import { repositoryPackageManager } from './package-manager';
 import { DEFAULT_HOOK_RULE_POLICY, evaluateHookRules, findingForRule, hasSourceFiles } from './rules';
 import type { HookFinding, HookName, HookRunResult } from './types';
 
@@ -25,11 +26,12 @@ export async function runHook(options: HookRunOptions, dependencies: HookRunDepe
   const sourceChanged = hasSourceFiles(paths);
   const configPath = path.join(options.workspaceRoot, '.pre-cr.json');
   const configExists = fs.existsSync(configPath);
+  const manager = await repositoryPackageManager(options.workspaceRoot);
 
   if (!sourceChanged) {
     const files = await stagedFiles(options.workspaceRoot, paths);
     const policy = configExists ? loadProjectConfig(options.workspaceRoot).config.hook.rules : DEFAULT_HOOK_RULE_POLICY;
-    const findings = evaluateHookRules(files, policy);
+    const findings = evaluateHookRules(files, policy, manager);
     await appendHookAuditEvents(options.workspaceRoot, auditConfig(configExists ? loadProjectConfig(options.workspaceRoot).config : null), findings);
     return {
       schemaVersion: 1,
@@ -62,7 +64,7 @@ export async function runHook(options: HookRunOptions, dependencies: HookRunDepe
   }
 
   const files = await stagedFiles(options.workspaceRoot, paths);
-  findings.push(...evaluateHookRules(files, policy));
+  findings.push(...evaluateHookRules(files, policy, manager));
 
   if (!findings.some((finding) => finding.severity === 'block') && configExists) {
     const runCheck = dependencies.runCheck ?? runWorkspacePreCrCheck;
